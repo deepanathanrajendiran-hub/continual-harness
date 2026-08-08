@@ -76,6 +76,7 @@ The core discipline, taken from Prime Agent's "smallest relevant CRUD edit": **t
 | Evidence in the trajectory | Target layer | Rationale |
 |---|---|---|
 | A durable fact about the user or project | M (memory) | Cheapest; loaded by relevance, not always |
+| A command that failed, then succeeded after a fix | M (memory) | The highest-signal class: a reproducible gotcha with the fix already proven |
 | A procedure re-derived or repeated ≥2× | G (skill) | Loaded only when triggered |
 | A research/exploration shape run repeatedly with the same structure | K (`.claude/agents/`) | Reusable, runs in its own context |
 | A correction that must apply to *every* session | ρ (CLAUDE.md) | Always loaded — most expensive |
@@ -91,6 +92,21 @@ The core discipline, taken from Prime Agent's "smallest relevant CRUD edit": **t
 5. **Propose** — emit a diff per proposal: target file, exact text, and the trajectory evidence justifying it. **Nothing is written at this step.**
 6. **On approval** — write the edits, then append one line per edit to `CHANGELOG.md`:
    `YYYY-MM-DD | layer | file | one-line rationale | evidence`
+
+Trajectories are mostly noise — file reads, tool output, exploration that led nowhere. Harvesting scans for **turning points**, not for patterns in general: a correction, a failure-then-fix, a third repetition. If a candidate cannot be tied to one of those, it is not a candidate. This is what keeps `refine` from inventing minor patterns that read plausibly but reflect nothing.
+
+### 4.2.1 Memory write contract
+
+`refine` does **not** define its own memory format. Claude Code already has one, and writing a parallel scheme would be invisible to recall:
+
+- **Location:** the per-project memory directory (`~/.claude/projects/<project-key>/memory/`), already project-scoped — no extra containment needed.
+- **Filename:** the kebab-case `name` slug. **Not** numbered or category-prefixed (`USER_PREFERENCE_001.md`) — retrieval keys off the `description` frontmatter field, so a numbered filename adds nothing and makes dedupe by name harder.
+- **Frontmatter:** `name`, `description`, `metadata.type` ∈ `{user, feedback, project, reference}`.
+- **Body:** for `feedback` and `project`, follow with `**Why:**` and `**How to apply:**`. Link related memories with `[[slug]]`.
+- **Index:** append one line to `MEMORY.md` — `- [Title](file.md) — hook`. Never put memory content in the index.
+- **Dedupe:** before creating, check for an existing file covering the same fact and update it instead.
+
+Categorisation is carried by `metadata.type`, which is what the recall path actually reads.
 
 ### 4.3 Guardrails
 
@@ -121,9 +137,14 @@ Prime Agent's own Factorio case study is the cautionary tale: its refinement loo
   "goal": "string",
   "cwd": "string",
   "gate": {"kind": "command|coverage", "value": "string"},
+  "watch_paths": ["string"],
   "budget": {"max_turns": 20, "max_minutes": null},
   "used": {"turns": 0, "started": "ISO-8601"},
   "status": "active|complete|abandoned",
+  "subagents": [
+    {"role": "string", "name": "string", "brief": "string",
+     "last_seen_turn": 0, "session": "string"}
+  ],
   "checkpoints": [
     {"turn": 1, "did": "string", "next": "string",
      "tree_hash": "string", "gate": "pass|fail|skipped", "gate_output": "string"}
@@ -138,10 +159,31 @@ Prime Agent's own Factorio case study is the cautionary tale: its refinement loo
 1. **Establish** goal and gate. Refuse to start without a gate — a long-horizon loop with no termination criterion is an infinite loop.
 2. **Work one increment.**
 3. **Checkpoint** — append what was done, what is next, and a hash of the working tree.
-4. **Run the gate**, capturing bounded output. **Skip the run if `tree_hash` is unchanged since the last attempt** — a gate re-run on an unchanged tree cannot produce a different result and is pure waste. `tree_hash` is `git status --porcelain=v1` plus `git rev-parse HEAD` hashed together, so it changes on any tracked edit, untracked file, or commit; in a non-git directory it falls back to a hash of `find . -type f -newer <state-file>`.
+4. **Run the gate**, capturing bounded output. Skip the run only if `tree_hash` is unchanged since the last attempt — see §5.2.1.
 5. **On failure**, feed the bounded gate output back as the next increment's input. **On pass**, mark `status: complete`.
 6. **On budget exhaustion**, stop and produce an honest partial report naming what is undone.
 7. **Heartbeat** via `/loop` or `ScheduleWakeup` for runs spanning sessions.
+
+### 5.2.1 `tree_hash` and the skip rule
+
+The skip is an **optimization**, and the two failure modes are not symmetric:
+
+- **False run** (gate runs when nothing changed) costs a few seconds.
+- **False skip** (gate skipped when something did change) is a *correctness* bug: the loop concludes on stale evidence, or stalls forever.
+
+Therefore: **skip only when the tree is provably unchanged; on any doubt, run the gate.**
+
+`tree_hash` is the hash of three inputs combined:
+
+1. `git rev-parse HEAD` — catches commits.
+2. `git status --porcelain=v1` — catches tracked edits and untracked files.
+3. Max mtime + size over `watch_paths` — catches everything git cannot see.
+
+Input 3 is required because **`git status --porcelain=v1` does not report writes inside `.gitignore`d directories.** Verified 2026-08-08: initialising a repo with `out/` ignored, then writing `out/report.md`, leaves porcelain output empty and `tree_hash` unchanged. A research goal whose only output lands in an ignored directory (`out/`, `dist/`, a scratch dir, `.claude/harness/logs/`) would have its gate wrongly skipped.
+
+`watch_paths` defaults to the goal's `cwd`, excluding `.git/` and any directory over a size threshold (`node_modules/`, `.venv/`, `target/`). It is overridable per goal — a research goal should set it to its actual output directory. If `watch_paths` cannot be walked for any reason, `tree_hash` is treated as changed and the gate runs.
+
+In a non-git directory, inputs 1 and 2 are omitted and input 3 alone decides.
 
 ### 5.3 Gate kinds
 
@@ -150,7 +192,14 @@ Prime Agent's own Factorio case study is the cautionary tale: its refinement loo
 
 ### 5.4 Fan-out
 
-Where sub-questions are independent, `horizon` dispatches `Agent` calls in parallel. To continue a line of inquiry, it uses `SendMessage` against an existing agent that already holds the context rather than spawning a cold one — Prime Agent's persistent-subagent idea, and the difference between a research sweep costing 1× and 3×.
+Where sub-questions are independent, `horizon` dispatches `Agent` calls in parallel. To continue a line of inquiry **within the same session**, it uses `SendMessage` against an existing agent that already holds the context rather than spawning a cold one — Prime Agent's persistent-subagent idea, and the difference between a research sweep costing 1× and 3×.
+
+**Subagent handles do not survive a session restart.** `ListAgents` documents its scope as *in-process* subagents, and a fresh `Agent` call starts cold. So the `subagents` array stores **role, name, and briefing — never a handle treated as durable**:
+
+- **Within a session:** look up the role in `subagents`, address the live agent by `name` via `SendMessage`, and only spawn if that fails.
+- **After a restart:** treat every entry as dead. Respawn from `brief` plus the relevant checkpoint history, which reconstitutes the agent's task context from state we own rather than from a handle we don't.
+
+`last_seen_turn` and `session` exist purely to detect staleness, not to resurrect. This design is correct whether or not handles happen to survive, which is why it is preferred over storing IDs and hoping.
 
 ### 5.5 Completion contract
 
@@ -184,6 +233,12 @@ Skills usually ship unverified. These will not.
 **T6 — `horizon` budget honesty.** Gate that never passes, `--max-turns 3`. **Pass:** stops at 3, reports partial status, does **not** claim success.
 
 **T7 — Rollback.** `/refine --undo` after T1. **Pass:** the memory file is removed and the changelog entry retired.
+
+**T8 — Gitignored output (regression, §5.2.1).** Goal whose only output lands in a `.gitignore`d directory. Run a continuation. **Pass:** `tree_hash` changes and the gate runs. Guards the bug reproduced on 2026-08-08, where porcelain status reported nothing after a write to an ignored path.
+
+**T9 — Memory contract conformance (§4.2.1).** Inspect the file written by T1. **Pass:** kebab-case filename matching its `name`, valid frontmatter with a `metadata.type` from the allowed set, and exactly one new line in `MEMORY.md`.
+
+**T10 — Subagent restart safety (§5.4).** Populate `subagents`, then resume the goal in a fresh session. **Pass:** entries are treated as dead and respawned from `brief` + checkpoints; no `SendMessage` is attempted against a stale handle.
 
 ## 8. Promotion to user scope
 
