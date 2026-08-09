@@ -36,6 +36,13 @@ def _git(cwd, *args) -> str | None:
     return r.stdout if r.returncode == 0 else None
 
 
+def _reraise(err: OSError) -> None:
+    """os.walk swallows scandir errors by default, silently dropping the
+    affected subtree. Re-raise so the failure reaches changed()'s
+    except-clause instead of producing an incomplete, normal-looking hash."""
+    raise err
+
+
 def _walk_entries(root: Path) -> list[str]:
     """One line per file: path, mtime_ns, size. Sorted for determinism."""
     if not root.exists():
@@ -45,7 +52,7 @@ def _walk_entries(root: Path) -> list[str]:
         return [f"{root}\x00{st.st_mtime_ns}\x00{st.st_size}"]
 
     entries: list[str] = []
-    for dirpath, dirnames, filenames in os.walk(root):
+    for dirpath, dirnames, filenames in os.walk(root, onerror=_reraise):
         dirnames[:] = [d for d in dirnames if d not in EXCLUDED_DIRS]
         for name in filenames:
             p = Path(dirpath) / name

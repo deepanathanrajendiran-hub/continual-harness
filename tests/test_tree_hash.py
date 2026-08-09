@@ -1,3 +1,4 @@
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -93,6 +94,29 @@ def test_changed_is_true_on_doubt(tmp_path, monkeypatch):
         lambda *a, **k: (_ for _ in ()).throw(OSError("boom")),
     )
     assert tree_hash.changed(repo, None, "abc123") is True
+
+
+def test_changed_is_true_when_subtree_unreadable(tmp_path):
+    """Skip-asymmetry hole: os.walk swallows scandir errors unless given an
+    onerror callback, so an unreadable subtree used to be silently dropped
+    from the walk instead of raising. That would let compute() return a
+    normal-looking digest built from incomplete data -- an unknown state
+    reported as "nothing changed", which changed()'s doubt-path must never
+    do. This exercises the real internal failure (a permission-denied
+    directory), not a monkeypatched one, so it would have passed unchanged
+    against the bug that test_changed_is_true_on_doubt does not catch."""
+    repo = _repo(tmp_path)
+    locked = repo / "locked"
+    locked.mkdir()
+    (locked / "secret.txt").write_text("v1")
+
+    previous = tree_hash.compute(repo)
+
+    os.chmod(locked, 0o000)
+    try:
+        assert tree_hash.changed(repo, None, previous) is True
+    finally:
+        os.chmod(locked, 0o755)
 
 
 def test_non_git_directory_uses_walk_only(tmp_path):
