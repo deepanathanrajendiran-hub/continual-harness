@@ -114,17 +114,19 @@ sys.path.insert(0, '.claude/harness/bin')
 import refine_log
 
 today_utc = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+log_path = refine_log.paths.changelog()
 count = 0
-for line in refine_log.paths.changelog().read_text().splitlines():
-    parts = [p.strip() for p in line.split("|")]
-    if len(parts) < 5:
-        continue  # header or blank line, not a dated entry
-    date, layer = parts[0], parts[1]
-    if not date[:4].isdigit():
-        continue  # header/format-spec line (e.g. the `YYYY-MM-DD | ...`
-                   # legend), not a real dated entry
-    if date == today_utc and layer != "REVERTED":
-        count += 1
+if log_path.exists():
+    for line in log_path.read_text().splitlines():
+        parts = [p.strip() for p in line.split("|")]
+        if len(parts) < 5:
+            continue  # header or blank line, not a dated entry
+        date, layer = parts[0], parts[1]
+        if not date[:4].isdigit():
+            continue  # header/format-spec line (e.g. the `YYYY-MM-DD | ...`
+                       # legend), not a real dated entry
+        if date == today_utc and layer != "REVERTED":
+            count += 1
 print(f"CHANGELOG pre-flight: {count} edits applied today (cap 3)")
 ```
 
@@ -135,6 +137,18 @@ legitimately contain that word (a proposal *about* the undo mechanism
 itself, for instance), and a substring search would then misclassify a
 normal entry as reverted and undercount — the same direction of error as
 the UTC bug above.
+
+Guard the read with `log_path.exists()` first. `commit_entry()` creates
+`CHANGELOG.md` lazily (Step 6), so a harness that has never applied an
+edit — a fresh project, or the state right after Task 7's global
+promotion — has no file yet, and reading it unguarded raises
+`FileNotFoundError` before a single proposal is made. Falling through to
+`count = 0` here is **not** the cap failing open the way a local-date
+comparison would be: a missing file means no edit has ever been
+committed, so zero is the *true* count, not a permissive guess. This is
+the opposite situation from the UTC case above — there, permissive was
+wrong because it hid edits that did happen; here, permissive is correct
+because there is nothing to hide.
 
 **State the count every time this pre-flight runs, whether or not it
 blocks** — one line before any proposals, in the form the snippet
@@ -282,11 +296,11 @@ Related: [[other-slug]]
   the Nth repetition of a named procedure. No speculative or anticipatory
   edits ("this might help next time").
 - **G2 — Cap of 3.** At most 3 proposals per trajectory, not per tool
-  call — see Step 4. Enforced against a persisted floor (today's
-  non-`REVERTED` `CHANGELOG.md` entry count), not against your own
-  recollection of what you've already proposed — self-attestation is not
-  a guardrail. Re-invoking `/refine` on the same trajectory to bypass the
-  cap is not a loophole, it's the exact bloat the cap exists to prevent.
+  call — see Step 4. Enforced against a persisted floor (today's, in
+  **UTC**, non-`REVERTED` `CHANGELOG.md` entry count), not against your
+  own recollection of what you've already proposed — self-attestation is
+  not a guardrail. Re-invoking `/refine` on the same trajectory to bypass
+  the cap is not a loophole, it's the exact bloat the cap exists to prevent.
   Forces ranking instead of dumping every candidate that came up.
 - **G3 — No self-exemption.** `refine` may never edit
   `.claude/skills/refine/SKILL.md` (this file) or anything under
