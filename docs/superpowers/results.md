@@ -83,7 +83,7 @@ diverge, this file is out of date and should be regenerated from
 - `TimeoutExpired`'s partial `.stdout`/`.stderr` are discarded, so `GateUnrunnable` carries no evidence of what the command was doing when it hung.
 - `test_output_is_bounded` only asserts length, not truncation direction — it would pass against head- or middle-truncation even though the module relies on tail-truncation.
 - (accepted trade) exit 127 can misclassify a gate that legitimately exits 127 as unrunnable. Fails toward stopping and surfacing to a human rather than silently retrying.
-- (forward-looking) `run_gate()` returns `(result, output)` but not the hash it evaluated against, so caller-side checkpoint timing stays caller-enforced — the exact bug class that bit the brief's own T4 test during implementation.
+- (forward-looking) `run_gate()` returns `(result, output)` but not the hash it evaluated against, so caller-side checkpoint timing stays unenforced — the exact bug class that bit the brief's own T4 test during implementation.
 - `start_new_session` detaches the gate from the parent's controlling terminal; irrelevant for typical gate commands but changes job-control signal propagation.
 - The timeout test is sleep-based and inherently flakiness-prone under heavy CI load.
 
