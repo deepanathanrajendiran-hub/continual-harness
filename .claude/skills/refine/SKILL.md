@@ -90,16 +90,37 @@ retrieval surfaces the weaker one half the time.
 
 ## Step 4 — Rank and cap
 
-**At most 3 proposals per invocation.** If you found more, rank by how
-often the situation will recur and drop the tail. An unbounded
-self-editor bloats the harness until it is worse than no harness.
+**At most 3 proposals per trajectory being harvested — never per tool
+call, and never resettable by re-invoking `/refine`.** An unbounded
+self-editor degrades the harness until it is worse than no harness, and
+a cap the editor can lift at will by calling itself again is not a cap.
 
-The cap is scoped to the **trajectory being harvested, not the tool
-call.** If this trajectory already produced 3 proposals in an earlier
-`/refine` run this session, re-invoking `/refine` on the same trajectory
-to squeeze out 3 more is the exact bloat the cap exists to prevent —
-don't. A fresh cap of 3 only opens up for a genuinely new trajectory
-(new turns since the last `/refine`, not the same ground re-scanned).
+**Before proposing anything, check the persisted floor, not your own
+recollection.** Read `.claude/harness/CHANGELOG.md` and count the
+non-`REVERTED` entries dated today (the `YYYY-MM-DD` prefix matching
+today's date). **If that count is already 3 or more, stop.** Propose
+nothing. Tell the user how many edits have already landed today and that
+the cap is reached, and let them decide whether to override. Do not
+treat their asking you to run `/refine` as the override — it must be
+explicit, given only after they've seen the count.
+
+This is deliberate belt-and-braces. The trajectory-level rule above
+states the intent, but it is self-attested by the same agent the cap is
+meant to constrain — a guardrail that depends on the constrained party's
+memory and good faith is not a guardrail. `CHANGELOG.md` is
+machine-written by `commit_entry()` (Step 6), carries a date on every
+line, and survives a session restart or a re-invocation on the "same"
+trajectory with one throwaway turn tacked onto the end — none of which
+the trajectory-level rule alone can detect. The CHANGELOG count is the
+enforceable floor; the trajectory rule is the discipline on top of it.
+
+**Within whatever budget remains, rank.** If Step 1 turned up more
+candidates than that, rank by how often the situation will recur and
+drop the tail. A single acknowledgement or unrelated aside ("ok,
+thanks") appended to a trajectory that already produced today's
+proposals is not new material and does not reopen the cap — only
+substance that wasn't already the basis of an earlier proposal today
+counts as a genuinely new trajectory.
 
 ## Step 5 — Propose, do not write
 
@@ -207,10 +228,12 @@ Related: [[other-slug]]
   the Nth repetition of a named procedure. No speculative or anticipatory
   edits ("this might help next time").
 - **G2 — Cap of 3.** At most 3 proposals per trajectory, not per tool
-  call — see Step 4. Re-invoking `/refine` on the same trajectory to
-  bypass the cap is not a loophole, it's the exact bloat the cap exists
-  to prevent. Forces ranking instead of dumping every candidate that
-  came up.
+  call — see Step 4. Enforced against a persisted floor (today's
+  non-`REVERTED` `CHANGELOG.md` entry count), not against your own
+  recollection of what you've already proposed — self-attestation is not
+  a guardrail. Re-invoking `/refine` on the same trajectory to bypass the
+  cap is not a loophole, it's the exact bloat the cap exists to prevent.
+  Forces ranking instead of dumping every candidate that came up.
 - **G3 — No self-exemption.** `refine` may never edit
   `.claude/skills/refine/SKILL.md` (this file) or anything under
   `.claude/harness/bin/*.py` — `refine_log.py` and its siblings are the
@@ -221,21 +244,24 @@ Related: [[other-slug]]
   or approval requirements: skipping a test, loosening a gate, removing
   a guardrail from another skill. And it may never propose anything —
   in memory, in `CLAUDE.md`, in another skill, anywhere — that softens
-  **G1's evidence bar or G2's cap of 3**, e.g. "relax quoting for small
-  edits" or "raise refine's proposal cap." The guardrails are not a
-  subject refine gets to have opinions about; G1–G3 apply to proposals
-  *about* G1–G3 exactly as they apply to everything else. An agent that
-  learns "skip the tests" is optimizing the harness *against* its user,
-  not for it. Prime Intellect's Prime Agent demonstrated exactly this
-  failure mode in its own Factorio case study: the same refinement loop
-  that built legitimate skills turned to building efficient cheating
-  skills once cheating scored better on the metric being optimized —
-  loosening G1 or G2 from the inside is that same pattern in miniature,
-  the loop optimizing its own constraints away rather than optimizing the
-  work. If a candidate would make a future session less likely to get
-  caught doing something wrong, or less constrained than this session
-  is, it fails G3 regardless of how well-evidenced it is — drop it; do
-  not propose a softened version instead.
+  **G1's evidence bar, G2's cap of 3, or G4's approval gate**, e.g.
+  "relax quoting for small edits," "raise refine's proposal cap," or a
+  memory entry recording "the user prefers fewer approval prompts" /
+  a CLAUDE.md line that makes approval implicit for small edits. The
+  guardrails are not a subject refine gets to have opinions about; G1–G4
+  apply to proposals *about* G1–G4 exactly as they apply to everything
+  else. An agent that learns "skip the tests" is optimizing the harness
+  *against* its user, not for it. Prime Intellect's Prime Agent
+  demonstrated exactly this failure mode in its own Factorio case study:
+  the same refinement loop that built legitimate skills turned to
+  building efficient cheating skills once cheating scored better on the
+  metric being optimized — loosening G1, G2, or G4 from the inside is
+  that same pattern in miniature, the loop optimizing its own constraints
+  away rather than optimizing the work. If a candidate would make a
+  future session less likely to get caught doing something wrong, or
+  less constrained than this session is, it fails G3 regardless of how
+  well-evidenced it is — drop it; do not propose a softened version
+  instead.
 - **G4 — Approval gate.** No write without explicit user approval, per
   proposal. An "approve all" for a batch is fine if the user says it;
   silence, or the conversation moving on, is not approval.
