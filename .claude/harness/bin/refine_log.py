@@ -67,6 +67,25 @@ def _protected_bin_dir() -> Path:
     to edit the enforcement, not just the instructions."""
     return (paths.harness_root() / "bin").resolve()
 
+
+def _same_file(a, b) -> bool:
+    """True if `a` and `b` name the same file, by identity not spelling.
+
+    Path.resolve() canonicalizes symlinks and `..` but not case, so on a
+    case-insensitive filesystem (APFS default) a differently-cased path
+    string, or a hardlink (a second directory entry sharing the same
+    inode), would slip past a plain string comparison of resolved paths.
+    os.path.samefile() compares (st_dev, st_ino) instead, which is true
+    identity: it catches both. It requires both paths to exist, so when
+    one doesn't (yet) -- e.g. checking a not-yet-created file against a
+    protected path -- fall back to a case-normalized string comparison,
+    which is the best available signal in that case.
+    """
+    try:
+        return os.path.samefile(a, b)
+    except OSError:
+        return os.path.normcase(str(a)) == os.path.normcase(str(b))
+
 def _hash_file(target) -> str | None:
     """sha256 of target's current bytes, or None if it does not exist."""
     try:
@@ -146,6 +165,14 @@ def record(layer: str, target_path, rationale: str, evidence: str) -> dict:
     SKILL.md, or anything under `.claude/harness/bin/` -- G3's no-self-
     exemption rule, enforced here (not only in prose) so it cannot be
     bypassed by a proposal that simply doesn't mention it.
+
+    The comparison is by file identity (os.path.samefile: st_dev + st_ino),
+    not by resolved path string. Path.resolve() canonicalizes symlinks and
+    `..` but not case, so on a case-insensitive filesystem (APFS's default)
+    a differently-cased spelling of a protected path -- or a hardlink to
+    it, which resolves to a different path string entirely -- would slip
+    past a string comparison while opening the exact same file. See
+    _same_file().
     """
     if layer not in _VALID_LAYERS or "|" in layer or "\n" in layer:
         raise ValueError(
@@ -154,7 +181,21 @@ def record(layer: str, target_path, rationale: str, evidence: str) -> dict:
 
     resolved = Path(target_path).resolve()
     protected_bin = _protected_bin_dir()
-    if resolved in _protected_targets() or resolved == protected_bin or protected_bin in resolved.parents:
+
+    for protected in _protected_targets():
+        if _same_file(resolved, protected):
+            raise ValueError(
+                f"refine may not write to {resolved}: it enforces or "
+                "verifies the harness guardrails (G3 no-self-exemption)"
+            )
+
+    in_bin = _same_file(resolved, protected_bin)
+    if not in_bin:
+        for parent in resolved.parents:
+            if _same_file(parent, protected_bin):
+                in_bin = True
+                break
+    if in_bin:
         raise ValueError(
             f"refine may not write to {resolved}: it enforces or verifies "
             "the harness guardrails (G3 no-self-exemption)"

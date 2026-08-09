@@ -1,3 +1,4 @@
+import os
 import sys
 from pathlib import Path
 
@@ -297,6 +298,46 @@ def test_record_allows_ordinary_target_outside_denylist(tmp_path, isolated):
     target = tmp_path / "CLAUDE.md"
     entry = refine_log.record("rho", target, "r", "e")
     assert entry["target"] == str(target)
+
+
+# --- F1: denylist bypass via filename case / hardlink (identity, not string) ---
+
+def test_record_denies_case_variant_of_protected_target(isolated):
+    """F1: Path.resolve() canonicalizes symlinks and `..` but not case. On
+    a case-insensitive filesystem (APFS's default) a differently-cased
+    spelling of a protected path opens the exact same file and must be
+    denied just as the canonically-cased path is."""
+    canonical = REPO_ROOT / ".claude" / "skills" / "refine" / "SKILL.md"
+    variant = REPO_ROOT / ".claude" / "skills" / "refine" / "skill.md"
+
+    if not variant.exists() or not os.path.samefile(canonical, variant):
+        pytest.skip(
+            "filesystem is case-sensitive: lowercase variant does not "
+            "resolve to the protected target, so this bypass doesn't apply"
+        )
+
+    with pytest.raises(ValueError):
+        refine_log.record("G", variant, "r", "e")
+    assert list((isolated / "undo").glob("*.json")) == []
+
+
+def test_record_denies_hardlink_to_protected_target(tmp_path, isolated):
+    """F1: a hardlink shares the protected file's inode but resolves to a
+    completely different path string, so a string comparison of resolved
+    paths misses it entirely. Identity comparison (samefile) must not."""
+    canonical = REPO_ROOT / ".claude" / "skills" / "refine" / "SKILL.md"
+    link = tmp_path / "not-suspicious-at-all.md"
+
+    try:
+        os.link(canonical, link)
+    except OSError as exc:
+        pytest.skip(f"hardlinks unsupported on this filesystem/setup: {exc}")
+
+    assert os.path.samefile(canonical, link)
+
+    with pytest.raises(ValueError):
+        refine_log.record("G", link, "r", "e")
+    assert list((isolated / "undo").glob("*.json")) == []
 
 
 # --- IMPORTANT 3: CHANGELOG date stamped at commit time, not record time ---
