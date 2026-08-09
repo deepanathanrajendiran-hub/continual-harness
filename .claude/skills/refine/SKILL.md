@@ -39,6 +39,11 @@ and `~/.claude/agents/`. Use it only for lessons that genuinely apply to
 every project — a project-specific gotcha written globally is noise in
 every future session.
 
+`--global` changes *where* a proposal writes, not the process it writes
+through: Steps 5-6's propose-then-approve flow and G4's approval gate apply
+to every global write exactly as they apply to a project-local one — no
+flag-conditional shortcut exists anywhere in this skill.
+
 Two things `--global` does **not** change:
 
 - **Memory (M) routing is unaffected.** Step 2's target for M is already

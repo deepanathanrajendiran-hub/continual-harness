@@ -55,6 +55,12 @@ Every line logged as `minor (deferred)` in
 implementation tasks. None blocked its task's completion; all were reviewed
 and consciously left for a human to weigh before wider rollout.
 
+**Count: 23** — `grep -c "minor (deferred" progress.md` returns 23, and the
+23 bullets below (3+4+4+7+3+2, by task) are the full set. This is the only
+place in this document that states the count; if the two numbers ever
+diverge, this file is out of date and should be regenerated from
+`progress.md` directly rather than patched.
+
 **Task 1 — `tree_hash.py` / `paths.py`:**
 - Empty `watch_paths=[]` collapses to a full-cwd walk via `watch_paths or [cwd]`. Safe direction (more conservative), but ambiguous — should be `if watch_paths is None`.
 - `cwd` parameter is unannotated in `compute()`/`changed()`; the brief specified `cwd: str | Path`.
@@ -67,6 +73,8 @@ and consciously left for a human to weigh before wider rollout.
 - `REQUIRED_KEYS` validates top-level key presence only — `{"used": {}}` passes `load()` then raises a raw `KeyError` inside `checkpoint()`.
 
 **Task 3 — `refine_log.py`:**
+- Uncaught `FileNotFoundError` in `undo()` when the target's parent directory was deleted (fails loud, retriable). Confirmed still live: `_atomic_write()` builds `tmp = path.parent / ...` with no existence check on `path.parent`.
+- `commit_entry()` flips the entry's `committed` flag (via `_write()`) *before* appending the CHANGELOG line, so a crash in that window leaves an entry marked committed with no CHANGELOG line — the audit trail under-reports. The reviewer suggested reversing the order so it over-reports instead. **This one deserves more weight than "minor" suggests**: it is the same failure class as the UTC date-boundary bug Task 6 spent a full fix round closing — a silent gap between what actually happened on disk and what a CHANGELOG-line count can see — and it sits in the exact file (`CHANGELOG.md`) that `refine`'s own G2 cap-enforcement pre-flight now reads to decide whether it has budget left. A promotion decision that trusts G2's cap globally is implicitly trusting this ordering never gets interrupted.
 - `undo()`'s CHANGELOG append is still a plain non-atomic append; a torn write leaves a partial log line.
 - If `_write()` fails after the target has already been atomically restored, the entry stays flagged un-reverted while the file is already back — safe (next `undo()` raises `UndoConflict` rather than double-reverting) but strands that entry behind `force=True`.
 
@@ -89,3 +97,27 @@ and consciously left for a human to weigh before wider rollout.
 - `/refine <focus hint>` from the spec's invocation line is absent from every task in the plan — never implemented anywhere.
 
 None of the above are regressions or known-broken behavior; they are documented, reviewed trade-offs or rough edges, each left in place by an explicit controller ruling rather than an oversight. They're listed here so a human deciding on promotion has the same picture the implementation loop had.
+
+## Process notes
+
+Two items from `progress.md` that aren't `minor (deferred)` lines but bear
+on trusting this project enough to promote it — a promotion decision should
+see both:
+
+- **Task 5 — deliberate spec deviation.** The shipped `add_subagent()` drops
+  the `session` field the design spec listed for staleness detection.
+  Reason: no session identifier exists anywhere in the harness and nothing
+  records which turn a session began at, so the rule built on `session` was
+  not computable. The blanket "after a restart, treat every entry as dead"
+  rule replaces it and is sufficient and executable — this is why T10 (see
+  above) checks for exactly that blanket behavior, not a session-id
+  comparison.
+- **Task 6 — security event.** During round-4 re-review, the re-reviewer
+  ran `mv` on the live, tracked `.claude/harness/CHANGELOG.md` to simulate
+  the missing-file case, instead of using a temp directory — nobody
+  authorized touching that file. The controller verified afterward that the
+  file was present, byte-identical to the committed version, with a clean
+  working tree and no stray copies. It was recoverable *only* because it
+  was already committed at the time. Action taken: all review/re-review
+  dispatches from that point on state explicitly that the live repo is
+  read-only for them and that simulations belong in a temp directory.
