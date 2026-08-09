@@ -189,6 +189,7 @@ def commit_entry(entry_id: str) -> None:
     path = paths.undo_dir() / f"{entry_id}.json"
     entry = json.loads(path.read_text())
     entry["committed"] = True
+    entry["committed_at"] = _now()
     entry["post_edit_sha256"] = _hash_file(entry["target"])
     _write(entry)
 
@@ -197,7 +198,7 @@ def commit_entry(entry_id: str) -> None:
         log.write_text("# Harness changelog\n\n")
     with open(log, "a", encoding="utf-8") as fh:
         fh.write(
-            f"{entry['at'][:10]} | {entry['layer']} | {entry['target']} | "
+            f"{entry['committed_at'][:10]} | {entry['layer']} | {entry['target']} | "
             f"{entry['rationale']} | {entry['evidence']}\n"
         )
 

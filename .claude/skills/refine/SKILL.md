@@ -141,8 +141,10 @@ a cap the editor can lift at will by calling itself again is not a cap.
 **Before proposing anything, check the persisted floor, not your own
 recollection.** Read `.claude/harness/CHANGELOG.md` and count the
 non-`REVERTED` entries dated **today in UTC — never local time.**
-`commit_entry()` stamps `entry["at"][:10]` from
-`datetime.now(timezone.utc)`, so every date already in the file is UTC.
+`commit_entry()` stamps `entry["committed_at"][:10]` from
+`datetime.now(timezone.utc)` at commit time — not `record()`'s earlier
+snapshot time — so every date already in the file is UTC and reflects
+when the edit actually landed, not when it was queued.
 Filtering by local "today" instead can silently *undercount*: for a user
 east of UTC, entries committed in their early morning carry *yesterday's*
 UTC date and would be skipped by a local-date filter, and the agent

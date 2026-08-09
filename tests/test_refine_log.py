@@ -297,3 +297,29 @@ def test_record_allows_ordinary_target_outside_denylist(tmp_path, isolated):
     target = tmp_path / "CLAUDE.md"
     entry = refine_log.record("rho", target, "r", "e")
     assert entry["target"] == str(target)
+
+
+# --- IMPORTANT 3: CHANGELOG date stamped at commit time, not record time ---
+
+def test_changelog_date_is_commit_time_not_record_time(tmp_path, isolated, monkeypatch):
+    """IMPORTANT 3: record() sets `at` before the edit; commit can land
+    after midnight UTC. The CHANGELOG line must reflect commit time, or a
+    late-night edit is silently attributed to yesterday and undercounts
+    against today's G2 cap -- the direction the skill says must never
+    happen."""
+    times = iter([
+        "2026-08-08T23:59:50+00:00",  # record() timestamp
+        "2026-08-09T00:00:10+00:00",  # commit_entry() timestamp
+    ])
+    monkeypatch.setattr(refine_log, "_now", lambda: next(times))
+
+    target = tmp_path / "x.md"
+    entry = refine_log.record("G", target, "r", "e")
+    assert entry["at"].startswith("2026-08-08")
+
+    target.write_text("content")
+    refine_log.commit_entry(entry["id"])
+
+    line = refine_log.paths.changelog().read_text().strip().splitlines()[-1]
+    date = line.split("|")[0].strip()
+    assert date == "2026-08-09"
