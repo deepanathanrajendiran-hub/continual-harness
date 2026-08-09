@@ -1,0 +1,14 @@
+{
+  "id": "0003",
+  "at": "2026-08-09T21:20:49.634988+00:00",
+  "layer": "M",
+  "target": "/Users/deeps/.claude/projects/-Users-deeps-Documents-NEW-STUFF-fun-/memory/verify-regression-tests-discriminate.md",
+  "rationale": "record that a regression test must be observed failing against the pre-fix code",
+  "evidence": "Task 1's regression test passed against pre-fix commit 6d03005, guarding nothing",
+  "previous_content": null,
+  "created_file": true,
+  "committed": true,
+  "reverted": false,
+  "committed_at": "2026-08-09T21:21:22.697893+00:00",
+  "post_edit_sha256": "8de3f998eb37dd292f636840d06bc436b90bc054cc382e512d5b94d18c0ff651"
+}

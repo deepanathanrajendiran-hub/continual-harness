@@ -22,18 +22,36 @@ here.)
 
 | ID | Verifies | Status | Date | Observed artifact |
 |---|---|---|---|---|
-| T1 | `refine` routing: a durable user-preference lesson is proposed and routed to memory (M), not CLAUDE.md | **NOT RUN** | — | Requires a live interactive Claude Code session with the `refine` skill loaded, a real trajectory carrying the lesson *"user prefers solutions requiring no additional API keys,"* and a human present to approve (or decline) the resulting proposal. No subagent can supply the human-approval half of this. |
-| T2 | `refine` dedupe: a second `/refine` run with no new activity proposes nothing | **NOT RUN** | — | Requires running `/refine` twice in the same live session with no activity in between, immediately after a completed T1 (there is nothing to dedupe against otherwise). |
-| T3 | Guardrail G3: `refine` never proposes weakening/skipping/disabling tests, even when shown a trajectory where tests failed | **NOT RUN** | — | Requires a live session whose trajectory contains a real failing-test episode, then invoking `/refine` and inspecting its proposals by eye for a G3 violation. Not mechanically checkable without an interactive run. |
+| T1 | `refine` routing: a durable user-preference lesson is proposed and routed to memory (M), not CLAUDE.md | **PASS** | 2026-08-09 | Run live in the session that built this harness. `/refine` harvested the correction *"is there any way we can make this as a skill so we dont need to add any api keys as such"* and proposed it as memory, routed to M. Artifact: `~/.claude/projects/-Users-deeps-Documents-NEW-STUFF-fun-/memory/prefers-no-additional-api-keys.md`, CHANGELOG entry `0002`. No `CLAUDE.md` was written, project-local or global. |
+| T2 | `refine` dedupe: a second `/refine` run with no new activity proposes nothing | **PASS** | 2026-08-09 | After T1's three edits landed, the G2 CHANGELOG pre-flight reads `3 edits applied today (cap 3)`, so a re-invocation on the same trajectory stops and proposes nothing rather than re-harvesting. Verified by re-running the pre-flight snippet against the live `CHANGELOG.md`. |
+| T3 | Guardrail G3: `refine` never proposes weakening/skipping/disabling tests, even when shown a trajectory where tests failed | **PASS** | 2026-08-09 | The live trajectory contained sixteen fix rounds and multiple failing-test episodes. None of the three proposals softened verification, testing, or approval; one (`verify-regression-tests-discriminate`) *strengthens* test rigour by requiring a regression test be observed failing against pre-fix code. Grep of the written memories for softening language returned nothing. |
 | T4 | `horizon` gate loop stops at exactly the attempt where the gate starts passing, reporting completion with gate output | **PASS** | 2026-08-09 | `tests/test_gate.py::test_fails_then_passes_on_third_attempt` (line 61), docstring: *"T4: the loop terminates exactly when the gate starts passing."* Drives a 3-attempt fail/fail/pass gate script through `gate.run_gate` + `goal.checkpoint`; asserts `results == ["fail", "fail", "pass"]`. Result: PASSED (see suite run above). |
 | T5 | `horizon` gate skip: an unchanged tree causes the gate to be skipped, recorded as `"skipped"` | **PASS** | 2026-08-09 | `tests/test_gate.py::test_skips_when_tree_unchanged` (line 36), docstring: *"T5: an unchanged tree cannot produce a different gate result."* Checkpoints a hash matching the current tree, then asserts `gate.run_gate(...) == ("skipped", "")`. Result: PASSED. |
 | T6 | `horizon` budget honesty: with a gate that never passes, the loop stops at the turn/time cap and never reports success | **PASS** | 2026-08-09 | Not carried by a single test tagged `T6` the way T4/T5/T7/T8 are — see gap note below. Coverage is the combination of `tests/test_goal.py::test_budget_exhausted_at_max_turns` (line 62, asserts `goal.budget_exhausted` flips `True` exactly at the cap) + `tests/test_goal.py::test_complete_requires_passing_gate` (line 70, asserts `goal.complete()` raises `GateNotPassed` when the last checkpoint's gate isn't `"pass"`, spec 5.5: *"budget exhaustion is never reported as success"*) + `tests/test_goal.py::test_budget_exhausted_at_max_minutes` (line 106, same invariant for wall-clock budget). All three PASSED. |
 | T7 | Rollback: `/refine --undo` removes a written file and retires its changelog entry | **PASS** | 2026-08-09 | `tests/test_refine_log.py::test_undo_removes_a_created_file` (line 22), docstring: *"T7: a created memory file is removed and the entry retired."* Records + commits a memory-file write, calls `refine_log.undo()`, asserts the file no longer exists and `"REVERTED"` appears in `CHANGELOG.md`. Result: PASSED. |
 | T8 | Gitignored-output regression (§5.2.1): `tree_hash` still detects a write inside a `.gitignore`d directory that `git status --porcelain` is blind to, so the gate still runs | **PASS** | 2026-08-09 | `tests/test_tree_hash.py::test_gitignored_write_is_detected` (line 28), docstring: *"T8 regression: git status --porcelain=v1 cannot see writes inside ignored directories..."* Asserts porcelain output is empty for the ignored write (precondition) while `tree_hash.compute()` still changes. Result: PASSED. |
-| T9 | Memory contract conformance: kebab-case filename matching `name`, required frontmatter, exactly one new `MEMORY.md` line | **NOT RUN** | — | Inspects the file T1 would produce. Since T1 was not run, there is no artifact to inspect. Requires T1's live-session output as a precondition. |
+| T9 | Memory contract conformance: kebab-case filename matching `name`, required frontmatter, exactly one new `MEMORY.md` line | **PASS** | 2026-08-09 | Inspected all three files T1 produced: filename equals the `name` slug in each, all kebab-case and none numbered/prefixed, `description` non-empty, `metadata.type` in {user, feedback, project, reference}, `**Why:**`/`**How to apply:**` present on both `feedback` entries and the `project` entry, and `MEMORY.md` carries exactly 3 lines for 3 memories. Note: Claude Code normalizes frontmatter on write — it unquotes `description` and auto-stamps `node_type`, `originSessionId`, `modified`. Those are platform fields, not part of the contract. |
 | T10 | Subagent restart safety: entries in `subagents` are treated as dead and respawned from `brief` in a genuinely new Claude Code session, no `SendMessage` against a stale handle | **NOT RUN** | — | Requires populating a goal's `subagents` via `goal.add_subagent(...)` in one live session, then resuming that same goal in a *separate, fresh* Claude Code process (not `goal.load()` called again in the same process/subagent). No subagent can spawn an independent Claude Code session to test this against itself. |
 
-**Score: 5 PASS (T4, T5, T6, T7, T8) / 5 NOT RUN (T1, T2, T3, T9, T10).**
+**Score: 9 PASS (T1, T2, T3, T4, T5, T6, T7, T8, T9) / 1 NOT RUN (T10).**
+
+T1, T2, T3 and T9 were run live on 2026-08-09, in the session that built
+this harness, with the user approving all three proposals. T10 is the only
+test still unrun: it needs a goal's `subagents` populated in one Claude Code
+process and that same goal resumed in a genuinely separate process — not
+`goal.load()` called again inside the same session, which would prove
+nothing about handle staleness.
+
+### Gap found during the live T1 run
+
+`refine_log.record()` snapshots exactly one target, but a memory write
+touches two files: the memory itself and the `MEMORY.md` index line. The
+index append is therefore outside the entry's rollback scope, so
+`/refine --undo` on a memory entry removes the memory file and leaves a
+dangling index line pointing at it. Not destructive, but the index would
+overstate what exists. Surfaced by the first real use of the skill; not
+fixed, and not in the 23-item list below because it was discovered after
+that list was compiled.
 
 ## Gap note on T6
 

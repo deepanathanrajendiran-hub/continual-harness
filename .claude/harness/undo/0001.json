@@ -1,0 +1,14 @@
+{
+  "id": "0001",
+  "at": "2026-08-09T21:20:49.634064+00:00",
+  "layer": "M",
+  "target": "/Users/deeps/.claude/projects/-Users-deeps-Documents-NEW-STUFF-fun-/memory/project-dir-has-trailing-space.md",
+  "rationale": "record that the project dir name ends with a space so paths are always quoted",
+  "evidence": "cd \"/Users/deeps/Documents/NEW STUFF/fun\" -> \"(eval):cd:1: no such file or directory\"; fixed by keeping the trailing space",
+  "previous_content": null,
+  "created_file": true,
+  "committed": true,
+  "reverted": false,
+  "committed_at": "2026-08-09T21:21:22.696519+00:00",
+  "post_edit_sha256": "15415a668f92f44e105cdceaab885541053bc1b4b3e4c955dc60718435a23cb3"
+}
