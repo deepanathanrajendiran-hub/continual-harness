@@ -42,10 +42,9 @@ Inspect the file written by T1.
 ## T10 — subagent restart safety
 
 Populate `subagents` in a goal (see `.claude/skills/horizon/SKILL.md`,
-"Subagents" — append an entry via `goal._save`, since `goal.py` exposes
-no other function that persists a `subagents` mutation), then resume it
-in a fresh session (a new Claude Code session, not `goal.load` called
-again in the same process).
+"Subagents" — append an entry via `goal.add_subagent(slug, role, name,
+brief)`), then resume it in a fresh session (a new Claude Code session,
+not `goal.load` called again in the same process).
 
 **Pass:** every entry in `subagents` is treated as dead and respawned
 from its `brief` plus the relevant checkpoints; no `SendMessage` is
