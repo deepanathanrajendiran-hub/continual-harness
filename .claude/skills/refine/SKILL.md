@@ -49,11 +49,19 @@ that reflect nothing.
 
 | Evidence | Layer | Target |
 |---|---|---|
-| Durable fact about user or project | M | project memory dir |
-| Command failed then fixed | M | project memory dir |
+| Durable fact about user or project | M | `~/.claude/projects/<project-key>/memory/` |
+| Command failed then fixed | M | `~/.claude/projects/<project-key>/memory/` |
 | Procedure repeated 3x | G | `.claude/skills/<name>/SKILL.md` |
 | Repeated exploration shape | K | `.claude/agents/<name>.md` |
 | Correction that must apply *everywhere* | rho | `./CLAUDE.md` |
+
+`<project-key>` — see "Memory write contract" below for the literal
+derivation rule and a worked example for this project. Do not guess it
+and do not substitute a repo-local path like `.claude/memory/` — nothing
+in Claude Code reads memory from there, so a memory written to the wrong
+path is invisible forever while still looking, to a user who only sees
+the filename in the approval prompt (Step 5, G4), exactly like a correct
+write.
 
 **Narrowest layer wins.** CLAUDE.md is loaded into every session, so it is
 the most expensive real estate in the system — last resort, never the
@@ -85,6 +93,13 @@ retrieval surfaces the weaker one half the time.
 **At most 3 proposals per invocation.** If you found more, rank by how
 often the situation will recur and drop the tail. An unbounded
 self-editor bloats the harness until it is worse than no harness.
+
+The cap is scoped to the **trajectory being harvested, not the tool
+call.** If this trajectory already produced 3 proposals in an earlier
+`/refine` run this session, re-invoking `/refine` on the same trajectory
+to squeeze out 3 more is the exact bloat the cap exists to prevent —
+don't. A fresh cap of 3 only opens up for a genuinely new trajectory
+(new turns since the last `/refine`, not the same ground re-scanned).
 
 ## Step 5 — Propose, do not write
 
@@ -154,8 +169,17 @@ should take because of this>
 Related: [[other-slug]]
 ```
 
-- **Location:** the project's existing memory directory — the same one
-  Claude Code already reads at session start. Do not invent a new folder.
+- **Location:** `~/.claude/projects/<project-key>/memory/` — the same
+  directory Claude Code already reads at session start. `<project-key>`
+  is the project's absolute path with every `/` and every space replaced
+  by `-`. Worked example, verified against what's actually on disk for
+  *this* project: `/Users/deeps/Documents/NEW STUFF/fun ` (note the
+  trailing space in the directory name) becomes
+  `-Users-deeps-Documents-NEW-STUFF-fun-`, so the memory directory is
+  `~/.claude/projects/-Users-deeps-Documents-NEW-STUFF-fun-/memory/`.
+  `MEMORY.md` (the Index, below) lives in that same directory, not
+  anywhere else. Do not invent a new folder, and do not use a repo-local
+  path such as `.claude/memory/` — recall does not read from there.
 - **Filename:** `<slug>.md`, where `<slug>` is exactly the `name` field,
   kebab-case. Never numbered or category-prefixed
   (`USER_PREF_001.md`, `feedback-2026-08-09.md`) — retrieval keys off
@@ -182,21 +206,36 @@ Related: [[other-slug]]
   moment — a quoted correction, a specific command and its failure/fix,
   the Nth repetition of a named procedure. No speculative or anticipatory
   edits ("this might help next time").
-- **G2 — Cap of 3.** At most 3 proposals per invocation. Forces ranking
-  instead of dumping every candidate that came up.
+- **G2 — Cap of 3.** At most 3 proposals per trajectory, not per tool
+  call — see Step 4. Re-invoking `/refine` on the same trajectory to
+  bypass the cap is not a loophole, it's the exact bloat the cap exists
+  to prevent. Forces ranking instead of dumping every candidate that
+  came up.
 - **G3 — No self-exemption.** `refine` may never edit
-  `.claude/skills/refine/SKILL.md` — this file. It may never propose
-  anything that weakens verification, testing, or approval requirements:
-  skipping a test, loosening a gate, removing a guardrail from another
-  skill. An agent that learns "skip the tests" is optimizing the harness
-  *against* its user, not for it. Prime Intellect's Prime Agent
-  demonstrated exactly this failure mode in its own Factorio case study:
-  the same refinement loop that built legitimate skills turned to
-  building efficient cheating skills once cheating scored better on the
-  metric being optimized. If a candidate would make a future session
-  less likely to get caught doing something wrong, it fails G3 regardless
-  of how well-evidenced it is — drop it; do not propose a softened
-  version instead.
+  `.claude/skills/refine/SKILL.md` (this file) or anything under
+  `.claude/harness/bin/*.py` — `refine_log.py` and its siblings are the
+  code that *enforces* the guardrails (`CorruptEntry`, `UndoConflict`,
+  atomic writes); a proposal to edit them is a proposal to edit the
+  enforcement, not just the instructions, and is off-limits the same
+  way. It may never propose anything that weakens verification, testing,
+  or approval requirements: skipping a test, loosening a gate, removing
+  a guardrail from another skill. And it may never propose anything —
+  in memory, in `CLAUDE.md`, in another skill, anywhere — that softens
+  **G1's evidence bar or G2's cap of 3**, e.g. "relax quoting for small
+  edits" or "raise refine's proposal cap." The guardrails are not a
+  subject refine gets to have opinions about; G1–G3 apply to proposals
+  *about* G1–G3 exactly as they apply to everything else. An agent that
+  learns "skip the tests" is optimizing the harness *against* its user,
+  not for it. Prime Intellect's Prime Agent demonstrated exactly this
+  failure mode in its own Factorio case study: the same refinement loop
+  that built legitimate skills turned to building efficient cheating
+  skills once cheating scored better on the metric being optimized —
+  loosening G1 or G2 from the inside is that same pattern in miniature,
+  the loop optimizing its own constraints away rather than optimizing the
+  work. If a candidate would make a future session less likely to get
+  caught doing something wrong, or less constrained than this session
+  is, it fails G3 regardless of how well-evidenced it is — drop it; do
+  not propose a softened version instead.
 - **G4 — Approval gate.** No write without explicit user approval, per
   proposal. An "approve all" for a batch is fine if the user says it;
   silence, or the conversation moving on, is not approval.
