@@ -27,8 +27,24 @@ class GateNotPassed(Exception):
     """Raised when completion is attempted without a passing gate."""
 
 
+class GoalClosed(GoalStateError):
+    """Raised when an operation is attempted on a goal that is no longer active."""
+
+
+REQUIRED_KEYS = (
+    "slug", "goal", "cwd", "gate", "watch_paths", "budget",
+    "used", "status", "checkpoints", "subagents",
+)
+
+
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def _bounded(text: str) -> str:
+    if len(text) > MAX_GATE_OUTPUT:
+        return text[:MAX_GATE_OUTPUT] + "\n...[truncated]"
+    return text
 
 
 def slugify(text: str) -> str:
@@ -78,8 +94,15 @@ def load(slug: str) -> dict:
         state = json.loads(p.read_text())
     except (json.JSONDecodeError, OSError) as e:
         raise GoalStateError(f"goal state at {p} is unreadable: {e}") from e
-    if "slug" not in state or "gate" not in state:
-        raise GoalStateError(f"goal state at {p} is missing required fields")
+    if not isinstance(state, dict):
+        raise GoalStateError(
+            f"goal state at {p} is not a JSON object (got {type(state).__name__})"
+        )
+    missing = [k for k in REQUIRED_KEYS if k not in state]
+    if missing:
+        raise GoalStateError(
+            f"goal state at {p} is missing required fields: {', '.join(missing)}"
+        )
     return state
 
 
@@ -88,8 +111,11 @@ def checkpoint(slug, did, next_action, tree_hash_value,
     if gate_result not in ("pass", "fail", "skipped"):
         raise ValueError(f"gate_result must be pass|fail|skipped, got {gate_result!r}")
     state = load(slug)
-    if len(gate_output) > MAX_GATE_OUTPUT:
-        gate_output = gate_output[:MAX_GATE_OUTPUT] + "\n...[truncated]"
+    if state["status"] != "active":
+        raise GoalClosed(
+            f"cannot checkpoint: goal status is {state['status']!r}, not active"
+        )
+    gate_output = _bounded(gate_output)
     state["checkpoints"].append({
         "turn": state["used"]["turns"] + 1,
         "at": _now(),
@@ -118,6 +144,10 @@ def budget_exhausted(state: dict) -> bool:
 
 def complete(slug: str, gate_output: str) -> dict:
     state = load(slug)
+    if state["status"] != "active":
+        raise GoalClosed(
+            f"cannot complete: goal status is {state['status']!r}, not active"
+        )
     last = state["checkpoints"][-1] if state["checkpoints"] else None
     if last is None or last["gate"] != "pass":
         raise GateNotPassed(
@@ -125,7 +155,7 @@ def complete(slug: str, gate_output: str) -> dict:
             "is reported as a partial result, never as success."
         )
     state["status"] = "complete"
-    state["gate_evidence"] = gate_output
+    state["gate_evidence"] = _bounded(gate_output)
     state["completed_at"] = _now()
     return _save(state)
 

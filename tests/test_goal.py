@@ -1,3 +1,4 @@
+import json
 import sys
 from pathlib import Path
 
@@ -100,3 +101,61 @@ def test_gate_output_is_bounded():
     stored = goal.load(state["slug"])["checkpoints"][0]["gate_output"]
     assert len(stored) <= goal.MAX_GATE_OUTPUT + 32
     assert "truncated" in stored
+
+
+def test_budget_exhausted_at_max_minutes():
+    """Spec 5.5: wall-clock budget must terminate the loop too, not just
+    turn count. Backdate started rather than sleeping."""
+    state = _make(max_turns=1000, max_minutes=1)
+    state["used"]["started"] = "2000-01-01T00:00:00+00:00"
+    goal._save(state)
+    assert goal.budget_exhausted(goal.load(state["slug"])) is True
+
+
+def test_load_non_dict_raises_goal_state_error(isolated_goals):
+    """Valid JSON that isn't an object (e.g. a bare number) must still
+    surface as GoalStateError, not a raw TypeError from 'in' on a non-dict."""
+    (isolated_goals / "notadict.json").write_text("42")
+    with pytest.raises(goal.GoalStateError):
+        goal.load("notadict")
+
+
+def test_load_missing_keys_raises(isolated_goals):
+    """Spec 6: every field the module depends on must be validated at
+    load time, not discovered later as a raw KeyError."""
+    partial = {"slug": "partial", "gate": {"kind": "command", "value": "x"}}
+    (isolated_goals / "partial.json").write_text(json.dumps(partial))
+    with pytest.raises(goal.GoalStateError):
+        goal.load("partial")
+
+
+def test_checkpoint_rejects_invalid_gate_result():
+    state = _make()
+    with pytest.raises(ValueError):
+        goal.checkpoint(state["slug"], "did", "next", "h", "maybe")
+
+
+def test_complete_bounds_gate_output():
+    """Spec 6: a runaway gate must not bloat the state file, even on the
+    passing/completing call."""
+    state = _make()
+    goal.checkpoint(state["slug"], "fixed it", "none", "h1", "pass", "ok")
+    done = goal.complete(state["slug"], "E" * 20000)
+    assert len(done["gate_evidence"]) <= goal.MAX_GATE_OUTPUT + 32
+    assert "truncated" in done["gate_evidence"]
+
+
+def test_complete_after_abandon_raises_goal_closed():
+    state = _make()
+    goal.checkpoint(state["slug"], "fixed it", "none", "h1", "pass", "ok")
+    goal.abandon(state["slug"], "cancelled")
+    with pytest.raises(goal.GoalClosed):
+        goal.complete(state["slug"], "ok")
+
+
+def test_checkpoint_after_complete_raises_goal_closed():
+    state = _make()
+    goal.checkpoint(state["slug"], "fixed it", "none", "h1", "pass", "ok")
+    goal.complete(state["slug"], "ok")
+    with pytest.raises(goal.GoalClosed):
+        goal.checkpoint(state["slug"], "more", "next", "h2", "pass", "ok")
