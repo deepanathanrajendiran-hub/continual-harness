@@ -159,3 +159,29 @@ def test_checkpoint_after_complete_raises_goal_closed():
     goal.complete(state["slug"], "ok")
     with pytest.raises(goal.GoalClosed):
         goal.checkpoint(state["slug"], "more", "next", "h2", "pass", "ok")
+
+
+def test_abandon_after_complete_raises_goal_closed(isolated_goals):
+    """Spec 6, symmetric case: a terminal status must not be silently
+    overwritten by any mutator, not just checkpoint()/complete(). A
+    rejected call must leave the on-disk file untouched."""
+    state = _make()
+    goal.checkpoint(state["slug"], "fixed it", "none", "h1", "pass", "ok")
+    goal.complete(state["slug"], "ok")
+    path = isolated_goals / f"{state['slug']}.json"
+    before = path.read_text()
+    with pytest.raises(goal.GoalClosed):
+        goal.abandon(state["slug"], "cancelled")
+    assert path.read_text() == before
+    reloaded = goal.load(state["slug"])
+    assert reloaded["status"] == "complete"
+    assert reloaded["gate_evidence"] == "ok"
+
+
+def test_abandon_after_abandon_raises_goal_closed():
+    state = _make()
+    goal.abandon(state["slug"], "first reason")
+    with pytest.raises(goal.GoalClosed):
+        goal.abandon(state["slug"], "second reason")
+    reloaded = goal.load(state["slug"])
+    assert reloaded["abandoned_reason"] == "first reason"

@@ -162,6 +162,10 @@ def complete(slug: str, gate_output: str) -> dict:
 
 def abandon(slug: str, reason: str) -> dict:
     state = load(slug)
+    if state["status"] != "active":
+        raise GoalClosed(
+            f"cannot abandon: goal status is {state['status']!r}, not active"
+        )
     state["status"] = "abandoned"
     state["abandoned_reason"] = reason
     state["abandoned_at"] = _now()
