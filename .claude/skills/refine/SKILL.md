@@ -29,6 +29,43 @@ print('module loads OK')
 
 Quote the path — the project directory name ends in a space.
 
+## Scope
+
+Default targets are project-local: `./CLAUDE.md`, `.claude/skills/`,
+`.claude/agents/`, and the project memory dir.
+
+`/refine --global` retargets to `~/.claude/CLAUDE.md`, `~/.claude/skills/`,
+and `~/.claude/agents/`. Use it only for lessons that genuinely apply to
+every project — a project-specific gotcha written globally is noise in
+every future session.
+
+Two things `--global` does **not** change:
+
+- **Memory (M) routing is unaffected.** Step 2's target for M is already
+  `~/.claude/projects/<project-key>/memory/` — under the user's home
+  directory, keyed by *this* project's path, not a repo-local folder.
+  There is no separate global memory store to retarget to (confirmed: no
+  `~/.claude/memory/` exists), so `--global` has nothing to do here. A
+  memory-routed proposal always writes to the current project's memory
+  dir regardless of the flag; if a lesson is durable enough to want
+  writing everywhere, route it to rho or G instead (Step 2), not to M.
+- **Changelog/undo bookkeeping stays project-local.** `record()` and
+  `commit_entry()` always write to *this* project's
+  `.claude/harness/CHANGELOG.md` and `.claude/harness/undo/`, even for a
+  `--global` proposal whose edit target is under `~/.claude/`. There is
+  no `~/.claude/harness/` — promoting the bookkeeping module itself is
+  spec §8's job, not this flag's, and until that promotion happens the
+  only rollback ledger that exists is this one. `/refine --undo` after a
+  `--global` write still reverts it, from this same project's log.
+
+`--global` retargets *where a proposal writes*, not *which file governs
+the edit itself*. G3's no-self-exemption rule still applies to the global
+copy once one exists: after promotion, `~/.claude/skills/refine/SKILL.md`
+and `~/.claude/harness/bin/*.py` (if and when they exist) are exactly as
+off-limits to a self-proposal as their project-local counterparts are
+today. A flag that changes the write path does not change what refine is
+allowed to propose about itself.
+
 ## Step 1 — Harvest turning points
 
 Trajectories are mostly noise: file reads, tool output, exploration that
