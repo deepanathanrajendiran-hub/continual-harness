@@ -1,0 +1,104 @@
+import subprocess
+import sys
+from pathlib import Path
+
+BIN = Path(__file__).resolve().parents[1] / ".claude" / "harness" / "bin"
+sys.path.insert(0, str(BIN))
+
+import tree_hash  # noqa: E402
+
+
+def _repo(tmp_path: Path, gitignore: str = "out/\nnode_modules/\n") -> Path:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
+    (repo / ".gitignore").write_text(gitignore)
+    (repo / "tracked.txt").write_text("hello")
+    subprocess.run(["git", "add", "-A"], cwd=repo, check=True)
+    subprocess.run(
+        ["git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "init"],
+        cwd=repo, check=True,
+    )
+    return repo
+
+
+def test_gitignored_write_is_detected(tmp_path):
+    """T8 regression: git status --porcelain=v1 cannot see writes inside
+    ignored directories, so a research goal writing only to out/ would have
+    its gate wrongly skipped."""
+    repo = _repo(tmp_path)
+    before = tree_hash.compute(repo)
+
+    (repo / "out").mkdir()
+    (repo / "out" / "report.md").write_text("findings v1")
+
+    porcelain = subprocess.run(
+        ["git", "status", "--porcelain=v1"], cwd=repo,
+        capture_output=True, text=True, check=True,
+    ).stdout
+    assert porcelain == "", "precondition: git must be blind to the ignored write"
+
+    assert tree_hash.compute(repo) != before, "tree_hash must still detect it"
+
+
+def test_tracked_edit_is_detected(tmp_path):
+    repo = _repo(tmp_path)
+    before = tree_hash.compute(repo)
+    (repo / "tracked.txt").write_text("changed")
+    assert tree_hash.compute(repo) != before
+
+
+def test_stable_when_nothing_changes(tmp_path):
+    repo = _repo(tmp_path)
+    assert tree_hash.compute(repo) == tree_hash.compute(repo)
+
+
+def test_excluded_dirs_are_ignored(tmp_path):
+    repo = _repo(tmp_path)
+    (repo / "node_modules").mkdir()
+    before = tree_hash.compute(repo)
+    (repo / "node_modules" / "junk.js").write_text("noise")
+    assert tree_hash.compute(repo) == before
+
+
+def test_watch_paths_add_coverage_for_ignored_output(tmp_path):
+    """watch_paths scopes the mtime walk only. Git state always
+    contributes, which is the conservative direction: it can add a
+    detection, never remove one."""
+    repo = _repo(tmp_path)
+    (repo / "out").mkdir()
+    watch = [str(repo / "out")]
+
+    before = tree_hash.compute(repo, watch)
+    (repo / "out" / "r.md").write_text("real output")
+    assert tree_hash.compute(repo, watch) != before
+
+    # And a tracked change is still caught even though it sits outside watch.
+    mid = tree_hash.compute(repo, watch)
+    (repo / "tracked.txt").write_text("edited")
+    assert tree_hash.compute(repo, watch) != mid
+
+
+def test_changed_is_true_without_previous(tmp_path):
+    repo = _repo(tmp_path)
+    assert tree_hash.changed(repo, None, None) is True
+
+
+def test_changed_is_true_on_doubt(tmp_path, monkeypatch):
+    """Skip asymmetry: a false skip is a correctness bug, so any failure
+    to compute must report changed."""
+    repo = _repo(tmp_path)
+    monkeypatch.setattr(
+        tree_hash, "compute",
+        lambda *a, **k: (_ for _ in ()).throw(OSError("boom")),
+    )
+    assert tree_hash.changed(repo, None, "abc123") is True
+
+
+def test_non_git_directory_uses_walk_only(tmp_path):
+    plain = tmp_path / "plain"
+    plain.mkdir()
+    (plain / "a.txt").write_text("one")
+    before = tree_hash.compute(plain)
+    (plain / "b.txt").write_text("two")
+    assert tree_hash.compute(plain) != before
