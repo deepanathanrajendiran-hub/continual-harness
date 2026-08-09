@@ -65,11 +65,12 @@ Two things `--global` does **not** change:
 
 `--global` retargets *where a proposal writes*, not *which file governs
 the edit itself*. G3's no-self-exemption rule still applies to the global
-copy once one exists: after promotion, `~/.claude/skills/refine/SKILL.md`
-and `~/.claude/harness/bin/*.py` (if and when they exist) are exactly as
-off-limits to a self-proposal as their project-local counterparts are
-today. A flag that changes the write path does not change what refine is
-allowed to propose about itself.
+copy once one exists: after promotion, `~/.claude/skills/refine/SKILL.md`,
+`~/.claude/skills/horizon/SKILL.md`, and `~/.claude/harness/bin/*.py` (if
+and when they exist) are exactly as off-limits to a self-proposal as
+their project-local counterparts are today. A flag that changes the
+write path does not change what refine is allowed to propose about
+itself.
 
 ## Step 1 — Harvest turning points
 
@@ -345,14 +346,38 @@ Related: [[other-slug]]
   the cap is not a loophole, it's the exact bloat the cap exists to prevent.
   Forces ranking instead of dumping every candidate that came up.
 - **G3 — No self-exemption.** `refine` may never edit
-  `.claude/skills/refine/SKILL.md` (this file) or anything under
-  `.claude/harness/bin/*.py` — `refine_log.py` and its siblings are the
-  code that *enforces* the guardrails (`CorruptEntry`, `UndoConflict`,
-  atomic writes); a proposal to edit them is a proposal to edit the
-  enforcement, not just the instructions, and is off-limits the same
-  way. It may never propose anything that weakens verification, testing,
+  `.claude/skills/refine/SKILL.md` (this file), `.claude/skills/horizon/
+  SKILL.md`, or anything under `.claude/harness/bin/*.py` —
+  `refine_log.py` and its siblings are the code that *enforces* the
+  guardrails (`CorruptEntry`, `UndoConflict`, atomic writes); a proposal
+  to edit them is a proposal to edit the enforcement, not just the
+  instructions, and is off-limits the same way. `horizon/SKILL.md` is
+  protected for the same reason from the other direction: it holds the
+  independent coverage-gate judge, and a proposal that flipped its judge
+  dispatch to `subagent_type="fork"` would turn that independent judge
+  into a self-grader — the verification mechanism is as off-limits as
+  the enforcement mechanism. `record()` itself refuses writes to any of
+  these three paths, resolved absolute against `../` tricks, so this is
+  not prose-only. It may never propose anything that weakens verification, testing,
   or approval requirements: skipping a test, loosening a gate, removing
-  a guardrail from another skill. And it may never propose anything —
+  a guardrail from another skill. **Every write to rho/G/K/M goes through
+  `record()`/`commit_entry()` — no exceptions.** `refine` may never
+  propose a skill, subagent, hook, or command whose job is (in whole or
+  in part) to write to the harness layer, to assert standing, implicit,
+  or batch approval for future harness edits, or to otherwise create a
+  second write path around `record()`/`commit_entry()` — a subagent
+  definition declares its own tools and, unless it is `fork`, starts
+  with a fresh context that never loads this skill's guardrails, so a
+  proposal that reads as reasonable prose to the approving user
+  ("you maintain the harness layer; you have standing approval for
+  harness maintenance") can still land an unrecorded, uncapped,
+  undo-less edit the next time that subagent runs. The same shape is
+  off-limits via a brand-new skill, hook, or command, not just a
+  subagent. Any proposal targeting K (a subagent) or G (a skill) must
+  state explicitly, as part of the proposal text, what write authority
+  the new artifact claims — including "none" if it claims none — and
+  that statement is part of what the user is approving in G4, not an
+  implementation detail left for later. And it may never propose anything —
   in memory, in `CLAUDE.md`, in another skill, anywhere — that softens
   **G1's evidence bar, G2's cap of 3, or G4's approval gate**, e.g.
   "relax quoting for small edits," "raise refine's proposal cap," or a

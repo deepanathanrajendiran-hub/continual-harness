@@ -3,7 +3,8 @@ from pathlib import Path
 
 import pytest
 
-BIN = Path(__file__).resolve().parents[1] / ".claude" / "harness" / "bin"
+REPO_ROOT = Path(__file__).resolve().parents[1]
+BIN = REPO_ROOT / ".claude" / "harness" / "bin"
 sys.path.insert(0, str(BIN))
 
 import refine_log  # noqa: E402
@@ -208,3 +209,91 @@ def test_record_does_not_reuse_sequence_id_after_gap(tmp_path, isolated):
     assert after_c == before_c
     assert after_a["previous_content"] == "a-original\n"
     assert after_c["previous_content"] == "c-original\n"
+
+
+# --- CRITICAL 1: layer validation (G2 cap defeat via REVERTED sentinel) ---
+
+def test_record_rejects_reverted_sentinel(tmp_path, isolated):
+    """CRITICAL 1: the CHANGELOG pre-flight (refine SKILL.md Step 4) skips
+    any line whose layer field reads REVERTED when counting today's edits
+    against the cap of 3. If record() accepted layer="REVERTED", that call
+    would produce a real, committed, undoable edit invisible to the
+    counter -- REVERTED must be unconstructible through record()."""
+    target = tmp_path / "x.md"
+    with pytest.raises(ValueError):
+        refine_log.record("REVERTED", target, "rationale", "evidence")
+    # observable state: no entry file was written, no side effect at all
+    assert list((isolated / "undo").glob("*.json")) == []
+
+
+def test_record_rejects_unknown_layer(tmp_path, isolated):
+    target = tmp_path / "x.md"
+    with pytest.raises(ValueError):
+        refine_log.record("bogus", target, "r", "e")
+    assert list((isolated / "undo").glob("*.json")) == []
+
+
+def test_record_rejects_layer_containing_pipe(tmp_path, isolated):
+    """A `|` in the layer field would corrupt CHANGELOG's `|`-delimited
+    positional parsing (the same parsing the G2 pre-flight snippet relies
+    on to read the layer field by position)."""
+    target = tmp_path / "x.md"
+    with pytest.raises(ValueError):
+        refine_log.record("rho|REVERTED", target, "r", "e")
+    assert list((isolated / "undo").glob("*.json")) == []
+
+
+def test_record_rejects_layer_containing_newline(tmp_path, isolated):
+    target = tmp_path / "x.md"
+    with pytest.raises(ValueError):
+        refine_log.record("rho\nG | x | y | z", target, "r", "e")
+    assert list((isolated / "undo").glob("*.json")) == []
+
+
+def test_record_accepts_every_valid_layer(tmp_path, isolated):
+    for layer in ("rho", "G", "K", "M"):
+        target = tmp_path / f"{layer}.md"
+        entry = refine_log.record(layer, target, "r", "e")
+        assert entry["layer"] == layer
+
+
+# --- CRITICAL 2: G3 no-self-exemption enforced in code, not only prose ---
+
+def test_record_denies_refine_skill_as_target(isolated):
+    target = REPO_ROOT / ".claude" / "skills" / "refine" / "SKILL.md"
+    with pytest.raises(ValueError):
+        refine_log.record("G", target, "r", "e")
+    assert list((isolated / "undo").glob("*.json")) == []
+
+
+def test_record_denies_horizon_skill_as_target(isolated):
+    target = REPO_ROOT / ".claude" / "skills" / "horizon" / "SKILL.md"
+    with pytest.raises(ValueError):
+        refine_log.record("G", target, "r", "e")
+    assert list((isolated / "undo").glob("*.json")) == []
+
+
+def test_record_denies_harness_bin_target(isolated):
+    target = REPO_ROOT / ".claude" / "harness" / "bin" / "goal.py"
+    with pytest.raises(ValueError):
+        refine_log.record("G", target, "r", "e")
+    assert list((isolated / "undo").glob("*.json")) == []
+
+
+def test_record_denylist_survives_dotdot_traversal(isolated):
+    """The denylist compares resolved absolute paths, not raw strings, so
+    a `../` cannot slip a denied target past the check."""
+    sneaky = (
+        REPO_ROOT / ".claude" / "skills" / "horizon" / ".." / "refine" / "SKILL.md"
+    )
+    assert str(sneaky) != str(REPO_ROOT / ".claude" / "skills" / "refine" / "SKILL.md")
+    with pytest.raises(ValueError):
+        refine_log.record("G", sneaky, "r", "e")
+    assert list((isolated / "undo").glob("*.json")) == []
+
+
+def test_record_allows_ordinary_target_outside_denylist(tmp_path, isolated):
+    """Sanity: the denylist doesn't over-broadly reject legitimate writes."""
+    target = tmp_path / "CLAUDE.md"
+    entry = refine_log.record("rho", target, "r", "e")
+    assert entry["target"] == str(target)

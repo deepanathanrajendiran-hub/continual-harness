@@ -35,8 +35,37 @@ class UndoConflict(Exception):
     """
 
 
+_VALID_LAYERS = ("rho", "G", "K", "M")
+
+
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def _repo_root() -> Path:
+    """The project root, two levels above .claude/harness."""
+    return paths.harness_root().parent.parent
+
+
+def _protected_targets() -> set[Path]:
+    """Files record() must never write to (G3 no-self-exemption): the
+    skill's own guardrails and the independent verification judge, whose
+    dispatch mechanism a self-write could flip to `fork` and turn into a
+    self-grader. Resolved to absolute paths, not compared as raw strings,
+    so a `../` in the caller's target cannot slip past.
+    """
+    claude_dir = _repo_root() / ".claude"
+    return {
+        (claude_dir / "skills" / "refine" / "SKILL.md").resolve(),
+        (claude_dir / "skills" / "horizon" / "SKILL.md").resolve(),
+    }
+
+
+def _protected_bin_dir() -> Path:
+    """`.claude/harness/bin/` -- the code that enforces the guardrails
+    (this module and its siblings). A proposal to edit it is a proposal
+    to edit the enforcement, not just the instructions."""
+    return (paths.harness_root() / "bin").resolve()
 
 def _hash_file(target) -> str | None:
     """sha256 of target's current bytes, or None if it does not exist."""
@@ -103,7 +132,34 @@ def _next_id() -> str:
 
 
 def record(layer: str, target_path, rationale: str, evidence: str) -> dict:
-    """Snapshot the target before an edit. Call this BEFORE writing."""
+    """Snapshot the target before an edit. Call this BEFORE writing.
+
+    Raises ValueError if `layer` is not one of the four harness codes
+    (`rho`, `G`, `K`, `M`), or contains a `|` or a newline (either would
+    corrupt CHANGELOG field parsing). This is what keeps the `REVERTED`
+    sentinel unconstructible through record(): the G2 cap pre-flight
+    (refine SKILL.md Step 4) skips any CHANGELOG line whose layer field
+    reads `REVERTED`, so a caller able to pass layer="REVERTED" could
+    produce a real, committed, undoable edit invisible to the counter.
+
+    Raises ValueError if the resolved target is refine's or horizon's own
+    SKILL.md, or anything under `.claude/harness/bin/` -- G3's no-self-
+    exemption rule, enforced here (not only in prose) so it cannot be
+    bypassed by a proposal that simply doesn't mention it.
+    """
+    if layer not in _VALID_LAYERS or "|" in layer or "\n" in layer:
+        raise ValueError(
+            f"layer must be one of {_VALID_LAYERS!r}, got {layer!r}"
+        )
+
+    resolved = Path(target_path).resolve()
+    protected_bin = _protected_bin_dir()
+    if resolved in _protected_targets() or resolved == protected_bin or protected_bin in resolved.parents:
+        raise ValueError(
+            f"refine may not write to {resolved}: it enforces or verifies "
+            "the harness guardrails (G3 no-self-exemption)"
+        )
+
     target = str(target_path)
     existing = None
     try:
