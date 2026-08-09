@@ -97,22 +97,76 @@ a cap the editor can lift at will by calling itself again is not a cap.
 
 **Before proposing anything, check the persisted floor, not your own
 recollection.** Read `.claude/harness/CHANGELOG.md` and count the
-non-`REVERTED` entries dated today (the `YYYY-MM-DD` prefix matching
-today's date). **If that count is already 3 or more, stop.** Propose
-nothing. Tell the user how many edits have already landed today and that
-the cap is reached, and let them decide whether to override. Do not
-treat their asking you to run `/refine` as the override — it must be
-explicit, given only after they've seen the count.
+non-`REVERTED` entries dated **today in UTC — never local time.**
+`commit_entry()` stamps `entry["at"][:10]` from
+`datetime.now(timezone.utc)`, so every date already in the file is UTC.
+Filtering by local "today" instead can silently *undercount*: for a user
+east of UTC, entries committed in their early morning carry *yesterday's*
+UTC date and would be skipped by a local-date filter, and the agent
+would conclude budget remains when the cap is already reached. Every
+other ambiguity in this guardrail resolves toward stopping sooner — this
+is the one place that must not resolve the other way.
 
-This is deliberate belt-and-braces. The trajectory-level rule above
-states the intent, but it is self-attested by the same agent the cap is
-meant to constrain — a guardrail that depends on the constrained party's
-memory and good faith is not a guardrail. `CHANGELOG.md` is
-machine-written by `commit_entry()` (Step 6), carries a date on every
-line, and survives a session restart or a re-invocation on the "same"
-trajectory with one throwaway turn tacked onto the end — none of which
-the trajectory-level rule alone can detect. The CHANGELOG count is the
-enforceable floor; the trajectory rule is the discipline on top of it.
+```python
+import sys
+from datetime import datetime, timezone
+sys.path.insert(0, '.claude/harness/bin')
+import refine_log
+
+today_utc = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+count = 0
+for line in refine_log.paths.changelog().read_text().splitlines():
+    parts = [p.strip() for p in line.split("|")]
+    if len(parts) < 5:
+        continue  # header or blank line, not a dated entry
+    date, layer = parts[0], parts[1]
+    if not date[:4].isdigit():
+        continue  # header/format-spec line (e.g. the `YYYY-MM-DD | ...`
+                   # legend), not a real dated entry
+    if date == today_utc and layer != "REVERTED":
+        count += 1
+print(f"CHANGELOG pre-flight: {count} edits applied today (cap 3)")
+```
+
+Split each line on `|` and read the layer field **by position**
+(`parts[1]`) — never by searching the whole line for the substring
+`"REVERTED"`. A target path, rationale, or evidence string can
+legitimately contain that word (a proposal *about* the undo mechanism
+itself, for instance), and a substring search would then misclassify a
+normal entry as reverted and undercount — the same direction of error as
+the UTC bug above.
+
+**State the count every time this pre-flight runs, whether or not it
+blocks** — one line before any proposals, in the form the snippet
+prints (`CHANGELOG pre-flight: N edits applied today (cap 3)`). A
+pre-flight only ever mentioned when it blocks is indistinguishable, in
+the transcript, from one that silently didn't run at all; nothing
+outside this skill verifies the check, so surfacing the count on every
+invocation is what makes it auditable.
+
+**If the count is already 3 or more, stop.** Propose nothing. Tell the
+user the count and that the cap is reached, and let them decide whether
+to override. Do not treat their asking you to run `/refine` as the
+override — it must be explicit, given only after they've seen the
+count.
+
+An edit applied and undone the same day still counts toward the 3,
+because `undo()` appends a separate `REVERTED` line rather than
+retiring the original committed line — the original line's layer field
+is untouched, so the snippet above still counts it. This is deliberate:
+it overcounts, and overcounting is the safe direction for a cap whose
+purpose is to stop bloat. Do not "fix" this by matching `REVERTED` lines
+back to their originals to exclude them — that would undercount instead.
+
+This is deliberate belt-and-braces beyond the trajectory rule above,
+which is self-attested by the same agent the cap is meant to constrain —
+a guardrail that depends on the constrained party's memory and good
+faith is not a guardrail. `CHANGELOG.md` is machine-written by
+`commit_entry()` (Step 6) and survives a session restart or a
+re-invocation on the "same" trajectory with one throwaway turn tacked
+onto the end, neither of which the trajectory rule alone can detect. The
+CHANGELOG count is the enforceable floor; the trajectory rule is the
+discipline on top of it.
 
 **Within whatever budget remains, rank.** If Step 1 turned up more
 candidates than that, rank by how often the situation will recur and
