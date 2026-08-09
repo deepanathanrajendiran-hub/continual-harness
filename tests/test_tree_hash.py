@@ -3,6 +3,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 BIN = Path(__file__).resolve().parents[1] / ".claude" / "harness" / "bin"
 sys.path.insert(0, str(BIN))
 
@@ -115,6 +117,27 @@ def test_changed_is_true_when_subtree_unreadable(tmp_path):
     os.chmod(locked, 0o000)
     try:
         assert tree_hash.changed(repo, None, previous) is True
+    finally:
+        os.chmod(locked, 0o755)
+
+
+def test_compute_refuses_to_guess_when_subtree_unreadable(tmp_path):
+    """compute() must not silently absorb an unreadable subtree.
+
+    Pre-fix, os.walk's default onerror=None dropped the subtree and
+    compute() returned a confident digest built from incomplete data.
+    changed() then compared two such digests and could report False --
+    an unknown state reported as "nothing changed". The fix makes the
+    failure propagate so changed()'s doubt-path can catch it.
+    """
+    repo = _repo(tmp_path)
+    locked = repo / "locked"
+    locked.mkdir()
+    (locked / "secret.txt").write_text("v1")
+    os.chmod(locked, 0o000)
+    try:
+        with pytest.raises(OSError):
+            tree_hash.compute(repo)
     finally:
         os.chmod(locked, 0o755)
 
