@@ -364,3 +364,32 @@ def test_changelog_date_is_commit_time_not_record_time(tmp_path, isolated, monke
     line = refine_log.paths.changelog().read_text().strip().splitlines()[-1]
     date = line.split("|")[0].strip()
     assert date == "2026-08-09"
+
+
+def test_atomic_write_reports_missing_parent_clearly(tmp_path, isolated):
+    """A vanished parent directory must raise a typed, retriable error --
+    not a bare FileNotFoundError that reads like a bug."""
+    with pytest.raises(refine_log.UndoTargetUnavailable):
+        refine_log._atomic_write(tmp_path / "gone" / "f.md", "x")
+
+
+def test_undo_reports_missing_parent_clearly(tmp_path, isolated):
+    """The same failure reached through the real undo path: the entry is
+    intact and the revert stays valid once the directory is restored."""
+    d = tmp_path / "layer"
+    d.mkdir()
+    target = d / "CLAUDE.md"
+    target.write_text("original\n")
+
+    entry = refine_log.record("rho", target, "add a rule", "turn 4")
+    target.write_text("original\nnew rule\n")
+    refine_log.commit_entry(entry["id"])
+
+    import shutil
+    shutil.rmtree(d)
+
+    with pytest.raises(refine_log.UndoTargetUnavailable):
+        refine_log.undo()
+
+    entries = [e for e in refine_log._entries()[0] if e["id"] == entry["id"]]
+    assert entries[0]["reverted"] is False, "entry marked reverted despite failing"

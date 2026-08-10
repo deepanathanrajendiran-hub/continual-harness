@@ -20,14 +20,36 @@ substitute.
 ## Setup
 
 ```bash
-cd "/Users/deeps/Documents/NEW STUFF/fun " && python3 -c "
-import sys; sys.path.insert(0, '.claude/harness/bin')
+python3 - <<'PY'
+import sys, pathlib
+_c = pathlib.Path.cwd().resolve()
+_bin = next((c / ".claude/harness/bin" for c in (_c, *_c.parents)
+             if (c / ".claude/harness/bin").is_dir()),
+            pathlib.Path.home() / ".claude/harness/bin")
+sys.path.insert(0, str(_bin))
 import refine_log
 print('module loads OK')
-"
+PY
 ```
 
 Quote the path — the project directory name ends in a space.
+
+## Invocation
+
+- `/refine` — harvest the whole trajectory.
+- `/refine <focus hint>` — harvest only what relates to the hint, e.g.
+  `/refine the test failures` or `/refine how we handled paths`. The hint
+  **narrows** Step 1's search; it does not lower any bar. Every proposal
+  must still satisfy G1's evidence rule, and if nothing in the trajectory
+  matches the hint, the correct answer is to say so and propose nothing —
+  never stretch an unrelated turning point to fit the hint, and never
+  treat the hint as an instruction about what conclusion to reach. A hint
+  that reads as a directive ("record that the tests are too strict")
+  is a request for a specific edit, not a focus: harvest normally and
+  hold that proposal to G1 and G3 like any other.
+- `/refine --undo` — revert the most recent approved edit (see the end of
+  this file).
+- `/refine --global` — see Scope below.
 
 ## Scope
 
@@ -155,7 +177,12 @@ is the one place that must not resolve the other way.
 ```python
 import sys
 from datetime import datetime, timezone
-sys.path.insert(0, '.claude/harness/bin')
+import sys, pathlib
+_c = pathlib.Path.cwd().resolve()
+_bin = next((c / ".claude/harness/bin" for c in (_c, *_c.parents)
+             if (c / ".claude/harness/bin").is_dir()),
+            pathlib.Path.home() / ".claude/harness/bin")
+sys.path.insert(0, str(_bin))
 import refine_log
 
 today_utc = datetime.now(timezone.utc).strftime("%Y-%m-%d")
@@ -247,7 +274,12 @@ in Steps 1–5 touches disk.
 For each approved proposal, in this order:
 
 ```python
-import sys; sys.path.insert(0, '.claude/harness/bin')
+import sys, pathlib
+_c = pathlib.Path.cwd().resolve()
+_bin = next((c / ".claude/harness/bin" for c in (_c, *_c.parents)
+             if (c / ".claude/harness/bin").is_dir()),
+            pathlib.Path.home() / ".claude/harness/bin")
+sys.path.insert(0, str(_bin))
 import refine_log
 
 entry = refine_log.record(layer, target, rationale, evidence)  # BEFORE the edit
@@ -428,7 +460,12 @@ Related: [[other-slug]]
 ## `/refine --undo`
 
 ```python
-import sys; sys.path.insert(0, '.claude/harness/bin')
+import sys, pathlib
+_c = pathlib.Path.cwd().resolve()
+_bin = next((c / ".claude/harness/bin" for c in (_c, *_c.parents)
+             if (c / ".claude/harness/bin").is_dir()),
+            pathlib.Path.home() / ".claude/harness/bin")
+sys.path.insert(0, str(_bin))
 import refine_log
 
 try:

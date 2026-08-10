@@ -35,6 +35,16 @@ class UndoConflict(Exception):
     """
 
 
+class UndoTargetUnavailable(Exception):
+    """Raised when a target cannot be written because its location is gone.
+
+    Distinct from a corrupt entry or a conflict: the recorded content is
+    intact and the revert is still valid, but the directory it belongs in
+    no longer exists. Fails loud and stays retriable once the path is
+    restored, rather than surfacing as a bare FileNotFoundError.
+    """
+
+
 _VALID_LAYERS = ("rho", "G", "K", "M")
 
 
@@ -102,6 +112,13 @@ def _atomic_write(path: Path, content: str) -> None:
     old content or fully the new content -- never truncated partway.
     """
     path = Path(path)
+    # A target whose parent directory has since been deleted would otherwise
+    # fail on the temp-file open with a bare FileNotFoundError, which reads
+    # as a bug rather than as "the place this edit belongs is gone".
+    if not path.parent.is_dir():
+        raise UndoTargetUnavailable(
+            f"cannot write {path}: parent directory {path.parent} does not exist"
+        )
     tmp = path.parent / f".{path.name}.tmp-{os.getpid()}-{uuid.uuid4().hex}"
     try:
         with open(tmp, "w", encoding="utf-8") as fh:
@@ -263,6 +280,18 @@ def undo(force: bool = False) -> dict:
 
     entry = candidates[-1]
     target = entry["target"]
+
+    # Checked before the staleness comparison, and regardless of `force`.
+    # A vanished parent directory would otherwise surface as UndoConflict
+    # ("the target changed — pass force=True to override"), which is both
+    # misleading and useless: forcing cannot write into a directory that
+    # does not exist. The entry stays un-reverted and the revert stays
+    # valid once the path is restored.
+    if not Path(target).parent.is_dir():
+        raise UndoTargetUnavailable(
+            f"cannot undo {target}: parent directory "
+            f"{Path(target).parent} no longer exists"
+        )
 
     if not force:
         current_hash = _hash_file(target)
