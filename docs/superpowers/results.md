@@ -139,3 +139,49 @@ see both:
   was already committed at the time. Action taken: all review/re-review
   dispatches from that point on state explicitly that the live repo is
   read-only for them and that simulations belong in a temp directory.
+
+## Promotion readiness — updated 2026-08-10
+
+The architectural blocker is fixed and proven. `paths.harness_root()` now
+discovers the project by walking up from the working directory rather than
+resolving from `__file__`, and both skills bootstrap the same way instead
+of hardcoding this project's path.
+
+**Measured before the fix**, with skills and modules copied to a fake
+`~/.claude` and two real projects:
+
+- `projB` silently overwrote `projA`'s identically-titled goal, destroying
+  its checkpoints — one shared goals directory.
+- Three edits applied entirely in `projA` left `projB` reading `3/3` on its
+  daily cap, out of budget without having applied anything.
+
+**Measured after:** separate state files, separate ledgers, independent
+`1/3` caps, no shared `~/.claude/harness/` created at all.
+
+All seven "must fix before global promotion" items are now closed:
+
+| Item | Status |
+|---|---|
+| unstattable watch root | fixed (final wave) |
+| slug collision / empty slug | fixed — `_unique_slug`, `slugify` never returns `""` |
+| `goal._save()` atomicity | fixed — temp file + `os.replace` |
+| `_atomic_write` missing parent | fixed — typed `UndoTargetUnavailable` |
+| output truncation direction | fixed — test asserts the tail survives |
+| `run_gate` returns evaluated hash | fixed — `gate.run_gate_at()` |
+| `/refine <focus hint>` | implemented |
+
+Suite: 78 tests.
+
+### Still open before promotion
+
+1. **T10** — needs a genuinely separate Claude Code process; see its row above.
+2. **`undo()` reverts the wrong edit** after a crash between the edit landing
+   and `commit_entry()`. Fixing it means changing
+   `test_uncommitted_entry_is_not_undone`, which currently encodes the
+   present behaviour as intended — a design decision, not a mechanical fix.
+3. **Heartbeat (spec §5.2 step 7) was never built.** `/loop`,
+   `ScheduleWakeup` and `CronCreate` appear nowhere. Cross-session
+   continuation is manual resume only. A scope decision, not a defect.
+4. **`MEMORY.md` index lines sit outside rollback scope** — `record()`
+   snapshots one target, so `/refine --undo` on a memory entry leaves a
+   dangling index line.
