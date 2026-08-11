@@ -31,6 +31,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
+import filelock
 import paths
 
 
@@ -235,6 +236,15 @@ def _append_changelog(line: str) -> None:
 # --------------------------------------------------------------------------
 
 def apply_edit(layer: str, edits, rationale: str, evidence: str) -> dict:
+    """See _apply_edit_locked. Serialised on the undo directory because
+    _next_id() is check-then-write: two concurrent proposals would both
+    read the same highest id and one would overwrite the other's snapshot,
+    losing the ability to undo it."""
+    with filelock.locked(paths.undo_dir() / "ENTRIES"):
+        return _apply_edit_locked(layer, edits, rationale, evidence)
+
+
+def _apply_edit_locked(layer: str, edits, rationale: str, evidence: str) -> dict:
     """Apply one approved proposal: write every target, log it, make it undoable.
 
     `edits` is a sequence of (target_path, new_content) pairs. All of them
@@ -321,6 +331,12 @@ def count_edits_today() -> int:
 
 
 def undo(force: bool = False) -> dict:
+    """Serialised against apply_edit for the same reason."""
+    with filelock.locked(paths.undo_dir() / "ENTRIES"):
+        return _undo_locked(force)
+
+
+def _undo_locked(force: bool = False) -> dict:
     """Revert the most recent applied, un-reverted entry, all targets together."""
     entries, corrupt = _entries()
     if corrupt:
