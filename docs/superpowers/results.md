@@ -247,3 +247,56 @@ turns.
 - Item 2 (`undo()` reverts the wrong edit after a crash between the edit and
   `commit_entry()`) — no longer reachable: there is no second phase to crash
   between. `apply_edit` snapshots, writes and records as one call.
+
+---
+
+## Third round — two cold audits in parallel, 2026-08-11
+
+One agent audited the Python; one read the two skills purely as instructions an
+agent has to follow under pressure. Both were denied the README, docs,
+changelog and git history. Between them they found five things twelve prior
+reviews had not, and they converged independently on one design criticism.
+
+### Criticals
+
+| Finding | Fix |
+|---|---|
+| the gate string decides what "verified" means, and `/bin/sh` has no `pipefail`: `pytest -q \| tail -30` completes a goal against a failing suite | `goal.create` raises `GateUnsound`, tokenised with `punctuation_chars` so a quoted `sh -o pipefail -c '…'` still passes |
+| one `apply_edit` call touching the same file twice rebuilt the lost update `AppendLine` exists to remove — success returned, a memory left unindexed, the entry born un-undoable | same-path edits fold in order; two full rewrites raise `DuplicateTarget` |
+| the tripwire was scoped to G and K, so "standing approval" was refused as a skill and accepted in `CLAUDE.md` | scanned at every layer; memory-write-path patterns added for G/K |
+| the orphan reaper SIGKILLed a bare pgid read from a file: concurrent turns killed each other's gates; a marker outliving a reboot named a recycled pid | removed, not repaired — it risked the user's own processes to reap a leaked `sleep` |
+| `filelock`'s stale branch skipped the deadline check: an unreclaimable lock spun at 100% CPU forever | deadline checked on every path; confirmed by hanging this session |
+
+### Importants and minors
+
+| Finding | Fix |
+|---|---|
+| a failed ledger write left the edit on disk, unrecorded and outside the cap | bookkeeping moved inside the rollback |
+| an interrupted `undo()` accused the user of a hand-edit the harness had made | a marker written before any file is touched; a retry resumes |
+| `tree_hash`'s constant `UNREADABLE` marker was deterministic enough to skip a gate against a tree it could not read (mode 0444) | re-raised, so `changed()` and the `"unknown"` sentinel both run the gate |
+| `goal.load` validated containers, not the elements callers index | checkpoint elements and a bounding budget validated |
+| `reopen(extra_turns=…)` was dropped on a minutes-only goal while `reopen_history` recorded it as honoured | the grant becomes `used + extra` |
+| a coverage goal's every turn died before its checkpoint | `CoverageGate` carries `tree_hash`; the turn block prints it and stops cleanly |
+| the success branch printed the *head* of the gate output, against every other truncation in the project | tail, like the rest |
+| the changelog recorded basenames, so a mis-routed memory logged identically to a correct one | full paths; and a memory outside this project's key now raises `MisroutedMemory` |
+| `normcase` credited with case-insensitivity (a no-op on POSIX); hardlinks claimed as covered | docstrings corrected |
+
+### The criticism worth keeping
+
+The tripwire refused `"Never skip the tests before committing."` — the memory a
+well-behaved session most wants to write. Both auditors said to cut it down,
+and they were right: a check that fires mostly on true statements about testing
+teaches its user to route around it, and by its own admission a paraphrase
+walks past it anyway. It is now narrow — write authority, cap-raising and
+approval-bypassing only — and G3's prohibition on weakening tests is enforced
+by the user reading the proposal, which is where it always actually lived.
+
+The code auditor's summary of the recurring pattern is the most useful sentence
+any review has produced here:
+
+> This codebase reasons carefully about a failure, writes an excellent
+> paragraph about it, fixes it in the layer where it was observed, and does not
+> re-derive it one layer over.
+
+**Suite: 218 tests.** All 17 fixes in this round verified by neutering each and
+confirming the covering test fails; 28 of 28 across the last three rounds.
