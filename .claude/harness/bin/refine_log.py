@@ -1,128 +1,185 @@
-"""Changelog and rollback for refine (spec §4.2 step 6).
+"""Apply, log and roll back harness edits for refine.
 
-Two-phase by design: record() snapshots the target before the edit,
-commit_entry() appends the CHANGELOG line only after the edit succeeded.
-An entry that was recorded but never committed represents a failed edit
-and is invisible to undo().
+One approved proposal is one entry is one atomic write of N files.
+
+That shape is deliberate, and replaces an earlier two-phase design where
+the caller snapshotted a path, applied the edit itself with some other
+tool, then told this module the edit had landed. Nothing connected the
+three steps: the path snapshotted, the file actually edited, and the text
+the user approved could all differ, and the module could not tell. A
+mistyped path produced a changelog asserting an edit that never happened
+and an `undo()` that "reverted" an untouched file, while the change that
+did land had no snapshot at all. Here the module receives the approved
+content and performs the write, so those cannot diverge.
+
+Multi-file proposals are first class for the same reason. Writing a
+memory file also means appending a line to `MEMORY.md`; if that second
+write sits outside the entry, `undo()` removes the memory and leaves the
+index advertising it.
+
+The cap that `refine` enforces counts entries in `undo/*.json`, not lines
+in `CHANGELOG.md`. The changelog is a rendering for humans and may
+contain arbitrary quoted text; counting from it would mean a newline in a
+rationale could hide a real edit from the cap.
 """
 
+import hashlib
 import json
+import os
+import re
+import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 
 import paths
-import hashlib
-import uuid
-from pathlib import Path
-import os
 
 
 class NothingToUndo(Exception):
-    """Raised when undo() finds no un-reverted committed entry."""
+    """No committed, un-reverted entry remains."""
+
 
 class CorruptEntry(Exception):
-    """Raised when undo() finds an unreadable/unparseable entry file.
+    """An entry file is unreadable or unparseable.
 
-    undo() must never guess past corrupted history -- silently skipping
-    a damaged entry could revert the wrong edit.
+    undo() must never guess past damaged history -- silently skipping a
+    corrupt entry could revert the wrong edit.
     """
 
 
 class UndoConflict(Exception):
-    """Raised when the target changed after its entry was committed.
+    """A target changed after its entry was written.
 
-    undo() would otherwise silently discard whatever wrote that change.
-    Pass force=True to undo() to override deliberately.
+    undo() would otherwise discard whatever made that change, which was
+    never snapshotted and is therefore unrecoverable. Pass force=True to
+    override deliberately, after showing the user what they would lose.
     """
 
 
 class UndoTargetUnavailable(Exception):
-    """Raised when a target cannot be written because its location is gone.
+    """A target cannot be written because its location is gone.
 
-    Distinct from a corrupt entry or a conflict: the recorded content is
-    intact and the revert is still valid, but the directory it belongs in
-    no longer exists. Fails loud and stays retriable once the path is
-    restored, rather than surfacing as a bare FileNotFoundError.
+    The recorded content is intact and the revert stays valid once the
+    path is restored.
     """
 
 
-_VALID_LAYERS = ("rho", "G", "K", "M")
+class ProtectedTarget(ValueError):
+    """The target is part of the harness's own enforcement or state.
 
+    Guardrail G3: refine may not edit its own rules, the code enforcing
+    them, the verification mechanism, the ledger the cap is counted from,
+    or settings files that can run arbitrary commands.
+    """
+
+
+VALID_LAYERS = ("rho", "G", "K", "M")
+MAX_FIELD = 2000
+
+
+# --------------------------------------------------------------------------
+# validation
+# --------------------------------------------------------------------------
+
+def _clean_field(name: str, value: str) -> str:
+    """Free text destined for the changelog rendering.
+
+    Newlines and pipes are collapsed rather than rejected: `evidence` is
+    documented as a quoted trajectory moment, and quoted terminal output is
+    multi-line by nature, so rejecting them would fire constantly on
+    legitimate input. The stored JSON entry keeps the original.
+    """
+    if not isinstance(value, str):
+        raise ValueError(f"{name} must be a string, got {type(value).__name__}")
+    if not value.strip():
+        raise ValueError(f"{name} must not be empty")
+    flat = re.sub(r"\s*[\r\n]+\s*", " ", value).replace("|", "/")
+    return flat[:MAX_FIELD]
+
+
+def _protected_patterns() -> list[re.Pattern]:
+    """Path patterns refine may never write to, in any project or in $HOME.
+
+    Matched against the resolved absolute path, so `../`, a symlink, a
+    lowercase spelling on a case-insensitive filesystem, or a hardlink all
+    land on the same test. Patterns rather than a list of literal paths:
+    the literal form only ever covered the current project, leaving every
+    `--global` target -- and the ledger itself -- writable.
+    """
+    return [
+        re.compile(r"/\.claude/harness/"),                 # modules, ledger, undo, goals
+        re.compile(r"/\.claude/skills/refine/"),           # its own rules
+        re.compile(r"/\.claude/skills/horizon/"),          # the verification mechanism
+        re.compile(r"/\.claude/settings[^/]*\.json$"),     # hooks: arbitrary shell
+        re.compile(r"/\.claude/hooks/"),
+    ]
+
+
+def _assert_allowed(resolved: Path) -> None:
+    s = str(resolved)
+    for pattern in _protected_patterns():
+        if pattern.search(s):
+            raise ProtectedTarget(
+                f"refine may not write to {resolved}: matches protected pattern "
+                f"{pattern.pattern!r} (guardrail G3). Editing the harness's own "
+                f"rules, enforcement code, ledger, or settings is off-limits "
+                f"regardless of how well-evidenced the proposal is."
+            )
+
+
+# --------------------------------------------------------------------------
+# storage
+# --------------------------------------------------------------------------
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def _repo_root() -> Path:
-    """The project root, two levels above .claude/harness."""
-    return paths.harness_root().parent.parent
+def _sha256(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
-def _protected_targets() -> set[Path]:
-    """Files record() must never write to (G3 no-self-exemption): the
-    skill's own guardrails and the independent verification judge, whose
-    dispatch mechanism a self-write could flip to `fork` and turn into a
-    self-grader. Resolved to absolute paths, not compared as raw strings,
-    so a `../` in the caller's target cannot slip past.
-    """
-    claude_dir = _repo_root() / ".claude"
-    return {
-        (claude_dir / "skills" / "refine" / "SKILL.md").resolve(),
-        (claude_dir / "skills" / "horizon" / "SKILL.md").resolve(),
-    }
+def _read_if_exists(path: Path):
+    """Previous content, or None if the file does not exist.
 
-
-def _protected_bin_dir() -> Path:
-    """`.claude/harness/bin/` -- the code that enforces the guardrails
-    (this module and its siblings). A proposal to edit it is a proposal
-    to edit the enforcement, not just the instructions."""
-    return (paths.harness_root() / "bin").resolve()
-
-
-def _same_file(a, b) -> bool:
-    """True if `a` and `b` name the same file, by identity not spelling.
-
-    Path.resolve() canonicalizes symlinks and `..` but not case, so on a
-    case-insensitive filesystem (APFS default) a differently-cased path
-    string, or a hardlink (a second directory entry sharing the same
-    inode), would slip past a plain string comparison of resolved paths.
-    os.path.samefile() compares (st_dev, st_ino) instead, which is true
-    identity: it catches both. It requires both paths to exist, so when
-    one doesn't (yet) -- e.g. checking a not-yet-created file against a
-    protected path -- fall back to a case-normalized string comparison,
-    which is the best available signal in that case.
+    Binary or non-UTF-8 files are stored base64 so a rollback is still
+    byte-exact; a latin-1 CLAUDE.md would otherwise crash the snapshot.
     """
     try:
-        return os.path.samefile(a, b)
-    except OSError:
-        return os.path.normcase(str(a)) == os.path.normcase(str(b))
-
-def _hash_file(target) -> str | None:
-    """sha256 of target's current bytes, or None if it does not exist."""
-    try:
-        with open(target, "rb") as fh:
-            return hashlib.sha256(fh.read()).hexdigest()
+        raw = path.read_bytes()
     except FileNotFoundError:
-        return None
+        return None, False
+    except IsADirectoryError as e:
+        raise ValueError(f"target is a directory, not a file: {path}") from e
+    try:
+        return raw.decode("utf-8"), False
+    except UnicodeDecodeError:
+        import base64
+        return base64.b64encode(raw).decode("ascii"), True
 
-def _atomic_write(path: Path, content: str) -> None:
-    """Write content to path so a failure never leaves a torn file.
 
-    Writes to a temp file in the same directory, then os.replace()s it
-    into place. POSIX rename is atomic, so path ends up either fully the
-    old content or fully the new content -- never truncated partway.
+def _atomic_write(path: Path, content: str, is_b64: bool = False) -> None:
+    """Write via a temp file in the same directory, then os.replace().
+
+    The path is resolved first so a symlinked target has its destination
+    rewritten rather than being replaced by a regular file -- a
+    dotfiles-managed CLAUDE.md is the common case, and replacing the link
+    would silently detach it from the repo it is managed by.
     """
     path = Path(path)
-    # A target whose parent directory has since been deleted would otherwise
-    # fail on the temp-file open with a bare FileNotFoundError, which reads
-    # as a bug rather than as "the place this edit belongs is gone".
+    if path.is_symlink():
+        path = path.resolve()
     if not path.parent.is_dir():
         raise UndoTargetUnavailable(
             f"cannot write {path}: parent directory {path.parent} does not exist"
         )
+    data = content.encode("utf-8")
+    if is_b64:
+        import base64
+        data = base64.b64decode(content)
     tmp = path.parent / f".{path.name}.tmp-{os.getpid()}-{uuid.uuid4().hex}"
     try:
-        with open(tmp, "w", encoding="utf-8") as fh:
-            fh.write(content)
+        with open(tmp, "wb") as fh:
+            fh.write(data)
         os.replace(tmp, path)
     finally:
         try:
@@ -132,188 +189,180 @@ def _atomic_write(path: Path, content: str) -> None:
 
 
 def _entries() -> tuple[list[dict], list[str]]:
-    """Return (valid entries, paths of files that failed to parse).
-
-    Corrupt files are reported, never silently dropped: undo() must not
-    guess past damaged history.
-    """
-    out = []
-    corrupt = []
+    good, corrupt = [], []
     for p in sorted(paths.undo_dir().glob("*.json")):
         try:
-            out.append(json.loads(p.read_text()))
+            good.append(json.loads(p.read_text()))
         except (json.JSONDecodeError, OSError):
             corrupt.append(str(p))
-    return out, corrupt
+    good.sort(key=lambda e: e.get("at", ""))
+    return good, corrupt
 
 
-def _write(entry: dict) -> None:
-    _atomic_write(
-        paths.undo_dir() / f"{entry['id']}.json",
-        json.dumps(entry, indent=2) + "\n",
-    )
+def _write_entry(entry: dict) -> None:
+    p = paths.undo_dir() / f"{entry['id']}.json"
+    tmp = p.parent / f".{p.name}.tmp-{os.getpid()}-{uuid.uuid4().hex}"
+    try:
+        tmp.write_text(json.dumps(entry, indent=2) + "\n")
+        os.replace(tmp, p)
+    finally:
+        try:
+            tmp.unlink()
+        except FileNotFoundError:
+            pass
+
 
 def _next_id() -> str:
-    """Smallest unused sequence id, derived from the max id on disk.
-
-    Deriving from a count instead would reuse an id after any entry file
-    is removed, letting _write() silently overwrite a surviving entry and
-    destroy its previous_content.
-    """
-    seq = 0
+    """max(existing) + 1, so pruning a file never mints a colliding id."""
+    highest = 0
     for p in paths.undo_dir().glob("*.json"):
         if p.stem.isdigit():
-            seq = max(seq, int(p.stem))
-    return f"{seq + 1:04d}"
+            highest = max(highest, int(p.stem))
+    return f"{highest + 1:04d}"
 
 
-def record(layer: str, target_path, rationale: str, evidence: str) -> dict:
-    """Snapshot the target before an edit. Call this BEFORE writing.
+def _append_changelog(line: str) -> None:
+    log = paths.changelog()
+    if not log.exists():
+        log.parent.mkdir(parents=True, exist_ok=True)
+        log.write_text("# Harness changelog\n\n")
+    with open(log, "a", encoding="utf-8") as fh:
+        fh.write(line + "\n")
 
-    Raises ValueError if `layer` is not one of the four harness codes
-    (`rho`, `G`, `K`, `M`), or contains a `|` or a newline (either would
-    corrupt CHANGELOG field parsing). This is what keeps the `REVERTED`
-    sentinel unconstructible through record(): the G2 cap pre-flight
-    (refine SKILL.md Step 4) skips any CHANGELOG line whose layer field
-    reads `REVERTED`, so a caller able to pass layer="REVERTED" could
-    produce a real, committed, undoable edit invisible to the counter.
 
-    Raises ValueError if the resolved target is refine's or horizon's own
-    SKILL.md, or anything under `.claude/harness/bin/` -- G3's no-self-
-    exemption rule, enforced here (not only in prose) so it cannot be
-    bypassed by a proposal that simply doesn't mention it.
+# --------------------------------------------------------------------------
+# public API
+# --------------------------------------------------------------------------
 
-    The comparison is by file identity (os.path.samefile: st_dev + st_ino),
-    not by resolved path string. Path.resolve() canonicalizes symlinks and
-    `..` but not case, so on a case-insensitive filesystem (APFS's default)
-    a differently-cased spelling of a protected path -- or a hardlink to
-    it, which resolves to a different path string entirely -- would slip
-    past a string comparison while opening the exact same file. See
-    _same_file().
+def apply_edit(layer: str, edits, rationale: str, evidence: str) -> dict:
+    """Apply one approved proposal: write every target, log it, make it undoable.
+
+    `edits` is a sequence of (target_path, new_content) pairs. All of them
+    are snapshotted before any is written, and if a later write fails the
+    earlier ones are rolled back, so an entry never describes a partially
+    applied proposal.
+
+    Returns the stored entry.
     """
-    if layer not in _VALID_LAYERS or "|" in layer or "\n" in layer:
-        raise ValueError(
-            f"layer must be one of {_VALID_LAYERS!r}, got {layer!r}"
-        )
+    if layer not in VALID_LAYERS:
+        raise ValueError(f"layer must be one of {VALID_LAYERS}, got {layer!r}")
+    rationale_flat = _clean_field("rationale", rationale)
+    evidence_flat = _clean_field("evidence", evidence)
 
-    resolved = Path(target_path).resolve()
-    protected_bin = _protected_bin_dir()
+    edits = [(Path(t), c) for t, c in edits]
+    if not edits:
+        raise ValueError("apply_edit needs at least one (target, content) pair")
 
-    for protected in _protected_targets():
-        if _same_file(resolved, protected):
-            raise ValueError(
-                f"refine may not write to {resolved}: it enforces or "
-                "verifies the harness guardrails (G3 no-self-exemption)"
-            )
+    targets = []
+    for target, content in edits:
+        if not isinstance(content, str):
+            raise ValueError(f"content for {target} must be a string")
+        resolved = target.resolve() if target.is_symlink() else Path(os.path.abspath(target))
+        _assert_allowed(resolved)
+        previous, was_b64 = _read_if_exists(resolved)
+        targets.append({
+            "path": str(resolved),
+            "previous_content": previous,
+            "previous_was_base64": was_b64,
+            "created_file": previous is None,
+            "new_sha256": _sha256(content),
+        })
 
-    in_bin = _same_file(resolved, protected_bin)
-    if not in_bin:
-        for parent in resolved.parents:
-            if _same_file(parent, protected_bin):
-                in_bin = True
-                break
-    if in_bin:
-        raise ValueError(
-            f"refine may not write to {resolved}: it enforces or verifies "
-            "the harness guardrails (G3 no-self-exemption)"
-        )
-
-    target = str(target_path)
-    existing = None
+    written = []
     try:
-        with open(target, encoding="utf-8") as fh:
-            existing = fh.read()
-    except FileNotFoundError:
-        existing = None
+        for spec, (_, content) in zip(targets, edits):
+            _atomic_write(Path(spec["path"]), content)
+            written.append(spec)
+    except Exception:
+        for spec in reversed(written):          # roll back a partial proposal
+            try:
+                if spec["created_file"]:
+                    os.remove(spec["path"])
+                else:
+                    _atomic_write(Path(spec["path"]), spec["previous_content"],
+                                  spec["previous_was_base64"])
+            except OSError:
+                pass
+        raise
 
     entry = {
         "id": _next_id(),
         "at": _now(),
         "layer": layer,
-        "target": target,
         "rationale": rationale,
         "evidence": evidence,
-        "previous_content": existing,
-        "created_file": existing is None,
-        "committed": False,
+        "targets": targets,
         "reverted": False,
     }
-    _write(entry)
+    _write_entry(entry)
+    _append_changelog(
+        f"{entry['at'][:10]} | {layer} | "
+        f"{', '.join(Path(t['path']).name for t in targets)} | "
+        f"{rationale_flat} | {evidence_flat}"
+    )
     return entry
 
 
-def commit_entry(entry_id: str) -> None:
-    """Mark the edit as applied and append its CHANGELOG line."""
-    path = paths.undo_dir() / f"{entry_id}.json"
-    entry = json.loads(path.read_text())
-    entry["committed"] = True
-    entry["committed_at"] = _now()
-    entry["post_edit_sha256"] = _hash_file(entry["target"])
-    _write(entry)
+def count_edits_today() -> int:
+    """Non-reverted entries applied today, in UTC.
 
-    log = paths.changelog()
-    if not log.exists():
-        log.write_text("# Harness changelog\n\n")
-    with open(log, "a", encoding="utf-8") as fh:
-        fh.write(
-            f"{entry['committed_at'][:10]} | {entry['layer']} | {entry['target']} | "
-            f"{entry['rationale']} | {entry['evidence']}\n"
+    Counted from the JSON entries rather than by parsing CHANGELOG.md.
+    The changelog carries quoted user text; a newline in a rationale would
+    split a markdown line and hide a real edit from a line-based count,
+    which is exactly the direction a cap must never fail in.
+    """
+    entries, corrupt = _entries()
+    if corrupt:
+        raise CorruptEntry(
+            "cannot count today's edits: unreadable entry file(s): " + ", ".join(corrupt)
         )
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    return sum(1 for e in entries if e.get("at", "")[:10] == today and not e.get("reverted"))
 
 
 def undo(force: bool = False) -> dict:
-    """Revert the most recent committed, un-reverted entry.
-
-    Raises CorruptEntry if any undo-log entry file is unreadable -- undo
-    must never guess past damaged history. Raises UndoConflict if the
-    target changed since the entry was committed, unless force=True.
-    """
+    """Revert the most recent applied, un-reverted entry, all targets together."""
     entries, corrupt = _entries()
     if corrupt:
         raise CorruptEntry(
             "cannot undo: unreadable entry file(s): " + ", ".join(corrupt)
         )
 
-    candidates = [e for e in entries if e["committed"] and not e["reverted"]]
+    candidates = [e for e in entries if not e.get("reverted")]
     if not candidates:
-        raise NothingToUndo("no committed harness edits left to revert")
-
+        raise NothingToUndo("no harness edits left to revert")
     entry = candidates[-1]
-    target = entry["target"]
 
-    # Checked before the staleness comparison, and regardless of `force`.
-    # A vanished parent directory would otherwise surface as UndoConflict
-    # ("the target changed — pass force=True to override"), which is both
-    # misleading and useless: forcing cannot write into a directory that
-    # does not exist. The entry stays un-reverted and the revert stays
-    # valid once the path is restored.
-    if not Path(target).parent.is_dir():
-        raise UndoTargetUnavailable(
-            f"cannot undo {target}: parent directory "
-            f"{Path(target).parent} no longer exists"
-        )
-
-    if not force:
-        current_hash = _hash_file(target)
-        expected_hash = entry.get("post_edit_sha256")
-        if current_hash != expected_hash:
-            raise UndoConflict(
-                f"target changed since commit, refusing to undo: {target}"
+    for spec in entry["targets"]:
+        p = Path(spec["path"])
+        if not p.parent.is_dir():
+            raise UndoTargetUnavailable(
+                f"cannot undo {p}: parent directory {p.parent} no longer exists"
             )
+        if not force:
+            current, _ = _read_if_exists(p)
+            if current is None or _sha256(current) != spec["new_sha256"]:
+                raise UndoConflict(
+                    f"{p} changed since this edit was applied; refusing to undo. "
+                    f"Show the user what would be lost before passing force=True."
+                )
 
-    if entry["created_file"]:
-        try:
-            os.remove(target)
-        except FileNotFoundError:
-            pass
-    else:
-        _atomic_write(Path(target), entry["previous_content"])
+    for spec in entry["targets"]:
+        if spec["created_file"]:
+            try:
+                os.remove(spec["path"])
+            except FileNotFoundError:
+                pass
+        else:
+            _atomic_write(Path(spec["path"]), spec["previous_content"],
+                          spec["previous_was_base64"])
 
     entry["reverted"] = True
     entry["reverted_at"] = _now()
-    _write(entry)
-
-    with open(paths.changelog(), "a", encoding="utf-8") as fh:
-        fh.write(f"{entry['reverted_at'][:10]} | REVERTED | {target} | "
-                 f"undo of entry {entry['id']} | -\n")
+    _write_entry(entry)
+    _append_changelog(
+        f"{entry['reverted_at'][:10]} | REVERTED | "
+        f"{', '.join(Path(t['path']).name for t in entry['targets'])} | "
+        f"undo of entry {entry['id']} | -"
+    )
     return entry

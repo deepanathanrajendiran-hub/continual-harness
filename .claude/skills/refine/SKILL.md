@@ -10,8 +10,9 @@ Every one is editable. This skill closes the loop that otherwise never
 closes: nothing in a normal session ever writes back to it.
 
 Rollback bookkeeping runs through one module at
-`.claude/harness/bin/refine_log.py` (`record`, `commit_entry`, `undo`,
-plus the `NothingToUndo` / `CorruptEntry` / `UndoConflict` exceptions).
+`.claude/harness/bin/refine_log.py` (`apply_edit`, `count_edits_today`,
+`undo`, plus the `NothingToUndo` / `CorruptEntry` / `UndoConflict` /
+`UndoTargetUnavailable` / `ProtectedTarget` exceptions).
 The skill calls it; it does not reimplement changelog formatting, entry
 storage, or the undo staleness check inline. If a step below can't be
 done by calling it, stop and say so rather than inventing an inline
@@ -76,8 +77,8 @@ Two things `--global` does **not** change:
   memory-routed proposal always writes to the current project's memory
   dir regardless of the flag; if a lesson is durable enough to want
   writing everywhere, route it to rho or G instead (Step 2), not to M.
-- **Changelog/undo bookkeeping stays project-local.** `record()` and
-  `commit_entry()` always write to *this* project's
+- **Changelog/undo bookkeeping stays project-local.** `apply_edit()`
+  always writes its ledger and snapshot to *this* project's
   `.claude/harness/CHANGELOG.md` and `.claude/harness/undo/`, even for a
   `--global` proposal whose edit target is under `~/.claude/`. There is
   no `~/.claude/harness/` — promoting the bookkeeping module itself is
@@ -161,22 +162,10 @@ self-editor degrades the harness until it is worse than no harness, and
 a cap the editor can lift at will by calling itself again is not a cap.
 
 **Before proposing anything, check the persisted floor, not your own
-recollection.** Read `.claude/harness/CHANGELOG.md` and count the
-non-`REVERTED` entries dated **today in UTC — never local time.**
-`commit_entry()` stamps `entry["committed_at"][:10]` from
-`datetime.now(timezone.utc)` at commit time — not `record()`'s earlier
-snapshot time — so every date already in the file is UTC and reflects
-when the edit actually landed, not when it was queued.
-Filtering by local "today" instead can silently *undercount*: for a user
-east of UTC, entries committed in their early morning carry *yesterday's*
-UTC date and would be skipped by a local-date filter, and the agent
-would conclude budget remains when the cap is already reached. Every
-other ambiguity in this guardrail resolves toward stopping sooner — this
-is the one place that must not resolve the other way.
+recollection.** A guardrail that depends on the constrained party's memory
+is not a guardrail.
 
 ```python
-import sys
-from datetime import datetime, timezone
 import sys, pathlib
 _c = pathlib.Path.cwd().resolve()
 _bin = next((c / ".claude/harness/bin" for c in (_c, *_c.parents)
@@ -184,75 +173,31 @@ _bin = next((c / ".claude/harness/bin" for c in (_c, *_c.parents)
             pathlib.Path.home() / ".claude/harness/bin")
 sys.path.insert(0, str(_bin))
 import refine_log
-
-today_utc = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-log_path = refine_log.paths.changelog()
-count = 0
-if log_path.exists():
-    for line in log_path.read_text().splitlines():
-        parts = [p.strip() for p in line.split("|")]
-        if len(parts) < 5:
-            continue  # header or blank line, not a dated entry
-        date, layer = parts[0], parts[1]
-        if not date[:4].isdigit():
-            continue  # header/format-spec line (e.g. the `YYYY-MM-DD | ...`
-                       # legend), not a real dated entry
-        if date == today_utc and layer != "REVERTED":
-            count += 1
-print(f"CHANGELOG pre-flight: {count} edits applied today (cap 3)")
+print(f"cap pre-flight: {refine_log.count_edits_today()} edits applied today (cap 3)")
 ```
 
-Split each line on `|` and read the layer field **by position**
-(`parts[1]`) — never by searching the whole line for the substring
-`"REVERTED"`. A target path, rationale, or evidence string can
-legitimately contain that word (a proposal *about* the undo mechanism
-itself, for instance), and a substring search would then misclassify a
-normal entry as reverted and undercount — the same direction of error as
-the UTC bug above.
+`count_edits_today()` counts the stored entries under
+`.claude/harness/undo/`, in UTC, excluding reverted ones. It does **not**
+parse `CHANGELOG.md`. That distinction is load-bearing: the changelog
+carries quoted trajectory text, and a newline inside a rationale would
+split a markdown line so a line-based count silently missed a real,
+committed, undoable edit — a cap failing in the one direction a cap must
+never fail. Do not reimplement the count by reading the changelog.
 
-Guard the read with `log_path.exists()` first. `commit_entry()` creates
-`CHANGELOG.md` lazily (Step 6), so a harness that has never applied an
-edit — a fresh project, or the state right after Task 7's global
-promotion — has no file yet, and reading it unguarded raises
-`FileNotFoundError` before a single proposal is made. Falling through to
-`count = 0` here is **not** the cap failing open the way a local-date
-comparison would be: a missing file means no edit has ever been
-committed, so zero is the *true* count, not a permissive guess. This is
-the opposite situation from the UTC case above — there, permissive was
-wrong because it hid edits that did happen; here, permissive is correct
-because there is nothing to hide.
+It raises `CorruptEntry` if any entry file is unreadable. That is not a
+reason to fall back to a looser count: report it and stop, exactly as
+`undo()` does.
 
-**State the count every time this pre-flight runs, whether or not it
-blocks** — one line before any proposals, in the form the snippet
-prints (`CHANGELOG pre-flight: N edits applied today (cap 3)`). A
-pre-flight only ever mentioned when it blocks is indistinguishable, in
-the transcript, from one that silently didn't run at all; nothing
-outside this skill verifies the check, so surfacing the count on every
-invocation is what makes it auditable.
+**State the count every time, whether or not it blocks.** A pre-flight
+only mentioned when it blocks is indistinguishable, in the transcript,
+from one that never ran.
 
 **If the count is already 3 or more, stop.** Propose nothing. Tell the
-user the count and that the cap is reached, and let them decide whether
-to override. Do not treat their asking you to run `/refine` as the
-override — it must be explicit, given only after they've seen the
-count.
+user the count and let them decide whether to override. Their asking you
+to run `/refine` is not the override — it must be explicit, given after
+they have seen the count.
 
-An edit applied and undone the same day still counts toward the 3,
-because `undo()` appends a separate `REVERTED` line rather than
-retiring the original committed line — the original line's layer field
-is untouched, so the snippet above still counts it. This is deliberate:
-it overcounts, and overcounting is the safe direction for a cap whose
-purpose is to stop bloat. Do not "fix" this by matching `REVERTED` lines
-back to their originals to exclude them — that would undercount instead.
-
-This is deliberate belt-and-braces beyond the trajectory rule above,
-which is self-attested by the same agent the cap is meant to constrain —
-a guardrail that depends on the constrained party's memory and good
-faith is not a guardrail. `CHANGELOG.md` is machine-written by
-`commit_entry()` (Step 6) and survives a session restart or a
-re-invocation on the "same" trajectory with one throwaway turn tacked
-onto the end, neither of which the trajectory rule alone can detect. The
-CHANGELOG count is the enforceable floor; the trajectory rule is the
-discipline on top of it.
+An edit applied and undone the same day stops counting once reverted.
 
 **Within whatever budget remains, rank.** If Step 1 turned up more
 candidates than that, rank by how often the situation will recur and
@@ -269,9 +214,9 @@ be written, and the trajectory moment justifying it — quote it, don't
 paraphrase it away. Then stop and wait for the user's response. Nothing
 in Steps 1–5 touches disk.
 
-## Step 6 — On approval, write and log
+## Step 6 — On approval, apply and log
 
-For each approved proposal, in this order:
+One call per approved proposal. The module performs the write:
 
 ```python
 import sys, pathlib
@@ -282,35 +227,36 @@ _bin = next((c / ".claude/harness/bin" for c in (_c, *_c.parents)
 sys.path.insert(0, str(_bin))
 import refine_log
 
-entry = refine_log.record(layer, target, rationale, evidence)  # BEFORE the edit
-# ... apply the edit to `target` now (Write/Edit tool) ...
-refine_log.commit_entry(entry["id"])                            # AFTER it succeeds
+entry = refine_log.apply_edit(
+    layer,                     # "rho" | "G" | "K" | "M"
+    [(target_path, new_content)],   # every file this proposal touches
+    rationale,                 # one sentence
+    evidence,                  # the trajectory moment from Step 5, quoted
+)
 ```
 
-`record()` first, always. It snapshots whatever currently exists at
-`target` (or notes that it doesn't exist yet), and that snapshot is the
-only thing that makes `/refine --undo` possible later. `commit_entry()`
-must come strictly after the edit has actually landed: it re-reads
-`target` and stores its sha256, which is what a later `undo()` uses to
-detect whether something else touched the file since. Calling
-`commit_entry()` before the edit lands, or skipping `record()` entirely,
-breaks rollback for that entry.
+**Do not write the file yourself with Write/Edit and then tell the module
+about it.** `apply_edit` takes the approved content and performs the write
+precisely so that what you showed the user, what gets logged, and what
+lands on disk cannot diverge. An earlier design split those steps and a
+single mistyped path produced a changelog asserting an edit that never
+happened, an `undo()` that "reverted" an untouched file, and a real change
+with no snapshot at all.
 
-If the edit fails partway through — a write error, a tool failure — do
-not call `commit_entry()`. An entry that was recorded but never committed
-represents a failed edit and `undo()` ignores it entirely; it is not
-left in a half-applied state that needs cleanup.
+**Every file the proposal touches goes in the same call.** Writing a
+memory means writing the memory file *and* appending its `MEMORY.md`
+index line — pass both pairs. One approved proposal is one entry and one
+atomic unit: all of them are written together, all of them revert
+together, and a failure part-way rolls the earlier ones back. Splitting
+them across two calls leaves `undo()` able to remove the memory while the
+index still advertises it, and burns two of your three proposals for one
+lesson.
 
-`layer` is one of `rho`, `G`, `K`, `M` — the same codes as the CHANGELOG
-legend. `target` is the absolute path being written. `rationale` is one
-sentence. `evidence` is the trajectory moment from Step 5, quoted or
-close to it — this is what makes reviewing `CHANGELOG.md` later actually
-mean something.
-
-`commit_entry()` appends the changelog line itself
-(`.claude/harness/CHANGELOG.md`) — never hand-edit that file; every line
-in it should trace back to a `record()`/`commit_entry()` or `undo()`
-call.
+`apply_edit` raises before writing anything if the target is protected
+(`ProtectedTarget`, guardrail G3), if `layer` is not one of the four, or
+if `rationale`/`evidence` are empty. It appends the changelog line itself
+— never hand-edit `.claude/harness/CHANGELOG.md`; every line in it should
+trace back to an `apply_edit()` or `undo()` call.
 
 ## Memory write contract
 
@@ -361,10 +307,13 @@ Related: [[other-slug]]
   `feedback` and `project` entries — they turn a fact into an
   instruction a future session can actually execute on. Link related
   memories with `[[slug]]` (no `.md`, no path).
-- **Index:** after writing the file, append exactly **one** line to
-  `MEMORY.md` in the same directory: `- [<Title>](<slug>.md) — <hook>`.
-  Never put memory content in the index — it's a table of contents, not
-  a copy.
+- **Index:** exactly **one** line appended to `MEMORY.md` in the same
+  directory: `- [<Title>](<slug>.md) — <hook>`. Never put memory content
+  in the index — it's a table of contents, not a copy. **Pass the index
+  file as a second `(target, content)` pair in the same `apply_edit()`
+  call**, not as a separate write: an index line outside the entry
+  survives `/refine --undo` and goes on advertising a memory that no
+  longer exists.
 
 ## Guardrails
 
@@ -390,16 +339,19 @@ Related: [[other-slug]]
   independent coverage-gate judge, and a proposal that flipped its judge
   dispatch to `subagent_type="fork"` would turn that independent judge
   into a self-grader — the verification mechanism is as off-limits as
-  the enforcement mechanism. `record()` itself refuses writes to any of
-  these three paths, resolved absolute against `../` tricks, so this is
-  not prose-only. It may never propose anything that weakens verification, testing,
+  the enforcement mechanism. `apply_edit()` itself refuses these targets,
+  matched as path *patterns* against the resolved absolute path — so the
+  rule holds for the global copies under `~/.claude/` exactly as for this
+  project's, and covers the ledger and undo snapshots the cap is counted
+  from, plus `settings*.json` and `hooks/` where a hook can run arbitrary
+  shell. It is not prose-only, and it is not three literal paths. It may never propose anything that weakens verification, testing,
   or approval requirements: skipping a test, loosening a gate, removing
   a guardrail from another skill. **Every write to rho/G/K/M goes through
-  `record()`/`commit_entry()` — no exceptions.** `refine` may never
+  `apply_edit()` — no exceptions, and every file a single proposal touches goes in the *same* call.** `refine` may never
   propose a skill, subagent, hook, or command whose job is (in whole or
   in part) to write to the harness layer, to assert standing, implicit,
   or batch approval for future harness edits, or to otherwise create a
-  second write path around `record()`/`commit_entry()` — a subagent
+  second write path around `apply_edit()` — a subagent
   definition declares its own tools and, unless it is `fork`, starts
   with a fresh context that never loads this skill's guardrails, so a
   proposal that reads as reasonable prose to the approving user
@@ -453,6 +405,8 @@ Related: [[other-slug]]
 
 | Call | Exception | Meaning | Action |
 |---|---|---|---|
+| `refine_log.apply_edit` | `ProtectedTarget` | the target is refine's own rules, horizon's, the harness code, the ledger, or a settings/hooks file | stop. This is G3 refusing, and it is not negotiable — do not propose a softened variant or a different route to the same file. |
+| `refine_log.count_edits_today` | `CorruptEntry` | an entry file under `.claude/harness/undo/` is unreadable | stop and report the paths. Do not fall back to counting the changelog — that is the looser count this design deliberately replaced. |
 | `refine_log.undo` | `NothingToUndo` | changelog has no committed, un-reverted entry | report it; there is nothing to revert |
 | `refine_log.undo` | `CorruptEntry` | an undo-log entry file under `.claude/harness/undo/` is unreadable or not valid JSON | stop. Report the exact file path(s) named in the exception to the user. Do not retry, delete the file, skip past it, or fall back to reverting a different entry on your own initiative — guessing past damaged history risks reverting the wrong edit. |
 | `refine_log.undo` | `UndoConflict` | the target's current sha256 doesn't match what was recorded when its entry was committed — something changed the target after the approved edit landed | stop. Show the user the target path and that it changed since. Only call `undo(force=True)` after the user explicitly approves discarding that later change — silently forcing would delete an edit nobody agreed to lose. |
@@ -481,11 +435,17 @@ except refine_log.UndoConflict as e:
     print(f"undo conflict: {e}")
     # present this to the user; do not proceed to force=True without
     # their explicit approval.
+except refine_log.UndoTargetUnavailable as e:
+    print(f"cannot undo, location gone: {e}")
+    # the snapshot is intact and the revert stays valid once the
+    # directory is restored. Report and stop; force=True cannot help.
 else:
-    print(f"reverted entry {entry['id']} on {entry['target']}")
+    reverted = ", ".join(t["path"] for t in entry["targets"])
+    print(f"reverted entry {entry['id']}: {reverted}")
 ```
 
-Reverts the single most recent committed, un-reverted entry and appends a
+Reverts the single most recent un-reverted entry — **all of its targets
+together**, since one approved proposal is one atomic unit — and appends a
 `REVERTED` line to `CHANGELOG.md`. There is no "undo entry #7
 specifically" call — it always targets the top of the stack, so calling
 it again walks back the next most recent entry.

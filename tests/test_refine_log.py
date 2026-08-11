@@ -1,3 +1,5 @@
+import base64
+import json
 import os
 import sys
 from pathlib import Path
@@ -9,7 +11,6 @@ BIN = REPO_ROOT / ".claude" / "harness" / "bin"
 sys.path.insert(0, str(BIN))
 
 import refine_log  # noqa: E402
-import json
 
 
 @pytest.fixture(autouse=True)
@@ -21,58 +22,46 @@ def isolated(tmp_path, monkeypatch):
     return root
 
 
-def test_undo_removes_a_created_file(tmp_path, isolated):
-    """T7: a created memory file is removed and the entry retired."""
-    target = tmp_path / "memory" / "no-api-keys.md"
-    target.parent.mkdir()
+# ---------------------------------------------------------------- apply/undo
 
-    entry = refine_log.record("M", target, "user prefers no-key solutions", "turn 12")
-    target.write_text("---\nname: no-api-keys\n---\nbody")
-    refine_log.commit_entry(entry["id"])
-
-    assert target.exists()
-    refine_log.undo()
-    assert not target.exists()
-    assert "REVERTED" in refine_log.paths.changelog().read_text()
-
-
-def test_undo_restores_previous_content(tmp_path, isolated):
+def test_apply_writes_the_approved_content(tmp_path):
+    """The module performs the write, so what was approved, what was
+    recorded and what landed cannot diverge."""
     target = tmp_path / "CLAUDE.md"
     target.write_text("original\n")
 
-    entry = refine_log.record("rho", target, "add routing rule", "turn 4")
-    target.write_text("original\nnew rule\n")
-    refine_log.commit_entry(entry["id"])
+    entry = refine_log.apply_edit("rho", [(target, "original\nnew rule\n")],
+                                  "add a rule", "turn 12")
+
+    assert target.read_text() == "original\nnew rule\n"
+    assert entry["targets"][0]["new_sha256"] == refine_log._sha256(target.read_text())
+
+
+def test_undo_restores_previous_content(tmp_path):
+    target = tmp_path / "CLAUDE.md"
+    target.write_text("original\n")
+    refine_log.apply_edit("rho", [(target, "changed\n")], "r", "e")
 
     refine_log.undo()
     assert target.read_text() == "original\n"
 
 
-def test_changelog_line_format(tmp_path, isolated):
-    target = tmp_path / "x.md"
-    entry = refine_log.record("G", target, "promote retry helper", "turns 3,7,11")
-    target.write_text("skill")
-    refine_log.commit_entry(entry["id"])
+def test_undo_removes_a_created_file(tmp_path):
+    """T7: a created memory file is removed and the entry retired."""
+    target = tmp_path / "memory" / "no-api-keys.md"
+    target.parent.mkdir()
+    refine_log.apply_edit("M", [(target, "---\nname: x\n---\nbody\n")], "r", "e")
+    assert target.exists()
 
-    line = refine_log.paths.changelog().read_text().strip().splitlines()[-1]
-    parts = [p.strip() for p in line.split("|")]
-    assert parts[1] == "G"
-    assert parts[3] == "promote retry helper"
-    assert parts[4] == "turns 3,7,11"
-
-
-def test_undo_with_empty_changelog_raises():
-    with pytest.raises(refine_log.NothingToUndo):
-        refine_log.undo()
+    refine_log.undo()
+    assert not target.exists()
+    assert "REVERTED" in refine_log.paths.changelog().read_text()
 
 
-def test_undo_twice_walks_back_two_entries(tmp_path, isolated):
-    a = tmp_path / "a.md"
-    b = tmp_path / "b.md"
-    for target in (a, b):
-        entry = refine_log.record("M", target, f"add {target.name}", "turn 1")
-        target.write_text("content")
-        refine_log.commit_entry(entry["id"])
+def test_undo_twice_walks_back_two_entries(tmp_path):
+    a, b = tmp_path / "a.md", tmp_path / "b.md"
+    refine_log.apply_edit("M", [(a, "A")], "first", "e")
+    refine_log.apply_edit("M", [(b, "B")], "second", "e")
 
     refine_log.undo()
     assert not b.exists() and a.exists()
@@ -80,316 +69,238 @@ def test_undo_twice_walks_back_two_entries(tmp_path, isolated):
     assert not a.exists()
 
 
-def test_uncommitted_entry_is_not_undone(tmp_path, isolated):
-    """A recorded-but-never-committed entry means the edit failed; undo
-    must not act on it."""
-    target = tmp_path / "never.md"
-    refine_log.record("M", target, "aborted edit", "turn 2")
+def test_undo_with_no_entries_raises():
     with pytest.raises(refine_log.NothingToUndo):
         refine_log.undo()
 
-def test_undo_atomic_restore_failure_leaves_target_intact(tmp_path, isolated, monkeypatch):
-    """Critical 1: a crash between truncate and write must not empty the
-    target. undo() must write to a temp file and os.replace() it in, so a
-    failed replace leaves the target exactly as it was post-edit."""
-    target = tmp_path / "CLAUDE.md"
-    target.write_text("original\n")
 
-    entry = refine_log.record("rho", target, "add routing rule", "turn 4")
-    target.write_text("original\nnew rule\n")
-    refine_log.commit_entry(entry["id"])
+# ------------------------------------------------- multi-target atomic units
 
-    def boom(*_args, **_kwargs):
-        raise OSError("simulated disk failure during replace")
+def test_one_proposal_reverts_all_of_its_files(tmp_path):
+    """A memory write touches the memory file AND the MEMORY.md index. If
+    the index sits outside the entry, undo orphans it -- the index keeps
+    advertising a memory that no longer exists."""
+    mem = tmp_path / "memory"
+    mem.mkdir()
+    note, index = mem / "quote-paths.md", mem / "MEMORY.md"
+    index.write_text("- [Older](older.md) — hook\n")
 
-    monkeypatch.setattr(refine_log.os, "replace", boom)
+    refine_log.apply_edit("M", [
+        (note, "---\nname: quote-paths\n---\nbody\n"),
+        (index, index.read_text() + "- [Quote paths](quote-paths.md) — hook\n"),
+    ], "record the lesson", "turn 3")
 
-    with pytest.raises(OSError):
-        refine_log.undo()
+    assert note.exists() and "quote-paths" in index.read_text()
 
-    assert target.read_text() == "original\nnew rule\n"
+    refine_log.undo()
+    assert not note.exists()
+    assert index.read_text() == "- [Older](older.md) — hook\n", "index line orphaned"
 
 
-def test_undo_raises_on_corrupt_entry(tmp_path, isolated):
-    """Critical 2: a torn/corrupt entry file must never be silently
-    skipped -- that would revert the wrong edit. undo() must refuse and
-    leave every entry, including older ones, untouched."""
-    a = tmp_path / "a.md"
-    b = tmp_path / "b.md"
-    committed = []
-    for target in (a, b):
-        entry = refine_log.record("M", target, f"add {target.name}", "turn 1")
-        target.write_text("content")
-        refine_log.commit_entry(entry["id"])
-        committed.append(entry)
+def test_a_failed_write_rolls_back_the_whole_proposal(tmp_path, monkeypatch):
+    """An entry must never describe a partially applied proposal."""
+    good = tmp_path / "good.md"
+    bad = tmp_path / "nodir" / "bad.md"          # parent missing -> write fails
+    good.write_text("before\n")
 
-    undo_dir = isolated / "undo"
-    newest_path = undo_dir / f"{committed[-1]['id']}.json"
-    newest_path.write_text("{not valid json")
+    with pytest.raises(refine_log.UndoTargetUnavailable):
+        refine_log.apply_edit("M", [(good, "after\n"), (bad, "x")], "r", "e")
 
+    assert good.read_text() == "before\n", "first target not rolled back"
+    assert not list((refine_log.paths.undo_dir()).glob("*.json")), "entry recorded for a failed proposal"
+
+
+# ------------------------------------------------------------------- the cap
+
+def test_cap_counts_entries_not_changelog_lines(tmp_path):
+    """A newline in a rationale must not hide a real edit from the cap.
+    Counting parsed markdown lines made one unescaped delimiter enough to
+    make a committed, undoable edit invisible."""
+    for i in range(3):
+        refine_log.apply_edit("M", [(tmp_path / f"h{i}.md", "x")], f"rationale {i}", "ev")
+    assert refine_log.count_edits_today() == 3
+
+    refine_log.apply_edit("M", [(tmp_path / "fourth.md", "real")],
+                          "loosen the bar\n(continued on a new line)", "quoted:\noutput\nhere")
+
+    assert refine_log.count_edits_today() == 4, "a newline hid a real edit from the cap"
+    assert (tmp_path / "fourth.md").exists()
+
+
+def test_changelog_stays_one_line_per_entry(tmp_path):
+    refine_log.apply_edit("M", [(tmp_path / "a.md", "x")],
+                          "multi\nline\nrationale", "multi\nline\nevidence")
+    body = [l for l in refine_log.paths.changelog().read_text().splitlines()
+            if l.startswith("20")]
+    assert len(body) == 1
+    assert body[0].count("|") == 4, "field count broken by embedded delimiters"
+
+
+def test_reverted_entries_do_not_count_toward_the_cap(tmp_path):
+    refine_log.apply_edit("M", [(tmp_path / "a.md", "x")], "r", "e")
+    assert refine_log.count_edits_today() == 1
+    refine_log.undo()
+    assert refine_log.count_edits_today() == 0
+
+
+def test_cap_refuses_to_count_past_corruption(tmp_path):
+    refine_log.apply_edit("M", [(tmp_path / "a.md", "x")], "r", "e")
+    (refine_log.paths.undo_dir() / "0001.json").write_text("{not json")
     with pytest.raises(refine_log.CorruptEntry):
-        refine_log.undo()
-
-    oldest_path = undo_dir / f"{committed[0]['id']}.json"
-    oldest_on_disk = json.loads(oldest_path.read_text())
-    assert oldest_on_disk["reverted"] is False
-    assert a.exists() and b.exists()
+        refine_log.count_edits_today()
 
 
-def test_undo_raises_on_staleness_conflict(tmp_path, isolated):
-    """Important 3: if something modified the target after commit,
-    undo() must refuse rather than silently discard that change."""
+# ---------------------------------------------------------------- guardrails
+
+@pytest.mark.parametrize("bad_layer", ["REVERTED", "rho|x", "M\nX", "", "memory"])
+def test_apply_rejects_invalid_layers(tmp_path, bad_layer):
+    with pytest.raises(ValueError):
+        refine_log.apply_edit(bad_layer, [(tmp_path / "a.md", "x")], "r", "e")
+
+
+@pytest.mark.parametrize("path_fragment", [
+    ".claude/skills/refine/SKILL.md",
+    ".claude/skills/horizon/SKILL.md",
+    ".claude/harness/bin/refine_log.py",
+    ".claude/harness/CHANGELOG.md",
+    ".claude/harness/undo/0001.json",
+    ".claude/harness/goals/x.json",
+    ".claude/settings.json",
+    ".claude/settings.local.json",
+    ".claude/hooks/pre.sh",
+])
+def test_protected_paths_are_denied_in_any_project(tmp_path, path_fragment):
+    """G3 must hold for the global copies too, not just this project's --
+    and for the ledger the cap is counted from, and for settings files
+    that can configure hooks running arbitrary shell."""
+    for base in (tmp_path / "someproject", tmp_path / "fakehome"):
+        target = base / path_fragment
+        target.parent.mkdir(parents=True, exist_ok=True)
+        with pytest.raises(refine_log.ProtectedTarget):
+            refine_log.apply_edit("M", [(target, "x")], "r", "e")
+
+
+def test_protected_check_survives_dotdot_and_case(tmp_path):
+    base = tmp_path / "proj" / ".claude" / "skills" / "refine"
+    base.mkdir(parents=True)
+    (base / "SKILL.md").write_text("rules")
+    sneaky = tmp_path / "proj" / ".claude" / "skills" / ".." / "skills" / "refine" / "SKILL.md"
+    with pytest.raises(refine_log.ProtectedTarget):
+        refine_log.apply_edit("M", [(sneaky, "x")], "r", "e")
+
+
+def test_ordinary_targets_are_still_allowed(tmp_path):
+    """A denylist that blocks everything is not a fix."""
+    target = tmp_path / "proj" / ".claude" / "agents" / "researcher.md"
+    target.parent.mkdir(parents=True)
+    entry = refine_log.apply_edit("K", [(target, "spec")], "r", "e")
+    assert target.read_text() == "spec"
+    assert entry["layer"] == "K"
+
+
+# ------------------------------------------------------------- content fidelity
+
+def test_symlinked_target_keeps_its_link(tmp_path):
+    """A dotfiles-managed CLAUDE.md is a symlink. Replacing the link
+    instead of its destination silently detaches it from the repo that
+    manages it, while appearing to have worked."""
+    real = tmp_path / "dotfiles" / "CLAUDE.md"
+    real.parent.mkdir()
+    real.write_text("# rules\noriginal\n")
+    link = tmp_path / "CLAUDE.md"
+    link.symlink_to(real)
+
+    refine_log.apply_edit("rho", [(link, "# rules\noriginal\nnew\n")], "r", "e")
+    assert link.is_symlink(), "the symlink was replaced by a regular file"
+    assert real.read_text() == "# rules\noriginal\nnew\n"
+
+    refine_log.undo()
+    assert link.is_symlink()
+    assert real.read_text() == "# rules\noriginal\n", "undo left the change live in dotfiles"
+
+
+def test_undo_is_byte_exact_for_crlf(tmp_path):
+    target = tmp_path / "win.md"
+    target.write_bytes(b"line1\r\nline2\r\n")
+    refine_log.apply_edit("rho", [(target, "replaced\n")], "r", "e")
+    refine_log.undo()
+    assert target.read_bytes() == b"line1\r\nline2\r\n"
+
+
+def test_non_utf8_target_round_trips(tmp_path):
+    """A latin-1 CLAUDE.md must not crash the snapshot, and must come
+    back byte-identical."""
+    target = tmp_path / "latin.md"
+    original = "caf\xe9 na\xefve\n".encode("latin-1")
+    target.write_bytes(original)
+
+    refine_log.apply_edit("rho", [(target, "ascii replacement\n")], "r", "e")
+    refine_log.undo()
+    assert target.read_bytes() == original
+
+
+def test_directory_as_target_is_rejected(tmp_path):
+    d = tmp_path / "adir"
+    d.mkdir()
+    with pytest.raises(ValueError):
+        refine_log.apply_edit("M", [(d, "x")], "r", "e")
+
+
+# ----------------------------------------------------------------- staleness
+
+def test_undo_refuses_when_the_target_changed(tmp_path):
     target = tmp_path / "CLAUDE.md"
     target.write_text("original\n")
-
-    entry = refine_log.record("rho", target, "add routing rule", "turn 4")
-    target.write_text("original\nnew rule\n")
-    refine_log.commit_entry(entry["id"])
-
-    target.write_text("original\nnew rule\nexternal edit\n")
+    refine_log.apply_edit("rho", [(target, "approved\n")], "r", "e")
+    target.write_text("approved\nMY OWN LATER EDIT\n")
 
     with pytest.raises(refine_log.UndoConflict):
         refine_log.undo()
+    assert "MY OWN LATER EDIT" in target.read_text()
 
-    assert target.read_text() == "original\nnew rule\nexternal edit\n"
 
-
-def test_undo_force_overrides_staleness_conflict(tmp_path, isolated):
-    """Important 3: force=True lets a user who has seen the conflict
-    proceed deliberately."""
+def test_undo_force_overrides_staleness(tmp_path):
     target = tmp_path / "CLAUDE.md"
     target.write_text("original\n")
-
-    entry = refine_log.record("rho", target, "add routing rule", "turn 4")
-    target.write_text("original\nnew rule\n")
-    refine_log.commit_entry(entry["id"])
-
-    target.write_text("original\nnew rule\nexternal edit\n")
+    refine_log.apply_edit("rho", [(target, "approved\n")], "r", "e")
+    target.write_text("approved\nlater\n")
 
     refine_log.undo(force=True)
     assert target.read_text() == "original\n"
 
 
-def test_record_does_not_reuse_sequence_id_after_gap(tmp_path, isolated):
-    """Important 4: the next id must be max(existing) + 1, not a count,
-    or removing an entry file causes the next record() to collide with
-    and destroy a surviving entry."""
-    a = tmp_path / "a.md"
-    b = tmp_path / "b.md"
-    c = tmp_path / "c.md"
-    a.write_text("a-original\n")
-    b.write_text("b-original\n")
-    c.write_text("c-original\n")
-
-    committed = []
-    for target in (a, b, c):
-        entry = refine_log.record("M", target, f"edit {target.name}", "turn 1")
-        target.write_text(target.read_text() + "edited\n")
-        refine_log.commit_entry(entry["id"])
-        committed.append(entry)
-
-    undo_dir = isolated / "undo"
-    survivor_a_id = committed[0]["id"]
-    survivor_c_id = committed[2]["id"]
-    middle_id = committed[1]["id"]
-
-    before_a = json.loads((undo_dir / f"{survivor_a_id}.json").read_text())
-    before_c = json.loads((undo_dir / f"{survivor_c_id}.json").read_text())
-
-    (undo_dir / f"{middle_id}.json").unlink()
-
-    d = tmp_path / "d.md"
-    d.write_text("d-original\n")
-    entry4 = refine_log.record("M", d, "edit d.md", "turn 1")
-
-    assert entry4["id"] not in (survivor_a_id, survivor_c_id)
-
-    after_a = json.loads((undo_dir / f"{survivor_a_id}.json").read_text())
-    after_c = json.loads((undo_dir / f"{survivor_c_id}.json").read_text())
-    assert after_a == before_a
-    assert after_c == before_c
-    assert after_a["previous_content"] == "a-original\n"
-    assert after_c["previous_content"] == "c-original\n"
-
-
-# --- CRITICAL 1: layer validation (G2 cap defeat via REVERTED sentinel) ---
-
-def test_record_rejects_reverted_sentinel(tmp_path, isolated):
-    """CRITICAL 1: the CHANGELOG pre-flight (refine SKILL.md Step 4) skips
-    any line whose layer field reads REVERTED when counting today's edits
-    against the cap of 3. If record() accepted layer="REVERTED", that call
-    would produce a real, committed, undoable edit invisible to the
-    counter -- REVERTED must be unconstructible through record()."""
-    target = tmp_path / "x.md"
-    with pytest.raises(ValueError):
-        refine_log.record("REVERTED", target, "rationale", "evidence")
-    # observable state: no entry file was written, no side effect at all
-    assert list((isolated / "undo").glob("*.json")) == []
-
-
-def test_record_rejects_unknown_layer(tmp_path, isolated):
-    target = tmp_path / "x.md"
-    with pytest.raises(ValueError):
-        refine_log.record("bogus", target, "r", "e")
-    assert list((isolated / "undo").glob("*.json")) == []
-
-
-def test_record_rejects_layer_containing_pipe(tmp_path, isolated):
-    """A `|` in the layer field would corrupt CHANGELOG's `|`-delimited
-    positional parsing (the same parsing the G2 pre-flight snippet relies
-    on to read the layer field by position)."""
-    target = tmp_path / "x.md"
-    with pytest.raises(ValueError):
-        refine_log.record("rho|REVERTED", target, "r", "e")
-    assert list((isolated / "undo").glob("*.json")) == []
-
-
-def test_record_rejects_layer_containing_newline(tmp_path, isolated):
-    target = tmp_path / "x.md"
-    with pytest.raises(ValueError):
-        refine_log.record("rho\nG | x | y | z", target, "r", "e")
-    assert list((isolated / "undo").glob("*.json")) == []
-
-
-def test_record_accepts_every_valid_layer(tmp_path, isolated):
-    for layer in ("rho", "G", "K", "M"):
-        target = tmp_path / f"{layer}.md"
-        entry = refine_log.record(layer, target, "r", "e")
-        assert entry["layer"] == layer
-
-
-# --- CRITICAL 2: G3 no-self-exemption enforced in code, not only prose ---
-
-def test_record_denies_refine_skill_as_target(isolated):
-    target = REPO_ROOT / ".claude" / "skills" / "refine" / "SKILL.md"
-    with pytest.raises(ValueError):
-        refine_log.record("G", target, "r", "e")
-    assert list((isolated / "undo").glob("*.json")) == []
-
-
-def test_record_denies_horizon_skill_as_target(isolated):
-    target = REPO_ROOT / ".claude" / "skills" / "horizon" / "SKILL.md"
-    with pytest.raises(ValueError):
-        refine_log.record("G", target, "r", "e")
-    assert list((isolated / "undo").glob("*.json")) == []
-
-
-def test_record_denies_harness_bin_target(isolated):
-    target = REPO_ROOT / ".claude" / "harness" / "bin" / "goal.py"
-    with pytest.raises(ValueError):
-        refine_log.record("G", target, "r", "e")
-    assert list((isolated / "undo").glob("*.json")) == []
-
-
-def test_record_denylist_survives_dotdot_traversal(isolated):
-    """The denylist compares resolved absolute paths, not raw strings, so
-    a `../` cannot slip a denied target past the check."""
-    sneaky = (
-        REPO_ROOT / ".claude" / "skills" / "horizon" / ".." / "refine" / "SKILL.md"
-    )
-    assert str(sneaky) != str(REPO_ROOT / ".claude" / "skills" / "refine" / "SKILL.md")
-    with pytest.raises(ValueError):
-        refine_log.record("G", sneaky, "r", "e")
-    assert list((isolated / "undo").glob("*.json")) == []
-
-
-def test_record_allows_ordinary_target_outside_denylist(tmp_path, isolated):
-    """Sanity: the denylist doesn't over-broadly reject legitimate writes."""
-    target = tmp_path / "CLAUDE.md"
-    entry = refine_log.record("rho", target, "r", "e")
-    assert entry["target"] == str(target)
-
-
-# --- F1: denylist bypass via filename case / hardlink (identity, not string) ---
-
-def test_record_denies_case_variant_of_protected_target(isolated):
-    """F1: Path.resolve() canonicalizes symlinks and `..` but not case. On
-    a case-insensitive filesystem (APFS's default) a differently-cased
-    spelling of a protected path opens the exact same file and must be
-    denied just as the canonically-cased path is."""
-    canonical = REPO_ROOT / ".claude" / "skills" / "refine" / "SKILL.md"
-    variant = REPO_ROOT / ".claude" / "skills" / "refine" / "skill.md"
-
-    if not variant.exists() or not os.path.samefile(canonical, variant):
-        pytest.skip(
-            "filesystem is case-sensitive: lowercase variant does not "
-            "resolve to the protected target, so this bypass doesn't apply"
-        )
-
-    with pytest.raises(ValueError):
-        refine_log.record("G", variant, "r", "e")
-    assert list((isolated / "undo").glob("*.json")) == []
-
-
-def test_record_denies_hardlink_to_protected_target(tmp_path, isolated):
-    """F1: a hardlink shares the protected file's inode but resolves to a
-    completely different path string, so a string comparison of resolved
-    paths misses it entirely. Identity comparison (samefile) must not."""
-    canonical = REPO_ROOT / ".claude" / "skills" / "refine" / "SKILL.md"
-    link = tmp_path / "not-suspicious-at-all.md"
-
-    try:
-        os.link(canonical, link)
-    except OSError as exc:
-        pytest.skip(f"hardlinks unsupported on this filesystem/setup: {exc}")
-
-    assert os.path.samefile(canonical, link)
-
-    with pytest.raises(ValueError):
-        refine_log.record("G", link, "r", "e")
-    assert list((isolated / "undo").glob("*.json")) == []
-
-
-# --- IMPORTANT 3: CHANGELOG date stamped at commit time, not record time ---
-
-def test_changelog_date_is_commit_time_not_record_time(tmp_path, isolated, monkeypatch):
-    """IMPORTANT 3: record() sets `at` before the edit; commit can land
-    after midnight UTC. The CHANGELOG line must reflect commit time, or a
-    late-night edit is silently attributed to yesterday and undercounts
-    against today's G2 cap -- the direction the skill says must never
-    happen."""
-    times = iter([
-        "2026-08-08T23:59:50+00:00",  # record() timestamp
-        "2026-08-09T00:00:10+00:00",  # commit_entry() timestamp
-    ])
-    monkeypatch.setattr(refine_log, "_now", lambda: next(times))
-
-    target = tmp_path / "x.md"
-    entry = refine_log.record("G", target, "r", "e")
-    assert entry["at"].startswith("2026-08-08")
-
-    target.write_text("content")
-    refine_log.commit_entry(entry["id"])
-
-    line = refine_log.paths.changelog().read_text().strip().splitlines()[-1]
-    date = line.split("|")[0].strip()
-    assert date == "2026-08-09"
-
-
-def test_atomic_write_reports_missing_parent_clearly(tmp_path, isolated):
-    """A vanished parent directory must raise a typed, retriable error --
-    not a bare FileNotFoundError that reads like a bug."""
-    with pytest.raises(refine_log.UndoTargetUnavailable):
-        refine_log._atomic_write(tmp_path / "gone" / "f.md", "x")
-
-
-def test_undo_reports_missing_parent_clearly(tmp_path, isolated):
-    """The same failure reached through the real undo path: the entry is
-    intact and the revert stays valid once the directory is restored."""
+def test_undo_reports_a_missing_parent_clearly(tmp_path):
+    import shutil
     d = tmp_path / "layer"
     d.mkdir()
     target = d / "CLAUDE.md"
     target.write_text("original\n")
-
-    entry = refine_log.record("rho", target, "add a rule", "turn 4")
-    target.write_text("original\nnew rule\n")
-    refine_log.commit_entry(entry["id"])
-
-    import shutil
+    refine_log.apply_edit("rho", [(target, "changed\n")], "r", "e")
     shutil.rmtree(d)
 
     with pytest.raises(refine_log.UndoTargetUnavailable):
         refine_log.undo()
+    entries, _ = refine_log._entries()
+    assert entries[-1]["reverted"] is False
 
-    entries = [e for e in refine_log._entries()[0] if e["id"] == entry["id"]]
-    assert entries[0]["reverted"] is False, "entry marked reverted despite failing"
+
+def test_undo_raises_on_corrupt_entry(tmp_path):
+    refine_log.apply_edit("M", [(tmp_path / "a.md", "A")], "first", "e")
+    refine_log.apply_edit("M", [(tmp_path / "b.md", "B")], "second", "e")
+    (refine_log.paths.undo_dir() / "0002.json").write_text("{not json")
+
+    with pytest.raises(refine_log.CorruptEntry):
+        refine_log.undo()
+    entries, _ = refine_log._entries()
+    assert all(not e["reverted"] for e in entries), "reverted past damaged history"
+
+
+def test_ids_do_not_collide_after_a_gap(tmp_path):
+    for n in ("a", "b", "c"):
+        refine_log.apply_edit("M", [(tmp_path / f"{n}.md", n)], "r", "e")
+    (refine_log.paths.undo_dir() / "0002.json").unlink()
+
+    refine_log.apply_edit("M", [(tmp_path / "d.md", "d")], "r", "e")
+    ids = sorted(p.stem for p in refine_log.paths.undo_dir().glob("*.json"))
+    assert len(ids) == len(set(ids)) == 3
+    assert json.loads((refine_log.paths.undo_dir() / "0001.json").read_text())["rationale"] == "r"
