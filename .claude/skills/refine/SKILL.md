@@ -10,9 +10,10 @@ Every one is editable. This skill closes the loop that otherwise never
 closes: nothing in a normal session ever writes back to it.
 
 Rollback bookkeeping runs through one module at
-`.claude/harness/bin/refine_log.py` (`apply_edit`, `count_edits_today`,
-`undo`, plus the `NothingToUndo` / `CorruptEntry` / `UndoConflict` /
-`UndoTargetUnavailable` / `ProtectedTarget` exceptions).
+`.claude/harness/bin/refine_log.py` (`apply_edit`, `AppendLine`,
+`count_recent_edits`, `list_entries`, `undo`, plus the `NothingToUndo` /
+`CorruptEntry` / `UndoConflict` / `UndoTargetUnavailable` /
+`ProtectedTarget` / `SelfExemption` / `CapReached` exceptions).
 The skill calls it; it does not reimplement changelog formatting, entry
 storage, or the undo staleness check inline. If a step below can't be
 done by calling it, stop and say so rather than inventing an inline
@@ -161,6 +162,12 @@ call, and never resettable by re-invoking `/refine`.** An unbounded
 self-editor degrades the harness until it is worse than no harness, and
 a cap the editor can lift at will by calling itself again is not a cap.
 
+**`apply_edit` enforces this itself.** The fourth edit inside the window
+raises `CapReached` and writes nothing — you are not trusted to stop, and
+neither is any future edit to this file. The pre-flight below exists so
+you can rank *before* proposing and tell the user where the budget
+stands, not because the count is advisory.
+
 **Before proposing anything, check the persisted floor, not your own
 recollection.** A guardrail that depends on the constrained party's memory
 is not a guardrail.
@@ -173,16 +180,29 @@ _bin = next((c / ".claude/harness/bin" for c in (_c, *_c.parents)
             pathlib.Path.home() / ".claude/harness/bin")
 sys.path.insert(0, str(_bin))
 import refine_log
-print(f"cap pre-flight: {refine_log.count_edits_today()} edits applied today (cap 3)")
+print(f"cap pre-flight: {refine_log.count_recent_edits()} of "
+      f"{refine_log.CAP} edits used in the last {refine_log.CAP_WINDOW_HOURS}h")
 ```
 
-`count_edits_today()` counts the stored entries under
-`.claude/harness/undo/`, in UTC, excluding reverted ones. It does **not**
-parse `CHANGELOG.md`. That distinction is load-bearing: the changelog
-carries quoted trajectory text, and a newline inside a rationale would
-split a markdown line so a line-based count silently missed a real,
-committed, undoable edit — a cap failing in the one direction a cap must
-never fail. Do not reimplement the count by reading the changelog.
+`count_recent_edits()` counts the stored entries under
+`.claude/harness/undo/`. It does **not** parse `CHANGELOG.md`. That
+distinction is load-bearing: the changelog carries quoted trajectory text,
+and a newline inside a rationale would split a markdown line so a
+line-based count silently missed a real, committed, undoable edit — a cap
+failing in the one direction a cap must never fail. Do not reimplement the
+count by reading the changelog.
+
+Three properties of the count, each chosen to fail toward stopping:
+
+- **A rolling 24-hour window, not a UTC calendar day.** A session that
+  runs past midnight would otherwise be handed a fresh budget
+  mid-trajectory. The cost — two unrelated sessions in one day sharing a
+  budget — is the harmless direction.
+- **Reverted entries still count.** Apply-then-undo is otherwise an
+  unlimited budget. The cap exists to force ranking, and an undo does not
+  undo the ranking decision.
+- **An entry with an unreadable timestamp counts.** It cannot be placed
+  outside the window, so it is treated as inside it.
 
 It raises `CorruptEntry` if any entry file is unreadable. That is not a
 reason to fall back to a looser count: report it and stop, exactly as
@@ -192,12 +212,12 @@ reason to fall back to a looser count: report it and stop, exactly as
 only mentioned when it blocks is indistinguishable, in the transcript,
 from one that never ran.
 
-**If the count is already 3 or more, stop.** Propose nothing. Tell the
+**If the count is already at the cap, stop.** Propose nothing. Tell the
 user the count and let them decide whether to override. Their asking you
 to run `/refine` is not the override — it must be explicit, given after
-they have seen the count.
-
-An edit applied and undone the same day stops counting once reverted.
+they have seen the count. Only then may you pass `override_cap=True`,
+which records `cap_override` on the entry and marks the changelog line, so
+an override is never mistaken later for the cap having failed.
 
 **Within whatever budget remains, rank.** If Step 1 turned up more
 candidates than that, rank by how often the situation will recur and
@@ -252,11 +272,31 @@ them across two calls leaves `undo()` able to remove the memory while the
 index still advertises it, and burns two of your three proposals for one
 lesson.
 
+**Append to an index with `AppendLine`, never with a rendered body:**
+
+```python
+refine_log.apply_edit("M", [
+    (memory_path, memory_text),
+    (index_path, refine_log.AppendLine("- [Title](slug.md) — hook")),
+], rationale, evidence)
+```
+
+A string carries *your* read of `MEMORY.md`, which may be several turns
+old. Two memory proposals in one session both read the index before either
+wrote, so each rendered a full body containing exactly one new line and
+the second silently dropped the first's: the memory file survived, its
+index entry did not, and nothing in the entry or the changelog showed
+anything had been lost. `AppendLine` is resolved against the file's
+current bytes while the lock is held, and appending a line that is already
+present is a no-op, so a retry cannot double it.
+
 `apply_edit` raises before writing anything if the target is protected
-(`ProtectedTarget`, guardrail G3), if `layer` is not one of the four, or
-if `rationale`/`evidence` are empty. It appends the changelog line itself
-— never hand-edit `.claude/harness/CHANGELOG.md`; every line in it should
-trace back to an `apply_edit()` or `undo()` call.
+(`ProtectedTarget`, guardrail G3), if the *content* claims harness
+authority or softens a guardrail (`SelfExemption`, also G3 — see below),
+if the cap is spent (`CapReached`, G2), if `layer` is not one of the four,
+or if `rationale`/`evidence` are empty. It appends the changelog line
+itself — never hand-edit `.claude/harness/CHANGELOG.md`; every line in it
+should trace back to an `apply_edit()` or `undo()` call.
 
 ## Memory write contract
 
@@ -322,12 +362,17 @@ Related: [[other-slug]]
   the Nth repetition of a named procedure. No speculative or anticipatory
   edits ("this might help next time").
 - **G2 — Cap of 3.** At most 3 proposals per trajectory, not per tool
-  call — see Step 4. Enforced against a persisted floor (today's, in
-  **UTC**, non-`REVERTED` `CHANGELOG.md` entry count), not against your
-  own recollection of what you've already proposed — self-attestation is
-  not a guardrail. Re-invoking `/refine` on the same trajectory to bypass
-  the cap is not a loophole, it's the exact bloat the cap exists to prevent.
-  Forces ranking instead of dumping every candidate that came up.
+  call — see Step 4. Enforced **in code**: `apply_edit` counts the stored
+  entries of the last 24 hours and raises `CapReached` on the fourth,
+  writing nothing. Not against your own recollection of what you have
+  already proposed, and not on your agreement to stop — self-attestation
+  is not a guardrail, and a limit the constrained party applies to itself
+  is self-attestation with extra steps. Re-invoking `/refine` on the same
+  trajectory to bypass the cap is not a loophole, it's the exact bloat the
+  cap exists to prevent. Forces ranking instead of dumping every candidate
+  that came up. `override_cap=True` exists for a user who has seen the
+  count and said so explicitly, and stamps the entry and the changelog
+  when used.
 - **G3 — No self-exemption.** `refine` may never edit
   `.claude/skills/refine/SKILL.md` (this file), `.claude/skills/horizon/
   SKILL.md`, or anything under `.claude/harness/bin/*.py` —
@@ -363,7 +408,23 @@ Related: [[other-slug]]
   state explicitly, as part of the proposal text, what write authority
   the new artifact claims — including "none" if it claims none — and
   that statement is part of what the user is approving in G4, not an
-  implementation detail left for later. And it may never propose anything —
+  implementation detail left for later.
+
+  This half of G3 is backed by a **content tripwire**, not just prose:
+  `apply_edit` raises `SelfExemption` when a G or K edit's text references
+  `refine_log`, calls `apply_edit`/`commit_entry`, targets
+  `.claude/harness/`, claims standing or implicit approval, or claims a
+  harness-maintenance role — and when an edit at *any* layer proposes
+  raising the cap, skipping approval, or weakening tests or gates. It is a
+  tripwire, not a proof: a determined paraphrase gets past it, and the
+  approval gate remains the real defence. It exists so that the shape the
+  audit found — `~/.claude/skills/harness-maintainer/SKILL.md`, a path no
+  denylist protects — fails closed instead of depending on the constrained
+  party to notice. If it fires on something genuinely innocent, that is
+  the user's file to write by hand; refine does not get to make that class
+  of change on its own authority.
+
+  And it may never propose anything —
   in memory, in `CLAUDE.md`, in another skill, anywhere — that softens
   **G1's evidence bar, G2's cap of 3, or G4's approval gate**, e.g.
   "relax quoting for small edits," "raise refine's proposal cap," or a
@@ -406,8 +467,10 @@ Related: [[other-slug]]
 | Call | Exception | Meaning | Action |
 |---|---|---|---|
 | `refine_log.apply_edit` | `ProtectedTarget` | the target is refine's own rules, horizon's, the harness code, the ledger, or a settings/hooks file | stop. This is G3 refusing, and it is not negotiable — do not propose a softened variant or a different route to the same file. |
-| `refine_log.count_edits_today` | `CorruptEntry` | an entry file under `.claude/harness/undo/` is unreadable | stop and report the paths. Do not fall back to counting the changelog — that is the looser count this design deliberately replaced. |
-| `refine_log.undo` | `NothingToUndo` | changelog has no committed, un-reverted entry | report it; there is nothing to revert |
+| `refine_log.apply_edit` | `SelfExemption` | the *content* claims harness write authority, standing approval, or softens G1/G2/G4 | stop. Also G3, for the same reason. Report the matched phrase to the user; if the match is genuinely innocent, they can write the file themselves — do not reword it to get past the check. |
+| `refine_log.apply_edit` | `CapReached` | G2's budget for the last 24h is spent | stop and report the count. Only re-run with `override_cap=True` if the user, having seen the count, explicitly says to. |
+| `refine_log.count_recent_edits` | `CorruptEntry` | an entry file under `.claude/harness/undo/` is unreadable | stop and report the paths. Do not fall back to counting the changelog — that is the looser count this design deliberately replaced. |
+| `refine_log.undo` | `NothingToUndo` | no matching entry: nothing un-reverted left, or the requested `entry_id` is unknown or already reverted | report it; the message lists the ids that exist |
 | `refine_log.undo` | `CorruptEntry` | an undo-log entry file under `.claude/harness/undo/` is unreadable or not valid JSON | stop. Report the exact file path(s) named in the exception to the user. Do not retry, delete the file, skip past it, or fall back to reverting a different entry on your own initiative — guessing past damaged history risks reverting the wrong edit. |
 | `refine_log.undo` | `UndoConflict` | the target's current sha256 doesn't match what was recorded when its entry was committed — something changed the target after the approved edit landed | stop. Show the user the target path and that it changed since. Only call `undo(force=True)` after the user explicitly approves discarding that later change — silently forcing would delete an edit nobody agreed to lose. |
 
@@ -443,6 +506,26 @@ else:
     reverted = ", ".join(t["path"] for t in entry["targets"])
     print(f"reverted entry {entry['id']}: {reverted}")
 ```
+
+**Undoing something other than the top of the stack.** `undo()` takes the
+most recent un-reverted entry. When that one raises `UndoConflict` —
+someone hand-edited its target since — every older entry used to be stuck
+behind it, because nothing else was reachable. Show the user what exists
+and revert by id instead:
+
+```python
+for e in refine_log.list_entries():
+    mark = "reverted" if e["reverted"] else "applied "
+    print(f"{e['id']}  {mark}  {e['at'][:16]}  {e['layer']}  {e['rationale'][:60]}")
+
+entry = refine_log.undo(entry_id="0002")
+```
+
+Selecting out of order is not a hole in the safety check. If a newer entry
+also rewrote that target, the older entry's recorded sha256 no longer
+matches the file and `UndoConflict` fires exactly as it should — the newer
+content was never snapshotted by the older entry, so reverting would
+destroy it.
 
 Reverts the single most recent un-reverted entry — **all of its targets
 together**, since one approved proposal is one atomic unit — and appends a

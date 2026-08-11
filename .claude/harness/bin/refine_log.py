@@ -21,6 +21,14 @@ The cap that `refine` enforces counts entries in `undo/*.json`, not lines
 in `CHANGELOG.md`. The changelog is a rendering for humans and may
 contain arbitrary quoted text; counting from it would mean a newline in a
 rationale could hide a real edit from the cap.
+
+The cap is enforced *here*, in `apply_edit`, not only described in the
+skill. A limit that lives entirely in prose is a limit the constrained
+party enforces against itself, which is the one arrangement a guardrail
+may not have. It counts a rolling 24-hour window rather than a UTC
+calendar day for the same reason: a calendar day hands a session that
+runs past midnight a fresh budget mid-trajectory, and that is the
+direction a cap must never fail in.
 """
 
 import hashlib
@@ -28,7 +36,7 @@ import json
 import os
 import re
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import filelock
@@ -73,8 +81,37 @@ class ProtectedTarget(ValueError):
     """
 
 
+class SelfExemption(ValueError):
+    """The *content* of an edit claims harness authority or softens a guardrail.
+
+    G3 has a semantic half that no path denylist can reach. A proposal
+    creating `~/.claude/skills/harness-maintainer/SKILL.md` writes to a
+    path nothing protects, and its text — "you maintain the harness
+    layer; you have standing approval for harness maintenance" — is what
+    makes it a second, unrecorded write path. Likewise a memory entry
+    saying the user prefers fewer approval prompts targets an ordinary
+    memory file and dissolves G4 from the inside.
+
+    This is a tripwire, not a proof. It catches the literal shapes; a
+    determined paraphrase gets past it, and the approval gate remains the
+    real defence. It exists so the common case fails closed instead of
+    relying on the constrained party to notice.
+    """
+
+
+class CapReached(Exception):
+    """G2: the edit budget for the current window is spent.
+
+    Refused in code rather than reported to the agent for voluntary
+    compliance. Overridable only by an explicit `override_cap=True`, which
+    the skill may pass only after the user has seen the count and said so.
+    """
+
+
 VALID_LAYERS = ("rho", "G", "K", "M")
 MAX_FIELD = 2000
+CAP = 3
+CAP_WINDOW_HOURS = 24
 
 
 # --------------------------------------------------------------------------
@@ -136,6 +173,62 @@ def _assert_allowed(resolved: Path) -> None:
                 f"{pattern.pattern!r} (guardrail G3). Editing the harness's own "
                 f"rules, enforcement code, ledger, or settings is off-limits "
                 f"regardless of how well-evidenced the proposal is."
+            )
+
+
+# Claims of authority over the harness itself. Scanned only in G and K
+# edits — a skill or subagent definition is the artifact that can carry
+# tools and a fresh context, and so is the only one that can become a
+# second write path around apply_edit.
+_WRITE_AUTHORITY = [
+    (re.compile(r"\brefine_log\b", re.I),
+     "references the harness's own write module"),
+    (re.compile(r"\b(?:apply_edit|commit_entry)\s*\(", re.I),
+     "calls the harness's write API directly"),
+    (re.compile(r"\.claude[/\\]harness\b", re.I),
+     "targets the harness's own state or code"),
+    (re.compile(r"\b(?:standing|blanket|implicit|pre-?)\s*approval\b", re.I),
+     "asserts approval that the user has not given per-edit"),
+    (re.compile(r"\b(?:maintain(?:s|ing)?|own(?:s|ing)?)\s+the\s+harness\b", re.I),
+     "claims a harness-maintenance role"),
+    (re.compile(r"\bharness\s+maintenance\b", re.I),
+     "claims a harness-maintenance role"),
+]
+
+# Text that weakens G1 (evidence), G2 (the cap) or G4 (approval),
+# wherever it lands. A memory file is an ordinary path, so nothing else
+# stops this shape.
+_GUARDRAIL_SOFTENING = [
+    (re.compile(r"\b(?:raise|lift|increase|remove|ignore|bypass|relax)\w*\s+"
+                r"(?:\w+\s+){0,3}cap\b", re.I),
+     "proposes loosening G2's cap"),
+    (re.compile(r"\b(?:skip|bypass|waive|suppress|avoid)\w*\s+"
+                r"(?:\w+\s+){0,3}approval\b", re.I),
+     "proposes bypassing G4's approval gate"),
+    (re.compile(r"\bfewer\s+approval\b", re.I),
+     "proposes bypassing G4's approval gate"),
+    (re.compile(r"\b(?:skip|disable|loosen|relax|weaken|drop)\w*\s+"
+                r"(?:\w+\s+){0,3}(?:tests?|gates?|guardrails?|verification)\b", re.I),
+     "proposes weakening verification"),
+    (re.compile(r"\b(?:without|no)\s+(?:needing\s+)?(?:asking|approval|confirmation)\b", re.I),
+     "proposes acting without approval"),
+]
+
+
+def _assert_content_allowed(layer: str, target: Path, content: str) -> None:
+    """G3's semantic half, as far as a mechanism can carry it."""
+    checks = list(_GUARDRAIL_SOFTENING)
+    if layer in ("G", "K"):
+        checks += _WRITE_AUTHORITY
+    for pattern, why in checks:
+        m = pattern.search(content)
+        if m:
+            raise SelfExemption(
+                f"refine may not write this content to {target}: it {why} "
+                f"(guardrail G3, matched {m.group(0)!r}). If this is a false "
+                f"positive, write the file yourself — the point of the rule is "
+                f"that refine cannot make this class of change on its own "
+                f"authority, not that the text is forbidden to exist."
             )
 
 
@@ -269,20 +362,54 @@ def _append_changelog(line: str) -> None:
 # public API
 # --------------------------------------------------------------------------
 
-def apply_edit(layer: str, edits, rationale: str, evidence: str) -> dict:
+class AppendLine:
+    """New content computed at write time, inside the lock, instead of by the caller.
+
+    A plain string carries the agent's *read* of the file, which may be
+    many turns old. Two memory proposals in one session both read
+    `MEMORY.md` before either wrote, so each rendered a full body holding
+    exactly one new index line, and the second silently dropped the
+    first's: the memory file survived, its index entry did not, and
+    nothing in the entry or the changelog showed anything was lost.
+    Resolving against the file's current bytes under the lock removes the
+    window rather than narrowing it.
+
+    Appending is idempotent — a line already present verbatim is not
+    added twice — so a retried proposal cannot double the index.
+    """
+
+    def __init__(self, line: str):
+        if not isinstance(line, str) or not line.strip():
+            raise ValueError("AppendLine needs a non-empty line")
+        self.line = line.rstrip("\n")
+
+    def render(self, previous: str | None) -> str:
+        base = previous or ""
+        if self.line in base.splitlines():
+            return base
+        if base and not base.endswith("\n"):
+            base += "\n"
+        return base + self.line + "\n"
+
+
+def apply_edit(layer: str, edits, rationale: str, evidence: str,
+               override_cap: bool = False) -> dict:
     """See _apply_edit_locked. Serialised on the undo directory because
     _next_id() is check-then-write: two concurrent proposals would both
     read the same highest id and one would overwrite the other's snapshot,
-    losing the ability to undo it."""
+    losing the ability to undo it. The cap check lives inside the same
+    lock, so two proposals cannot both read `used == 2` and both apply."""
     with filelock.locked(paths.undo_dir() / "ENTRIES"):
-        return _apply_edit_locked(layer, edits, rationale, evidence)
+        return _apply_edit_locked(layer, edits, rationale, evidence, override_cap)
 
 
-def _apply_edit_locked(layer: str, edits, rationale: str, evidence: str) -> dict:
+def _apply_edit_locked(layer: str, edits, rationale: str, evidence: str,
+                       override_cap: bool = False) -> dict:
     """Apply one approved proposal: write every target, log it, make it undoable.
 
-    `edits` is a sequence of (target_path, new_content) pairs. All of them
-    are snapshotted before any is written, and if a later write fails the
+    `edits` is a sequence of (target_path, new_content) pairs, where
+    new_content is a string or an `AppendLine`. All targets are
+    snapshotted before any is written, and if a later write fails the
     earlier ones are rolled back, so an entry never describes a partially
     applied proposal.
 
@@ -297,24 +424,51 @@ def _apply_edit_locked(layer: str, edits, rationale: str, evidence: str) -> dict
     if not edits:
         raise ValueError("apply_edit needs at least one (target, content) pair")
 
+    used = count_recent_edits()
+    if used >= CAP and not override_cap:
+        raise CapReached(
+            f"G2: {used} harness edits already applied in the last "
+            f"{CAP_WINDOW_HOURS}h (cap {CAP}). Refusing. Tell the user the "
+            f"count and let them decide; only a deliberate override_cap=True, "
+            f"after they have seen it, applies anything further."
+        )
+
     targets = []
+    contents = []
     for target, content in edits:
-        if not isinstance(content, str):
-            raise ValueError(f"content for {target} must be a string")
+        if not isinstance(content, (str, AppendLine)):
+            raise ValueError(
+                f"content for {target} must be a string or AppendLine, "
+                f"got {type(content).__name__}"
+            )
         resolved = Path(os.path.realpath(str(target)))
         _assert_allowed(resolved)
         previous, was_b64 = _read_if_exists(resolved)
+        if isinstance(content, AppendLine):
+            if was_b64:
+                raise ValueError(
+                    f"cannot append a line to {resolved}: it is not UTF-8 text"
+                )
+            # Only the appended line is scanned. Scanning the rendered file
+            # would let one old line in MEMORY.md that happens to match a
+            # tripwire block every future append to it.
+            _assert_content_allowed(layer, resolved, content.line)
+            content = content.render(previous)
+        else:
+            _assert_content_allowed(layer, resolved, content)
+        contents.append(content)
         targets.append({
             "path": str(resolved),
             "previous_content": previous,
             "previous_was_base64": was_b64,
             "created_file": previous is None,
+            "new_content": content,
             "new_sha256": _sha256(content),
         })
 
     written = []
     try:
-        for spec, (_, content) in zip(targets, edits):
+        for spec, content in zip(targets, contents):
             _atomic_write(Path(spec["path"]), content, create_parents=True)
             written.append(spec)
     except Exception:
@@ -338,50 +492,119 @@ def _apply_edit_locked(layer: str, edits, rationale: str, evidence: str) -> dict
         "targets": targets,
         "reverted": False,
     }
+    if override_cap:
+        entry["cap_override"] = True
     _write_entry(entry)
     _append_changelog(
-        f"{entry['at'][:10]} | {layer} | "
+        f"{entry['at'][:10]} | {layer}{' (CAP OVERRIDE)' if override_cap else ''} | "
         f"{', '.join(Path(t['path']).name for t in targets)} | "
         f"{rationale_flat} | {evidence_flat}"
     )
     return entry
 
 
-def count_edits_today() -> int:
-    """Non-reverted entries applied today, in UTC.
+def count_recent_edits(hours: int = CAP_WINDOW_HOURS) -> int:
+    """Entries applied within the last `hours`. This is the cap's floor.
 
     Counted from the JSON entries rather than by parsing CHANGELOG.md.
     The changelog carries quoted user text; a newline in a rationale would
     split a markdown line and hide a real edit from a line-based count,
     which is exactly the direction a cap must never fail in.
+
+    Two deliberate overcounts, both in the safe direction:
+
+    - **Reverted entries still count.** Otherwise apply-then-undo is an
+      unlimited edit budget, and the point of the cap is to force ranking,
+      which an undo does not undo.
+    - **An unparseable timestamp counts.** It cannot be placed outside the
+      window, so it is treated as inside it.
+
+    A rolling window, not a UTC calendar day: a session that runs past
+    midnight would otherwise be handed a fresh budget mid-trajectory. The
+    cost is that two unrelated sessions within a day share one budget —
+    the other direction of error, and the one worth paying.
     """
     entries, corrupt = _entries()
     if corrupt:
         raise CorruptEntry(
-            "cannot count today's edits: unreadable entry file(s): " + ", ".join(corrupt)
+            "cannot count recent edits: unreadable entry file(s): " + ", ".join(corrupt)
         )
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    return sum(1 for e in entries if e.get("at", "")[:10] == today and not e.get("reverted"))
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
+    n = 0
+    for e in entries:
+        try:
+            at = datetime.fromisoformat(e["at"])
+        except (ValueError, TypeError, KeyError):
+            n += 1
+            continue
+        if at.tzinfo is None:
+            at = at.replace(tzinfo=timezone.utc)
+        if at >= cutoff:
+            n += 1
+    return n
 
 
-def undo(force: bool = False) -> dict:
+def list_entries() -> list[dict]:
+    """Every readable entry, oldest first, for showing the user what is undoable.
+
+    Undo needs an id to select; nothing else exposes one. Content is
+    omitted — this is a picker, not a diff viewer.
+    """
+    entries, corrupt = _entries()
+    if corrupt:
+        raise CorruptEntry(
+            "cannot list entries: unreadable entry file(s): " + ", ".join(corrupt)
+        )
+    return [{
+        "id": e["id"],
+        "at": e["at"],
+        "layer": e["layer"],
+        "reverted": bool(e.get("reverted")),
+        "rationale": e.get("rationale", ""),
+        "targets": [t.get("path", "?") for t in e["targets"]],
+    } for e in entries]
+
+
+def undo(force: bool = False, entry_id=None) -> dict:
     """Serialised against apply_edit for the same reason."""
     with filelock.locked(paths.undo_dir() / "ENTRIES"):
-        return _undo_locked(force)
+        return _undo_locked(force, entry_id)
 
 
-def _undo_locked(force: bool = False) -> dict:
-    """Revert the most recent applied, un-reverted entry, all targets together."""
+def _undo_locked(force: bool = False, entry_id=None) -> dict:
+    """Revert one entry, all its targets together.
+
+    Without `entry_id`, the most recent un-reverted entry. With one, that
+    specific entry — the stack is not the only order a user may want.
+    A hand-edit to one target otherwise raises UndoConflict forever and
+    blocks every older entry behind it, since only the top was reachable.
+
+    Selecting out of order is not a hole in the safety check: reverting an
+    older entry whose target a newer entry also rewrote fails the sha
+    comparison below, exactly as it should, because the newer content was
+    never snapshotted by the older entry.
+    """
     entries, corrupt = _entries()
     if corrupt:
         raise CorruptEntry(
             "cannot undo: unreadable entry file(s): " + ", ".join(corrupt)
         )
 
-    candidates = [e for e in entries if not e.get("reverted")]
-    if not candidates:
-        raise NothingToUndo("no harness edits left to revert")
-    entry = candidates[-1]
+    if entry_id is None:
+        candidates = [e for e in entries if not e.get("reverted")]
+        if not candidates:
+            raise NothingToUndo("no harness edits left to revert")
+        entry = candidates[-1]
+    else:
+        wanted = str(entry_id).strip()
+        matches = [e for e in entries
+                   if e["id"] == wanted or e["id"] == wanted.zfill(4)]
+        if not matches:
+            known = ", ".join(e["id"] for e in entries) or "none"
+            raise NothingToUndo(f"no entry with id {entry_id!r} (have: {known})")
+        entry = matches[0]
+        if entry.get("reverted"):
+            raise NothingToUndo(f"entry {entry['id']} is already reverted")
 
     for spec in entry["targets"]:
         p = Path(spec["path"])
@@ -397,15 +620,34 @@ def _undo_locked(force: bool = False) -> dict:
                     f"Show the user what would be lost before passing force=True."
                 )
 
-    for spec in entry["targets"]:
-        if spec["created_file"]:
+    # Reverting is itself a multi-file write and needs the same all-or-nothing
+    # treatment as applying. A failure on the second target used to leave the
+    # first reverted, the entry still marked applied, and the sha check
+    # guaranteed to reject every later attempt: unrecoverable by design.
+    reverted = []
+    try:
+        for spec in entry["targets"]:
+            p = Path(spec["path"])
+            current, current_b64 = _read_if_exists(p)
+            if spec["created_file"]:
+                try:
+                    os.remove(p)
+                except FileNotFoundError:
+                    pass
+            else:
+                _atomic_write(p, spec["previous_content"],
+                              spec["previous_was_base64"])
+            reverted.append((spec, current, current_b64))
+    except Exception:
+        for spec, current, current_b64 in reversed(reverted):
             try:
-                os.remove(spec["path"])
-            except FileNotFoundError:
+                if current is None:
+                    os.remove(spec["path"])
+                else:
+                    _atomic_write(Path(spec["path"]), current, current_b64)
+            except OSError:
                 pass
-        else:
-            _atomic_write(Path(spec["path"]), spec["previous_content"],
-                          spec["previous_was_base64"])
+        raise
 
     entry["reverted"] = True
     entry["reverted_at"] = _now()
