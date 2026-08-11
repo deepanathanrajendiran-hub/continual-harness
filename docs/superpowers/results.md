@@ -300,3 +300,50 @@ any review has produced here:
 
 **Suite: 218 tests.** All 17 fixes in this round verified by neutering each and
 confirming the covering test fails; 28 of 28 across the last three rounds.
+
+
+---
+
+## T10 — run 2026-08-11, in a genuinely fresh process
+
+Staged a goal with a `subagents` entry named `guarantee-scanner-1` and a
+recorded `next` that **explicitly instructed the resuming session to go back to
+that agent** — the hardest form of the test. Claude Code was then quit entirely
+(not `/clear`, which keeps the process and its in-process agent registry alive)
+and reopened.
+
+**Result: PASS on restart safety. The respawn branch was not exercised.**
+
+What the fresh session did:
+
+- Loaded the goal, saw the subagent entry, and treated it as dead. No
+  `SendMessage`, no `ListAgents`, no attempt to address the stale name — the
+  hazard T10 exists to catch.
+- Did **not** respawn from `brief`. It read the two files itself, because this
+  environment carries a user-level instruction not to dispatch agents unasked,
+  which correctly outranks a skill. Recorded the deviation in the checkpoint
+  rather than only in chat.
+- Completed on turn 2 of 3 with a passing gate and a real deliverable
+  (`docs/superpowers/t10-evidence.md`, 29 guarantees with `file:line`). Six
+  citations were spot-checked by hand afterwards and all six were accurate.
+
+The staging was flawed: the bait could not fully fire in an environment where
+agent dispatch is off by default, so "treated as dead" is proven and
+"respawned from `brief`" is not. Re-running the respawn half needs a session
+without that instruction.
+
+### What running it found
+
+The goal's gate was `test -f docs/superpowers/t10-evidence.md`. It passed, and
+the goal was marked complete — on the strength of a file *existing*. The
+content was correct, but nothing in the harness established that; a human did,
+afterwards. A `coverage` gate judged by a fresh subagent was the right choice
+for this goal, and the mechanical one was chosen because it was easier to
+write. This is the third audit's gate-quality warning reproducing itself in
+live use, one day later, in a goal staged by the person who wrote the warning.
+
+It also exposed a defect no test covered: **a silent passing gate stored empty
+evidence.** `test -f x`, `make -s check` and most linters print nothing on
+success, so `gate_evidence` — the only thing a completed goal offers as proof
+it was verified — was `""`. `complete()` now falls back to the gate command and
+its verdict. Verified by neutering the fallback and confirming the test fails.
