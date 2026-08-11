@@ -4,6 +4,14 @@ Every guarantee the two core harness modules state in their own docstrings
 and comments, using the words *never* / *always* / *cannot* / *refuses*.
 Collected by reading the source; each line cites `file:line`.
 
+**Line numbers are valid at commit `3494661`, and only there.** Four of the 29
+citations below were wrong within hours of being written: commit `3494661`
+inserted ten lines into `goal.py` at line 352, and every citation past that
+point silently slid ten lines short while still looking plausible. Re-derive
+before trusting a range, or `git show <commit>:<file>` to read the file this
+note was actually written against. Audited row by row in
+`t10-citation-audit.md`.
+
 ## `gate.py` — gate execution
 
 | # | Guarantee | Where |
@@ -18,7 +26,7 @@ Collected by reading the source; each line cites `file:line`.
 | G8 | Anything unequal to the last checkpoint's hash — including the `"unknown"` sentinel — runs the gate. | `gate.py:109-110`, enforced at `gate.py:126-128` |
 | G9 | The hash returned by `run_gate_at` is the one the gate actually judged; pass it straight to `goal.checkpoint()` and **never recompute it after the gate has run**. Getting this backwards turns fail/fail/pass into fail/skipped/skipped. | `gate.py:176-183` |
 | G10 | On an unreadable watch tree the hash **cannot** be computed, so the sentinel is returned rather than losing the checkpoint entirely; it can **never** equal a real digest, so the next turn is guaranteed to run the gate. | `gate.py:185-188`, `gate.py:190-193` |
-| G11 | The gate child leads its own process group, so a timeout kills the whole group — grandchildren included — not just the shell. | `gate.py:135-142`, `gate.py:148-157` |
+| G11 | The gate child leads its own process group, so a timeout kills the whole group — grandchildren included — not just the shell. | `gate.py:134-142`, `gate.py:148-157` |
 | G12 | Output is bounded to `MAX_OUTPUT` (4000 chars), keeping the **tail**. | `gate.py:13`, `gate.py:168` |
 
 ## `goal.py` — goal state
@@ -34,11 +42,11 @@ Collected by reading the source; each line cites `file:line`.
 | H7 | A budget that **cannot** bound is refused at `create` *and* at `load` — with neither `max_turns` nor `max_minutes`, `budget_exhausted()` can **never** become True, the unbounded loop a gate exists to prevent. | `goal.py:55-56`, `goal.py:195-207`, `goal.py:279-288` |
 | H8 | A goal cannot be created without a termination criterion. | `goal.py:21-22`, `goal.py:182-188` |
 | H9 | Completion is refused unless the **last** checkpoint's gate is `pass`; budget exhaustion is reported as a partial result, **never as success**. | `goal.py:51-52`, `goal.py:348-353` |
-| H10 | Every terminal-state mutator (`checkpoint`, `complete`, `abandon`, `add_subagent`) raises `GoalClosed` when the goal is not active; writing the state file any other way skips that guard. | `goal.py:311-314`, `344-347`, `362-365`, `429-441` |
+| H10 | Every terminal-state mutator (`checkpoint`, `complete`, `abandon`, `add_subagent`) raises `GoalClosed` when the goal is not active; writing the state file any other way skips that guard. | `goal.py:311-314`, `344-347`, `372-375`, `449-452` |
 | H11 | Writes are atomic (write-beside-then-rename): the file is either entirely the old state or entirely the new one, **never half of each**, because a torn write loses the goal. | `goal.py:159-177` |
 | H12 | Every mutator is a read-modify-write and is serialised under a file lock — two concurrent turns would each read turn N and both write N+1, losing one turn's record entirely. Includes `create`, which was the one left unlocked (eight concurrent creates of one title produced five files). | `goal.py:296-305`, `goal.py:209-214`, `goal.py:463-468` |
 | H13 | Two goals with the same title must not share a state file; `_unique_slug` suffixes rather than letting the second `create()` silently overwrite the first. | `goal.py:139-152` |
 | H14 | Slugs preserve non-Latin scripts (`\w` under Unicode), so a non-ASCII goal title is still nameable and resumable; an all-punctuation title becomes `"goal"`, never a hidden `.json`. | `goal.py:123-136` |
 | H15 | Truncation keeps the **end** of oversized text in both modules — a failing gate's diagnosis and a coverage judge's verdict both come last, and the two modules disagreeing about direction is worse than either choice. | `goal.py:73-83` |
-| H16 | Reopen only works from `abandoned`. A completed goal's passing gate must **never** stand as evidence for later work it did not judge. | `goal.py:381-384`, `goal.py:400-403` |
-| H17 | Reopening does **not** refresh the budget implicitly; `extra_turns` on a minutes-only goal means "N more than used", not a grant silently dropped while `reopen_history` records it as honoured. | `goal.py:386-390`, `goal.py:414-422` |
+| H16 | Reopen only works from `abandoned`. A completed goal's passing gate must **never** stand as evidence for later work it did not judge. | `goal.py:392-394`, `goal.py:410-413` |
+| H17 | Reopening does **not** refresh the budget implicitly; `extra_turns` on a minutes-only goal means "N more than used", not a grant silently dropped while `reopen_history` records it as honoured. | `goal.py:396-400`, `goal.py:424-432` |

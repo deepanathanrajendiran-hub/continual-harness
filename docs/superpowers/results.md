@@ -347,3 +347,55 @@ evidence.** `test -f x`, `make -s check` and most linters print nothing on
 success, so `gate_evidence` — the only thing a completed goal offers as proof
 it was verified — was `""`. `complete()` now falls back to the gate command and
 its verdict. Verified by neutering the fallback and confirming the test fails.
+
+
+---
+
+## T10, second run — the respawn half, 2026-08-11
+
+Re-staged with the gap the first run left: a `coverage` gate (so the judge
+branch runs) and a trigger sentence that explicitly authorises subagent
+dispatch, removing the user-level instruction that pre-empted the respawn last
+time. Run from a second Claude Code session in a separate process, with the
+first still alive — equivalent to a restart here, since in-process subagents
+are never addressable across processes.
+
+**Result: PASS on both halves.**
+
+| Check | Result |
+|---|---|
+| stale entry `citation-checker-1` addressed? | **no** — never referenced |
+| respawned from the recorded `brief`? | **yes** — three fresh agents, new names, work split three ways |
+| new agents recorded via `add_subagent`? | yes, all three, `last_seen_turn=1` |
+| coverage turn checkpointed at all? | **yes** — the branch that discarded the whole turn until this morning |
+| checkpoint hash a real digest? | yes, not the sentinel, not a copy of turn 1's |
+| judge's verdict stored as the gate result? | yes |
+| all 29 rows covered, none sampled? | yes |
+| completion evidence non-empty? | yes — the fix committed hours earlier, working live |
+
+T10 is now **PASS**, and the coverage-judge path has its first live exercise.
+
+### What it found, which is the more useful result
+
+The goal was to verify the 29 `file:line` citations in `t10-evidence.md`.
+**Four were wrong** — H10, H16, H17 displaced by ~10 lines, G11 off by one.
+Nothing was fabricated: every guarantee is genuinely present in the module it
+names. The *pointers* rotted.
+
+The cause is named in the audit and confirmed independently by the coverage
+judge via `git show 3494661`: that commit — the one recording T10's first run —
+also inserted ten lines into `goal.py` at line 352 (the silent-gate evidence
+fallback). Every citation past line 352 slid ten lines short, within hours of
+being written, while still looking entirely plausible.
+
+**The prior session's hand-verification missed it, and the sample explains
+why.** Six citations were spot-checked and all six passed — but all six sat in
+`gate.py` or in `goal.py` *before* line 352, the only region that could not
+have drifted. The check was real and its sample was structurally incapable of
+finding the defect. "6 of 6 accurate" was reported as evidence the note was
+sound; the true rate was 25 of 29.
+
+Fixed: the four ranges corrected and re-verified line by line, and the note now
+pins the commit its numbers are valid at, with the rot hazard stated at the
+top. Line-number citations into a repo still under edit are a perishable
+format — the audit file records the same pin.
