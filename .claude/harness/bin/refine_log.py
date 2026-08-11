@@ -99,6 +99,17 @@ class SelfExemption(ValueError):
     """
 
 
+class DuplicateTarget(ValueError):
+    """One proposal rewrites the same file twice with full content.
+
+    Repeated `AppendLine` edits to one file are folded in order, because a
+    proposal writing two memories legitimately appends two index lines. Two
+    full rewrites cannot be ordered safely -- which one the user approved is
+    unknowable, and last-one-wins is exactly how a lost update looks from
+    the outside.
+    """
+
+
 class CapReached(Exception):
     """G2: the edit budget for the current window is spent.
 
@@ -137,11 +148,18 @@ def _clean_field(name: str, value: str) -> str:
 def _protected_patterns() -> list[re.Pattern]:
     """Path patterns refine may never write to, in any project or in $HOME.
 
-    Matched against the resolved absolute path, so `../`, a symlink, a
-    lowercase spelling on a case-insensitive filesystem, or a hardlink all
-    land on the same test. Patterns rather than a list of literal paths:
-    the literal form only ever covered the current project, leaving every
-    `--global` target -- and the ledger itself -- writable.
+    Matched against the resolved absolute path, so `../`, a symlink, and a
+    lowercase spelling on a case-insensitive filesystem all land on the
+    same test. Patterns rather than a list of literal paths: the literal
+    form only ever covered the current project, leaving every `--global`
+    target -- and the ledger itself -- writable.
+
+    Not hardlinks: `realpath` does not resolve them, so a hardlink to a
+    protected file passes this check. Benign in practice, because
+    `_atomic_write` replaces a directory entry rather than writing through
+    it, leaving the protected file's own content intact -- but the
+    snapshot in the undo entry would carry its contents, so do not treat
+    this as coverage.
     """
     return [
         re.compile(r"/\.claude/harness/", re.I),        # modules, ledger, undo, goals
@@ -157,7 +175,10 @@ def _protected_patterns() -> list[re.Pattern]:
 
 
 def _assert_allowed(resolved: Path) -> None:
-    """Match against the fully realpath'd, case-normalised path.
+    """Match against the fully realpath'd path.
+
+    `normcase` is a no-op on POSIX, so it is `re.I` on the patterns that
+    carries the case rule -- the earlier docstring credited the wrong one.
 
     Resolving only the final component missed a symlinked *parent*: a link
     at `proj/notes -> .claude/harness/bin` let a write land on the real
@@ -176,10 +197,15 @@ def _assert_allowed(resolved: Path) -> None:
             )
 
 
-# Claims of authority over the harness itself. Scanned only in G and K
-# edits — a skill or subagent definition is the artifact that can carry
-# tools and a fresh context, and so is the only one that can become a
-# second write path around apply_edit.
+# Claims of authority over the harness itself. Scanned at EVERY layer.
+#
+# Scoping these to G and K was wrong, and an audit demonstrated it: the
+# identical "you have standing approval for harness maintenance" text was
+# refused as a skill and accepted as a line in `CLAUDE.md` — the file this
+# same skill calls the most expensive real estate in the system, loaded
+# into every future session. The reasoning behind that scope confused *how*
+# a claim executes with *where* a claim can be written: rho and M do not
+# need tools of their own, they instruct the agent that already has them.
 _WRITE_AUTHORITY = [
     (re.compile(r"\brefine_log\b", re.I),
      "references the harness's own write module"),
@@ -198,31 +224,92 @@ _WRITE_AUTHORITY = [
      "claims a harness-maintenance role"),
 ]
 
-# Text that weakens G1 (evidence), G2 (the cap) or G4 (approval),
-# wherever it lands. A memory file is an ordinary path, so nothing else
-# stops this shape.
-_GUARDRAIL_SOFTENING = [
-    (re.compile(r"\b(?:raise|lift|increase|remove|ignore|bypass|relax)\w*\s+"
-                r"(?:\w+\s+){0,3}cap\b", re.I),
-     "proposes loosening G2's cap"),
-    (re.compile(r"\b(?:skip|bypass|waive|suppress|avoid)\w*\s+"
-                r"(?:\w+\s+){0,3}approval\b", re.I),
-     "proposes bypassing G4's approval gate"),
-    (re.compile(r"\bfewer\s+approval\b", re.I),
-     "proposes bypassing G4's approval gate"),
-    (re.compile(r"\b(?:skip|disable|loosen|relax|weaken|drop)\w*\s+"
-                r"(?:\w+\s+){0,3}(?:tests?|gates?|guardrails?|verification)\b", re.I),
-     "proposes weakening verification"),
-    (re.compile(r"\b(?:without|no)\s+(?:needing\s+)?(?:asking|approval|confirmation)\b", re.I),
-     "proposes acting without approval"),
+# A second write path does not have to name the harness to be one. The
+# audit's sharpest proposal was a subagent called `session-notes-keeper`
+# that mentioned neither `refine_log` nor `.claude/harness` — it simply
+# told itself to write memory files and append to `MEMORY.md` directly.
+# Layer M lives under `~/.claude/projects/…`, outside every protected
+# path, so nothing else stopped it. Scanned in G and K only: a memory
+# file's own *content* may legitimately discuss where memories live, but
+# a skill or subagent instructing itself to write there is claiming the
+# write authority that G3 reserves to apply_edit.
+_MEMORY_WRITE_AUTHORITY = [
+    (re.compile(r"\.claude[/\\]projects[/\\]", re.I),
+     "instructs writing directly into the memory layer"),
+    (re.compile(r"\bMEMORY\.md\b", re.I),
+     "instructs writing the memory index directly"),
 ]
+
+# Text that weakens G2 (the cap) or G4 (approval), wherever it lands. A
+# memory file is an ordinary path, so nothing else stops this shape.
+#
+# Deliberately narrow. A wider version refused the three memories a
+# well-behaved session most wants to write -- "Never skip the tests before
+# committing", "Do not write files without asking the user first" -- because
+# the patterns matched verbs without polarity, so the safest possible advice
+# read as an attack on the guardrails. A tripwire that fires mostly on true
+# statements about testing teaches its user to route around it, and by its
+# own admission a paraphrase walks past it anyway. Two auditors independently
+# said to cut it down; the approval gate is the real defence, and G3's
+# prohibition on weakening tests or gates is now enforced by the user reading
+# the proposal rather than by a regex guessing at intent.
+_GUARDRAIL_SOFTENING = [
+    (re.compile(r"\b(?:raise|lift|increase|remove|ignore|bypass)\w*\s+"
+                r"(?:the\s+|its\s+)?(?:\w+\s+){0,2}cap\b", re.I),
+     "proposes loosening G2's cap"),
+    (re.compile(r"\bcap\s+(?:of|to)\s+(?:[4-9]|\d{2,})\b", re.I),
+     "proposes raising G2's cap"),
+    (re.compile(r"\bfewer\s+approval", re.I),
+     "proposes bypassing G4's approval gate"),
+    (re.compile(r"\b(?:skip|skipping|bypass|waive|suppress)\s+"
+                r"(?:the\s+)?(?:\w+\s+){0,2}approval\b", re.I),
+     "proposes bypassing G4's approval gate"),
+    (re.compile(r"\bapprovals?\s+(?:is|are)\s+(?:implicit|assumed|automatic|"
+                r"not\s+(?:needed|required))\b", re.I),
+     "proposes treating approval as already given"),
+]
+
+
+class MisroutedMemory(ValueError):
+    """A memory target sits under `.claude/projects/` but not this project's key.
+
+    The skill warns about this and cannot prevent it: a memory written one
+    character off in the project key is invisible to recall forever, while
+    looking — in the approval prompt, and in the changelog afterwards —
+    exactly like a correct write. `_atomic_write(create_parents=True)`
+    obligingly creates the wrong directory, so nothing fails.
+
+    Checked only for paths that are already inside `.claude/projects/`, so
+    it constrains the memory route without dictating where anything else
+    may live.
+    """
+
+
+def _assert_memory_route(resolved: Path) -> None:
+    parts = resolved.parts
+    try:
+        i = parts.index(".claude")
+    except ValueError:
+        return
+    if len(parts) <= i + 1 or parts[i + 1] != "projects":
+        return
+    expected = paths.memory_dir()
+    if resolved == expected or str(resolved).startswith(str(expected) + os.sep):
+        return
+    raise MisroutedMemory(
+        f"{resolved} is under .claude/projects/ but not this project's memory "
+        f"directory, which is {expected}. Recall reads only from there, so this "
+        f"write would be invisible forever — and would look correct in the "
+        f"approval prompt and the changelog. Use paths.memory_dir(); do not "
+        f"assemble the project key by hand."
+    )
 
 
 def _assert_content_allowed(layer: str, target: Path, content: str) -> None:
     """G3's semantic half, as far as a mechanism can carry it."""
-    checks = list(_GUARDRAIL_SOFTENING)
+    checks = _GUARDRAIL_SOFTENING + _WRITE_AUTHORITY
     if layer in ("G", "K"):
-        checks += _WRITE_AUTHORITY
+        checks = checks + _MEMORY_WRITE_AUTHORITY
     for pattern, why in checks:
         m = pattern.search(content)
         if m:
@@ -436,8 +523,15 @@ def _apply_edit_locked(layer: str, edits, rationale: str, evidence: str,
             f"after they have seen it, applies anything further."
         )
 
-    targets = []
-    contents = []
+    # Folded by resolved path, in first-seen order. One proposal writing two
+    # memories legitimately touches MEMORY.md twice, and the earlier shape --
+    # snapshot every target, then write every target -- resolved both appends
+    # against the same pre-write bytes and silently dropped the first. That is
+    # the identical lost update AppendLine was built to remove, rebuilt inside
+    # a single call: apply_edit returned success, one memory was left
+    # unindexed and invisible to recall, and the entry was born un-undoable
+    # because the file no longer matched either recorded sha.
+    folded: dict[str, dict] = {}
     for target, content in edits:
         if not isinstance(content, (str, AppendLine)):
             raise ValueError(
@@ -446,9 +540,20 @@ def _apply_edit_locked(layer: str, edits, rationale: str, evidence: str,
             )
         resolved = Path(os.path.realpath(str(target)))
         _assert_allowed(resolved)
-        previous, was_b64 = _read_if_exists(resolved)
+        _assert_memory_route(resolved)
+        key = str(resolved)
+
+        if key not in folded:
+            previous, was_b64 = _read_if_exists(resolved)
+            folded[key] = {
+                "path": key, "previous_content": previous,
+                "previous_was_base64": was_b64, "created_file": previous is None,
+                "current": previous,
+            }
+        spec = folded[key]
+
         if isinstance(content, AppendLine):
-            if was_b64:
+            if spec["previous_was_base64"]:
                 raise ValueError(
                     f"cannot append a line to {resolved}: it is not UTF-8 text"
                 )
@@ -456,35 +561,35 @@ def _apply_edit_locked(layer: str, edits, rationale: str, evidence: str,
             # would let one old line in MEMORY.md that happens to match a
             # tripwire block every future append to it.
             _assert_content_allowed(layer, resolved, content.line)
-            content = content.render(previous)
+            spec["current"] = content.render(spec["current"])
         else:
+            if spec["current"] is not spec["previous_content"]:
+                # Two full-content writes to one file, or a rewrite after an
+                # append: which one the user approved is unknowable, and
+                # last-one-wins is how the lost update looked from outside.
+                raise DuplicateTarget(
+                    f"{resolved} appears more than once in this proposal with "
+                    f"full content. Only repeated AppendLine edits can be "
+                    f"combined; two rewrites of one file cannot be ordered "
+                    f"safely. Pass the final content once."
+                )
             _assert_content_allowed(layer, resolved, content)
+            spec["current"] = content
+
+    targets, contents = [], []
+    for spec in folded.values():
+        content = spec["current"]
+        if content is None:
+            raise ValueError(f"no content produced for {spec['path']}")
         contents.append(content)
         targets.append({
-            "path": str(resolved),
-            "previous_content": previous,
-            "previous_was_base64": was_b64,
-            "created_file": previous is None,
+            "path": spec["path"],
+            "previous_content": spec["previous_content"],
+            "previous_was_base64": spec["previous_was_base64"],
+            "created_file": spec["created_file"],
             "new_content": content,
             "new_sha256": _sha256(content),
         })
-
-    written = []
-    try:
-        for spec, content in zip(targets, contents):
-            _atomic_write(Path(spec["path"]), content, create_parents=True)
-            written.append(spec)
-    except Exception:
-        for spec in reversed(written):          # roll back a partial proposal
-            try:
-                if spec["created_file"]:
-                    os.remove(spec["path"])
-                else:
-                    _atomic_write(Path(spec["path"]), spec["previous_content"],
-                                  spec["previous_was_base64"])
-            except OSError:
-                pass
-        raise
 
     entry = {
         "id": _next_id(),
@@ -497,12 +602,47 @@ def _apply_edit_locked(layer: str, edits, rationale: str, evidence: str,
     }
     if override_cap:
         entry["cap_override"] = True
-    _write_entry(entry)
-    _append_changelog(
-        f"{entry['at'][:10]} | {layer}{' (CAP OVERRIDE)' if override_cap else ''} | "
-        f"{', '.join(Path(t['path']).name for t in targets)} | "
-        f"{rationale_flat} | {evidence_flat}"
-    )
+
+    # The bookkeeping is inside the rollback, not after it. It used to sit
+    # outside: targets were written, then the entry, then the changelog -- so a
+    # read-only ledger directory or a full disk left the edit ON DISK with no
+    # snapshot, no changelog line, and no contribution to the cap, while the
+    # caller was told it had failed. That is precisely the divergence this
+    # module's opening paragraph says cannot happen here, in the one direction
+    # nobody had checked.
+    written, entry_written = [], False
+    try:
+        for spec, content in zip(targets, contents):
+            _atomic_write(Path(spec["path"]), content, create_parents=True)
+            written.append(spec)
+        _write_entry(entry)
+        entry_written = True
+        # Full paths, not basenames. A memory written to a mistyped project key
+        # produced a changelog line byte-identical to a correct write -- the one
+        # permanent record that could have shown the difference was the one that
+        # threw the difference away.
+        _append_changelog(
+            f"{entry['at'][:10]} | {layer}{' (CAP OVERRIDE)' if override_cap else ''} | "
+            f"{', '.join(t['path'] for t in targets)} | "
+            f"{rationale_flat} | {evidence_flat}"
+        )
+    except Exception:
+        for spec in reversed(written):          # roll back a partial proposal
+            try:
+                if spec["created_file"]:
+                    os.remove(spec["path"])
+                else:
+                    _atomic_write(Path(spec["path"]), spec["previous_content"],
+                                  spec["previous_was_base64"])
+            except OSError:
+                pass
+        if entry_written:
+            try:
+                (paths.undo_dir() / f"{entry['id']}.json").unlink()
+            except OSError:
+                pass
+        raise
+
     return entry
 
 
@@ -609,6 +749,20 @@ def _undo_locked(force: bool = False, entry_id=None) -> dict:
         if entry.get("reverted"):
             raise NothingToUndo(f"entry {entry['id']} is already reverted")
 
+    # An undo interrupted after the files were reverted but before the entry
+    # was marked accused the user of a hand-edit that never happened: the
+    # retry saw content matching neither sha, raised UndoConflict, and the
+    # skill's own error table told the agent to offer force=True -- asking
+    # the user to approve discarding a change the harness itself had made.
+    # A marker written BEFORE the revert makes the second attempt able to
+    # tell "already reverted" from "someone else edited this".
+    resuming = bool(entry.get("revert_started_at"))
+
+    def _already_reverted(spec, current) -> bool:
+        if spec["created_file"]:
+            return current is None
+        return current == spec["previous_content"]
+
     for spec in entry["targets"]:
         p = Path(spec["path"])
         if not p.parent.is_dir():
@@ -617,11 +771,22 @@ def _undo_locked(force: bool = False, entry_id=None) -> dict:
             )
         if not force:
             current, _ = _read_if_exists(p)
-            if current is None or _sha256(current) != spec["new_sha256"]:
-                raise UndoConflict(
-                    f"{p} changed since this edit was applied; refusing to undo. "
-                    f"Show the user what would be lost before passing force=True."
-                )
+            if current is not None and _sha256(current) == spec["new_sha256"]:
+                continue                       # as applied: the normal case
+            if resuming and _already_reverted(spec, current):
+                continue                       # this one landed before the interruption
+            hint = (" This entry has an interrupted revert recorded, and this "
+                    "target matches neither its applied nor its original "
+                    "content, so something else changed it in between."
+                    if resuming else "")
+            raise UndoConflict(
+                f"{p} changed since this edit was applied; refusing to undo.{hint} "
+                f"Show the user what would be lost before passing force=True."
+            )
+
+    if not resuming:
+        entry["revert_started_at"] = _now()
+        _write_entry(entry)
 
     # Reverting is itself a multi-file write and needs the same all-or-nothing
     # treatment as applying. A failure on the second target used to leave the
@@ -657,7 +822,7 @@ def _undo_locked(force: bool = False, entry_id=None) -> dict:
     _write_entry(entry)
     _append_changelog(
         f"{entry['reverted_at'][:10]} | REVERTED | "
-        f"{', '.join(Path(t['path']).name for t in entry['targets'])} | "
+        f"{', '.join(t['path'] for t in entry['targets'])} | "
         f"undo of entry {entry['id']} | -"
     )
     return entry

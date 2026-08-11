@@ -13,7 +13,8 @@ Rollback bookkeeping runs through one module at
 `.claude/harness/bin/refine_log.py` (`apply_edit`, `AppendLine`,
 `count_recent_edits`, `list_entries`, `undo`, plus the `NothingToUndo` /
 `CorruptEntry` / `UndoConflict` / `UndoTargetUnavailable` /
-`ProtectedTarget` / `SelfExemption` / `CapReached` exceptions).
+`ProtectedTarget` / `SelfExemption` / `CapReached` /
+`MisroutedMemory` / `DuplicateTarget` exceptions).
 The skill calls it; it does not reimplement changelog formatting, entry
 storage, or the undo staleness check inline. If a step below can't be
 done by calling it, stop and say so rather than inventing an inline
@@ -81,11 +82,11 @@ Two things `--global` does **not** change:
 - **Changelog/undo bookkeeping stays project-local.** `apply_edit()`
   always writes its ledger and snapshot to *this* project's
   `.claude/harness/CHANGELOG.md` and `.claude/harness/undo/`, even for a
-  `--global` proposal whose edit target is under `~/.claude/`. There is
-  no `~/.claude/harness/` — promoting the bookkeeping module itself is
-  spec §8's job, not this flag's, and until that promotion happens the
-  only rollback ledger that exists is this one. `/refine --undo` after a
-  `--global` write still reverts it, from this same project's log.
+  `--global` proposal whose edit target is under `~/.claude/`. So
+  `/refine --undo` after a `--global` write still reverts it, from this
+  project's log — and G2's cap counts that same project-local ledger,
+  which is why N projects can spend N budgets against one global layer
+  (Step 4).
 
 `--global` retargets *where a proposal writes*, not *which file governs
 the edit itself*. G3's no-self-exemption rule still applies to the global
@@ -122,13 +123,15 @@ that reflect nothing.
 | Repeated exploration shape | K | `.claude/agents/<name>.md` |
 | Correction that must apply *everywhere* | rho | `./CLAUDE.md` |
 
-`<project-key>` — see "Memory write contract" below for the literal
-derivation rule and a worked example for this project. Do not guess it
-and do not substitute a repo-local path like `.claude/memory/` — nothing
-in Claude Code reads memory from there, so a memory written to the wrong
-path is invisible forever while still looking, to a user who only sees
-the filename in the approval prompt (Step 5, G4), exactly like a correct
-write.
+`<project-key>` — **do not assemble it by hand.** Call
+`refine_log.paths.memory_dir()`, which derives it from the project root.
+`apply_edit` now refuses a target under `.claude/projects/` that is not
+this project's memory directory (`MisroutedMemory`), because a key one
+character off produces a directory `mkdir -p` happily creates, that recall
+never reads, and that looks correct in both the approval prompt and the
+changelog. See "Memory write contract" below for the literal rule and a
+worked example. Never substitute a repo-local path like `.claude/memory/`
+— nothing in Claude Code reads memory from there.
 
 **Narrowest layer wins.** CLAUDE.md is loaded into every session, so it is
 the most expensive real estate in the system — last resort, never the
@@ -163,10 +166,17 @@ self-editor degrades the harness until it is worse than no harness, and
 a cap the editor can lift at will by calling itself again is not a cap.
 
 **`apply_edit` enforces this itself.** The fourth edit inside the window
-raises `CapReached` and writes nothing — you are not trusted to stop, and
-neither is any future edit to this file. The pre-flight below exists so
-you can rank *before* proposing and tell the user where the budget
-stands, not because the count is advisory.
+raises `CapReached` and writes nothing. The pre-flight below exists so you
+can rank *before* proposing and tell the user where the budget stands, not
+because the count is advisory.
+
+Be accurate about what that means: `apply_edit` is the **disciplined
+path, not the only one**. You hold `Write` and `Edit`; nothing intercepts
+them, and no hook is installed. Every guarantee on this page — the cap,
+the ledger, the snapshots, `undo` — holds exactly as long as harness
+writes go through `apply_edit`. That is a rule you follow, not a wall you
+cannot cross, and this skill is not going to pretend otherwise: a claim of
+enforcement that overstates itself invites less care, not more.
 
 **Before proposing anything, check the persisted floor, not your own
 recollection.** A guardrail that depends on the constrained party's memory
@@ -198,12 +208,16 @@ Three properties of the count, each chosen to fail toward stopping:
   runs past midnight would otherwise be handed a fresh budget
   mid-trajectory. The cost — two unrelated sessions in one day sharing a
   budget — is the harmless direction.
+- **Per project, not per machine.** The count reads *this* project's
+  ledger. Three projects each report `0 of 3` and each allow three edits,
+  so `/refine --global` run in N projects can land 3N edits in
+  `~/.claude/` in one day, every pre-flight honestly reporting zero. Treat
+  the global layer as a shared resource the cap does not protect: before
+  proposing a `--global` edit, say so plainly, and prefer a project-local
+  target whenever the lesson is not genuinely universal.
 - **Reverted entries still count.** Apply-then-undo is otherwise an
   unlimited budget. The cap exists to force ranking, and an undo does not
   undo the ranking decision.
-- **An entry with an unreadable timestamp counts.** It cannot be placed
-  outside the window, so it is treated as inside it.
-
 It raises `CorruptEntry` if any entry file is unreadable. That is not a
 reason to fall back to a looser count: report it and stop, exactly as
 `undo()` does.
@@ -432,12 +446,7 @@ Related: [[other-slug]]
   guardrails are not a subject refine gets to have opinions about; G1–G4
   apply to proposals *about* G1–G4 exactly as they apply to everything
   else. An agent that learns "skip the tests" is optimizing the harness
-  *against* its user, not for it. Prime Intellect's Prime Agent
-  demonstrated exactly this failure mode in its own Factorio case study:
-  the same refinement loop that built legitimate skills turned to
-  building efficient cheating skills once cheating scored better on the
-  metric being optimized — loosening G1, G2, or G4 from the inside is
-  that same pattern in miniature, the loop optimizing its own constraints
+  *against* its user, not for it — the loop optimizing its own constraints
   away rather than optimizing the work. If a candidate would make a
   future session less likely to get caught doing something wrong, or
   less constrained than this session is, it fails G3 regardless of how
@@ -467,10 +476,13 @@ Related: [[other-slug]]
 |---|---|---|---|
 | `refine_log.apply_edit` | `ProtectedTarget` | the target is refine's own rules, horizon's, the harness code, the ledger, or a settings/hooks file | stop. This is G3 refusing, and it is not negotiable — do not propose a softened variant or a different route to the same file. |
 | `refine_log.apply_edit` | `SelfExemption` | the *content* claims harness write authority, standing approval, or softens G1/G2/G4 | stop. Also G3, for the same reason. Report the matched phrase to the user; if the match is genuinely innocent, they can write the file themselves — do not reword it to get past the check. |
+| `refine_log.apply_edit` | `MisroutedMemory` | the target is under `.claude/projects/` but not this project's memory dir | use `paths.memory_dir()`; a hand-assembled project key is invisible to recall forever |
+| `refine_log.apply_edit` | `DuplicateTarget` | one proposal rewrites the same file twice with full content | pass the final content once. Repeated `AppendLine` edits to one file are fine and are folded in order |
 | `refine_log.apply_edit` | `CapReached` | G2's budget for the last 24h is spent | stop and report the count. Only re-run with `override_cap=True` if the user, having seen the count, explicitly says to. |
 | `refine_log.count_recent_edits` | `CorruptEntry` | an entry file under `.claude/harness/undo/` is unreadable | stop and report the paths. Do not fall back to counting the changelog — that is the looser count this design deliberately replaced. |
 | `refine_log.undo` | `NothingToUndo` | no matching entry: nothing un-reverted left, or the requested `entry_id` is unknown or already reverted | report it; the message lists the ids that exist |
 | `refine_log.undo` | `CorruptEntry` | an undo-log entry file under `.claude/harness/undo/` is unreadable or not valid JSON | stop. Report the exact file path(s) named in the exception to the user. Do not retry, delete the file, skip past it, or fall back to reverting a different entry on your own initiative — guessing past damaged history risks reverting the wrong edit. |
+| any of the above | `filelock.LockTimeout` | another process holds the ledger lock — a second terminal, or a `/loop` firing beside a live session | retry once. If it persists, tell the user which lock file to delete; the exception names it |
 | `refine_log.undo` | `UndoConflict` | the target's current sha256 doesn't match what was recorded when its entry was committed — something changed the target after the approved edit landed | stop. Show the user the target path and that it changed since. Only call `undo(force=True)` after the user explicitly approves discarding that later change — silently forcing would delete an edit nobody agreed to lose. |
 
 ## `/refine --undo`
@@ -526,13 +538,19 @@ matches the file and `UndoConflict` fires exactly as it should — the newer
 content was never snapshotted by the older entry, so reverting would
 destroy it.
 
-Reverts the single most recent un-reverted entry — **all of its targets
-together**, since one approved proposal is one atomic unit — and appends a
-`REVERTED` line to `CHANGELOG.md`. There is no "undo entry #7
-specifically" call — it always targets the top of the stack, so calling
-it again walks back the next most recent entry.
+With no `entry_id`, it reverts the single most recent un-reverted entry —
+**all of its targets together**, since one approved proposal is one atomic
+unit — and appends a `REVERTED` line to `CHANGELOG.md`. Calling it again
+walks back the next most recent.
 
-Only after the user has seen a `UndoConflict` and explicitly approved
+An `UndoConflict` on an entry whose revert was **interrupted** — killed
+turn, crashed process — is not a hand-edit, and the module can tell the
+difference: a marker is written before any file is touched, so a retry
+recognises targets that were already reverted and finishes the job. If you
+still see `UndoConflict` on a resumed entry, its message says so
+explicitly, and something else really did change that file.
+
+Only after the user has seen an `UndoConflict` and explicitly approved
 discarding the later change:
 
 ```python
