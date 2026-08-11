@@ -183,6 +183,9 @@ def _assert_allowed(resolved: Path) -> None:
 _WRITE_AUTHORITY = [
     (re.compile(r"\brefine_log\b", re.I),
      "references the harness's own write module"),
+    # `commit_entry` is a removed API. It stays in the pattern deliberately:
+    # a proposal written against the old two-phase interface is exactly as
+    # much a second write path as one written against the current single call.
     (re.compile(r"\b(?:apply_edit|commit_entry)\s*\(", re.I),
      "calls the harness's write API directly"),
     (re.compile(r"\.claude[/\\]harness\b", re.I),

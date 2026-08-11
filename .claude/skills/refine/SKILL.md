@@ -412,9 +412,8 @@ Related: [[other-slug]]
 
   This half of G3 is backed by a **content tripwire**, not just prose:
   `apply_edit` raises `SelfExemption` when a G or K edit's text references
-  `refine_log`, calls `apply_edit`/`commit_entry`, targets
-  `.claude/harness/`, claims standing or implicit approval, or claims a
-  harness-maintenance role — and when an edit at *any* layer proposes
+  `refine_log`, calls its write API directly, targets `.claude/harness/`,
+  claims standing or implicit approval, or claims a harness-maintenance role — and when an edit at *any* layer proposes
   raising the cap, skipping approval, or weakening tests or gates. It is a
   tripwire, not a proof: a determined paraphrase gets past it, and the
   approval gate remains the real defence. It exists so that the shape the
