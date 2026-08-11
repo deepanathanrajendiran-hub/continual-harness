@@ -185,3 +185,65 @@ Suite: 78 tests.
 4. **`MEMORY.md` index lines sit outside rollback scope** — `record()`
    snapshots one target, so `/refine --undo` on a memory entry leaves a
    dangling index line.
+
+---
+
+## Two cold audits — updated 2026-08-11
+
+Both were fresh agents given the code and **denied** this file, the README, the
+docs, the changelog and the git history, so neither could re-report a
+conclusion the authors had already reached. Each found Criticals that every
+review before it had missed.
+
+### First cold audit — 3 Criticals, all fixed
+
+| Finding | Fix |
+|---|---|
+| `undo()` truncated the file it exists to restore | temp file + `os.replace` |
+| cap defeated by `record("REVERTED", …)` — a caller-supplied sentinel | count stored JSON entries, not changelog lines |
+| approval gate never saw the approved content | `apply_edit()` takes the content and performs the write |
+
+### Second cold audit — 3 Criticals, all fixed
+
+Run against the code the first audit's fixes produced. One of its three
+findings was a **regression introduced by those fixes** — the round of fixes is
+itself new code, and it has not been audited by the round that motivated it.
+
+| Finding | Fix |
+|---|---|
+| skip was an absorbing state: `fail, fail`, then 8 consecutive skips on a gate that would have passed on its third run | never two skips in a row (`gate.py`) |
+| case-variant and symlinked-parent denylist bypasses, introduced when the inode check became path patterns | `realpath` + `normcase` + `re.I`; denylist extended to `commands/`, `plugins/`, `.claude.json`, `.mcp.json` |
+| `undo()` raised a bare `KeyError` on this repo's own pre-`apply_edit` entries — not `CorruptEntry`, so the skill's documented handler missed it | entry *shape* validated, not just JSON syntax |
+
+### Its Importants — all closed 2026-08-11
+
+| Finding | Fix |
+|---|---|
+| the cap of 3 was enforced nowhere in code | `apply_edit` raises `CapReached`; rolling 24h window; reverted entries still count |
+| two memory proposals in one session clobbered `MEMORY.md` | `AppendLine`, resolved inside the lock |
+| `undo()` had no per-entry selection; one hand-edit blocked the whole stack | `undo(entry_id=…)` + `list_entries()` |
+| G3's semantic half was unenforceable by a path denylist | content tripwire (`SelfExemption`) — documented as a tripwire, not a proof |
+| `filelock` collapsed rather than degraded after a stale reclaim | release and reclaim both check inode identity |
+| double tree walk per turn | `run_gate_at` passes its hash into `run_gate` |
+| `abandon()` was terminal with no inverse | `goal.reopen()`, with an explicit budget grant |
+| a partial `undo()` left a half-reverted entry | reverts roll back like applies do |
+| the ledger never recorded what was *written* | `new_content` stored on each target |
+
+**Suite: 154 tests.** Every one of the 11 fixes above was verified by neutering
+the fix and confirming the covering test fails — 11 of 11 discriminate. Two
+tests in this project's history passed against the bugs they were written to
+guard, which is why that check is now mandatory rather than advisory.
+
+One bug was caught by a test written *before* its fix was finished: passing the
+already-computed tree hash into `run_gate` made the `"unknown"` sentinel compare
+equal to itself, which would have skipped the gate forever after two unreadable
+turns.
+
+### Superseded by the fixes above
+
+- Item 4 of "Still open before promotion" (`MEMORY.md` index lines outside
+  rollback scope) — closed: one proposal is one entry is one atomic multi-file
+  write, and the index append is part of it.
+- Item 2 (`undo()` reverts the wrong edit after a crash between the edit and
+  `commit_entry()`) — no longer reachable: there is no second phase to crash
+  between. `apply_edit` snapshots, writes and records as one call.
