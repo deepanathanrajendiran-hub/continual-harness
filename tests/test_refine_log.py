@@ -100,10 +100,14 @@ def test_one_proposal_reverts_all_of_its_files(tmp_path):
 def test_a_failed_write_rolls_back_the_whole_proposal(tmp_path, monkeypatch):
     """An entry must never describe a partially applied proposal."""
     good = tmp_path / "good.md"
-    bad = tmp_path / "nodir" / "bad.md"          # parent missing -> write fails
     good.write_text("before\n")
+    # A missing parent is now created on purpose, so trigger a failure that
+    # cannot be: a regular file standing where a directory would have to be.
+    blocker = tmp_path / "afile"
+    blocker.write_text("i am not a directory")
+    bad = blocker / "bad.md"
 
-    with pytest.raises(refine_log.UndoTargetUnavailable):
+    with pytest.raises((refine_log.UndoTargetUnavailable, NotADirectoryError, OSError)):
         refine_log.apply_edit("M", [(good, "after\n"), (bad, "x")], "r", "e")
 
     assert good.read_text() == "before\n", "first target not rolled back"
@@ -304,3 +308,71 @@ def test_ids_do_not_collide_after_a_gap(tmp_path):
     ids = sorted(p.stem for p in refine_log.paths.undo_dir().glob("*.json"))
     assert len(ids) == len(set(ids)) == 3
     assert json.loads((refine_log.paths.undo_dir() / "0001.json").read_text())["rationale"] == "r"
+
+
+@pytest.mark.parametrize("variant", [
+    ".claude/Skills/refine/SKILL.md",
+    ".claude/SKILLS/refine/SKILL.md",
+    ".CLAUDE/skills/refine/SKILL.md",
+    ".claude/Harness/bin/refine_log.py",
+])
+def test_protected_paths_are_case_insensitive(tmp_path, variant):
+    """On a case-insensitive filesystem (macOS default) a capitalised
+    directory reaches the same real file. A case-sensitive regex let
+    .claude/Skills/refine/SKILL.md overwrite the real rules."""
+    target = tmp_path / "proj" / variant
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with pytest.raises(refine_log.ProtectedTarget):
+        refine_log.apply_edit("M", [(target, "G3 REMOVED")], "r", "e")
+
+
+def test_protected_check_resolves_a_symlinked_parent(tmp_path):
+    """Resolving only the final component missed a symlinked parent: a link
+    at proj/notes -> .claude/harness/bin let a write land on the real
+    enforcement code."""
+    proj = tmp_path / "proj"
+    real = proj / ".claude" / "harness" / "bin"
+    real.mkdir(parents=True)
+    (real / "refine_log.py").write_text("REAL ENFORCEMENT\n")
+    (proj / "notes").symlink_to(real)
+
+    with pytest.raises(refine_log.ProtectedTarget):
+        refine_log.apply_edit("M", [(proj / "notes" / "refine_log.py", "REPLACED")], "r", "e")
+    assert (real / "refine_log.py").read_text() == "REAL ENFORCEMENT\n"
+
+
+@pytest.mark.parametrize("surface", [
+    ".claude.json", ".mcp.json", ".claude/commands/x.md",
+    ".claude/plugins/p/hooks/h.sh", ".claude/settings.json.bak",
+])
+def test_other_arbitrary_shell_surfaces_are_denied(tmp_path, surface):
+    """Each of these defines something that executes in a later session."""
+    target = tmp_path / "proj" / surface
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with pytest.raises(refine_log.ProtectedTarget):
+        refine_log.apply_edit("M", [(target, "x")], "r", "e")
+
+
+def test_a_foreign_schema_entry_is_corruption_not_a_crash(tmp_path):
+    """An entry from an older schema parses as JSON and then raised a bare
+    KeyError deep inside undo() — which the skill's documented try/except
+    does not catch, because CorruptEntry is what it was told to expect."""
+    refine_log.apply_edit("M", [(tmp_path / "a.md", "A")], "r", "e")
+    (refine_log.paths.undo_dir() / "0099.json").write_text(json.dumps({
+        "id": "0099", "at": "2026-08-09T00:00:00+00:00", "layer": "M",
+        "target": str(tmp_path / "old.md"),        # old single-target schema
+        "post_edit_sha256": "abc", "committed": True, "reverted": False,
+    }))
+    with pytest.raises(refine_log.CorruptEntry):
+        refine_log.undo()
+    with pytest.raises(refine_log.CorruptEntry):
+        refine_log.count_edits_today()
+
+
+def test_a_first_memory_creates_its_parent_directory(tmp_path):
+    """"Creating the file is part of the approved edit" — so is creating
+    the directory it lives in. A project with no memory dir yet failed on
+    its very first /refine proposal."""
+    target = tmp_path / "projects" / "key" / "memory" / "quote-paths.md"
+    refine_log.apply_edit("M", [(target, "---\nname: quote-paths\n---\n")], "r", "e")
+    assert target.read_text().startswith("---")

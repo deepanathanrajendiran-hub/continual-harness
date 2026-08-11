@@ -107,16 +107,28 @@ def _protected_patterns() -> list[re.Pattern]:
     `--global` target -- and the ledger itself -- writable.
     """
     return [
-        re.compile(r"/\.claude/harness/"),                 # modules, ledger, undo, goals
-        re.compile(r"/\.claude/skills/refine/"),           # its own rules
-        re.compile(r"/\.claude/skills/horizon/"),          # the verification mechanism
-        re.compile(r"/\.claude/settings[^/]*\.json$"),     # hooks: arbitrary shell
-        re.compile(r"/\.claude/hooks/"),
+        re.compile(r"/\.claude/harness/", re.I),        # modules, ledger, undo, goals
+        re.compile(r"/\.claude/skills/refine/", re.I),  # its own rules
+        re.compile(r"/\.claude/skills/horizon/", re.I), # the verification mechanism
+        re.compile(r"/\.claude/settings[^/]*\.json", re.I),   # hooks: arbitrary shell
+        re.compile(r"/\.claude/hooks/", re.I),
+        re.compile(r"/\.claude/commands/", re.I),       # slash commands also execute
+        re.compile(r"/\.claude/plugins/", re.I),
+        re.compile(r"/\.claude\.json", re.I),            # MCP server definitions
+        re.compile(r"/\.mcp\.json", re.I),
     ]
 
 
 def _assert_allowed(resolved: Path) -> None:
-    s = str(resolved)
+    """Match against the fully realpath'd, case-normalised path.
+
+    Resolving only the final component missed a symlinked *parent*: a link
+    at `proj/notes -> .claude/harness/bin` let a write land on the real
+    enforcement code. And the patterns were case-sensitive on a
+    case-insensitive filesystem, so `.claude/Skills/refine/SKILL.md`
+    overwrote the real rules. Both were verified on this machine.
+    """
+    s = os.path.normcase(os.path.realpath(str(resolved)))
     for pattern in _protected_patterns():
         if pattern.search(s):
             raise ProtectedTarget(
@@ -158,7 +170,8 @@ def _read_if_exists(path: Path):
         return base64.b64encode(raw).decode("ascii"), True
 
 
-def _atomic_write(path: Path, content: str, is_b64: bool = False) -> None:
+def _atomic_write(path: Path, content: str, is_b64: bool = False,
+                  create_parents: bool = False) -> None:
     """Write via a temp file in the same directory, then os.replace().
 
     The path is resolved first so a symlinked target has its destination
@@ -169,6 +182,11 @@ def _atomic_write(path: Path, content: str, is_b64: bool = False) -> None:
     path = Path(path)
     if path.is_symlink():
         path = path.resolve()
+    if create_parents and not path.parent.exists():
+        # "Creating the file is part of the approved edit" -- so is creating
+        # the directory it lives in. A project without a memory dir yet hit
+        # UndoTargetUnavailable on its very first /refine proposal.
+        path.parent.mkdir(parents=True, exist_ok=True)
     if not path.parent.is_dir():
         raise UndoTargetUnavailable(
             f"cannot write {path}: parent directory {path.parent} does not exist"
@@ -189,13 +207,29 @@ def _atomic_write(path: Path, content: str, is_b64: bool = False) -> None:
             pass
 
 
+ENTRY_KEYS = ("id", "at", "layer", "targets", "reverted")
+
+
 def _entries() -> tuple[list[dict], list[str]]:
+    """Parsed entries, and the paths of any this module cannot use.
+
+    Shape is validated, not just JSON syntax. An entry written by an older
+    schema parses cleanly and then raises a bare KeyError deep inside
+    undo() — which the skill's documented try/except does not catch,
+    because CorruptEntry is what it was told to expect. Unrecognised shape
+    is corruption for our purposes: undo must refuse rather than guess.
+    """
     good, corrupt = [], []
     for p in sorted(paths.undo_dir().glob("*.json")):
         try:
-            good.append(json.loads(p.read_text()))
+            entry = json.loads(p.read_text())
         except (json.JSONDecodeError, OSError):
             corrupt.append(str(p))
+            continue
+        if not isinstance(entry, dict) or any(k not in entry for k in ENTRY_KEYS):
+            corrupt.append(str(p))
+            continue
+        good.append(entry)
     good.sort(key=lambda e: e.get("at", ""))
     return good, corrupt
 
@@ -267,7 +301,7 @@ def _apply_edit_locked(layer: str, edits, rationale: str, evidence: str) -> dict
     for target, content in edits:
         if not isinstance(content, str):
             raise ValueError(f"content for {target} must be a string")
-        resolved = target.resolve() if target.is_symlink() else Path(os.path.abspath(target))
+        resolved = Path(os.path.realpath(str(target)))
         _assert_allowed(resolved)
         previous, was_b64 = _read_if_exists(resolved)
         targets.append({
@@ -281,7 +315,7 @@ def _apply_edit_locked(layer: str, edits, rationale: str, evidence: str) -> dict
     written = []
     try:
         for spec, (_, content) in zip(targets, edits):
-            _atomic_write(Path(spec["path"]), content)
+            _atomic_write(Path(spec["path"]), content, create_parents=True)
             written.append(spec)
     except Exception:
         for spec in reversed(written):          # roll back a partial proposal
