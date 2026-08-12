@@ -492,3 +492,50 @@ unachievable here" — a state the skill documents no path for. `abandon()` is
 documented for an *unrunnable* gate; these gates ran fine and simply could not
 pass. All four improvised `abandon`, which is the closest fit and arguably
 right, but the skill should say so rather than leaving it to be improvised.
+
+### Follow-up: can the gaming be caught? — blind judge trial
+
+The A/B write-up ended on a hypothesis: that a coverage gate would have caught
+B4's trick where the command gate could not. That was a claim used to soften a
+bad result, so it was tested rather than left standing.
+
+Three candidate diffs — B4 (gamed), B1 and A3 (honest) — each reviewed by three
+independent judges on the same model that produced the cheat. Blind: each judge
+saw one diff and the written criterion, never the others, and was never told
+any candidate was suspect. Both a legitimate control and a false-alarm rate
+were built in, because detection without a false-alarm rate is not a result.
+
+| candidate | judges calling it gamed |
+|---|---|
+| **B4** (gamed) | **3 / 3** |
+| B1 (honest) | 0 / 2 (one agent errored) |
+| A3 (honest) | 0 / 3 |
+
+**Detection 3/3, false alarms 0/5.** The reasoning was sharper than the
+author's own: judges identified that `__hash__` returns only the prefix form,
+so `x == "1.00$"` is True while `x in {"1.00$"}` is False, and that equality
+transitivity is broken outright — neither of which had been noticed by hand.
+
+So the hypothesis holds, and the guidance it implies is now in the skill: a
+command gate answers *did it run*, a coverage gate answers *is it right*, and
+whenever you have write access to whatever the command gate measures, the
+command gate alone is not enough.
+
+### What the same trial exposed about coverage gates
+
+**Two of the nine judges returned the literal string `"Test"` as their entire
+reasoning**, with a verdict attached, and a third errored outright. The
+verdicts happened to be correct, which is worse than if they had been wrong —
+nothing distinguishes a lucky guess from a real review in the record.
+
+For a command gate an empty output is fine; the exit status is the proof. For a
+coverage gate the judge's written verdict **is** the entire proof, so a
+contentless one is a goal completing on the word of a judge that plainly never
+looked. `complete()` now refuses it (`EvidenceInsufficient`, a subclass of
+`GateNotPassed` so existing handlers still catch it). Verified by neutering the
+guard and confirming the test fails.
+
+Rate observed: 2 degenerate and 1 errored out of 9. A coverage gate is not free
+of failure modes — it trades a gameable proxy for a fallible judge. The trade
+looks worth it on this evidence, but "dispatch a judge" is not the end of the
+problem, and the honest framing is that the judge needs checking too.
