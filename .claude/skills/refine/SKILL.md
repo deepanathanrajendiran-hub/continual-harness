@@ -11,7 +11,7 @@ closes: nothing in a normal session ever writes back to it.
 
 Rollback bookkeeping runs through one module at
 `.claude/harness/bin/refine_log.py` (`apply_edit`, `AppendLine`,
-`count_recent_edits`, `list_entries`, `undo`, plus the `NothingToUndo` /
+`ReplaceLine`, `count_recent_edits`, `list_entries`, `undo`, plus the `NothingToUndo` /
 `CorruptEntry` / `UndoConflict` / `UndoTargetUnavailable` /
 `ProtectedTarget` / `SelfExemption` / `CapReached` /
 `MisroutedMemory` / `DuplicateTarget` exceptions).
@@ -119,6 +119,7 @@ that reflect nothing.
 |---|---|---|
 | Durable fact about user or project | M | `~/.claude/projects/<project-key>/memory/` |
 | Command failed then fixed | M | `~/.claude/projects/<project-key>/memory/` |
+| User correction scoped to this project | M | same memory dir, as `metadata.type: feedback` |
 | Procedure repeated 3x | G | `.claude/skills/<name>/SKILL.md` |
 | Repeated exploration shape | K | `.claude/agents/<name>.md` |
 | Correction that must apply *everywhere* | rho | `./CLAUDE.md` |
@@ -158,12 +159,25 @@ Update the matching entry rather than creating a near-duplicate. Two
 memories saying almost the same thing are worse than one, because
 retrieval surfaces the weaker one half the time.
 
+When the update must revise the entry's `MEMORY.md` index line, pass the
+new line as `refine_log.ReplaceLine(match, line)` in the same
+`apply_edit` call as the body rewrite. Resolved against the file's
+current bytes under the lock — like `AppendLine` — it replaces the line
+containing `match` (collapsing any duplicates for the same slug into
+one), or appends if nothing matches. `AppendLine` cannot do this: it
+only ever adds, so a revised hook line would land as a second line for
+the same slug — the exact near-duplicate this step exists to prevent.
+
 ## Step 4 — Rank and cap
 
-**At most 3 proposals per trajectory being harvested — never per tool
-call, and never resettable by re-invoking `/refine`.** An unbounded
-self-editor degrades the harness until it is worse than no harness, and
-a cap the editor can lift at will by calling itself again is not a cap.
+**At most 3 proposals per trajectory being harvested — and, in code, at
+most 3 applied edits per rolling 24-hour window per project, whichever
+bites first. Never per tool call, and never resettable by re-invoking
+`/refine`.** A second trajectory harvested the same day shares the day's
+budget; the pre-flight below, not your recollection of this session,
+says how much remains. An unbounded self-editor degrades the harness
+until it is worse than no harness, and a cap the editor can lift at will
+by calling itself again is not a cap.
 
 **`apply_edit` enforces this itself.** The fourth edit inside the window
 raises `CapReached` and writes nothing. The pre-flight below exists so you
@@ -304,6 +318,26 @@ anything had been lost. `AppendLine` is resolved against the file's
 current bytes while the lock is held, and appending a line that is already
 present is a no-op, so a retry cannot double it.
 
+**Update an existing index line with `refine_log.ReplaceLine`, the same
+way** — a dedupe update (Step 3) that revises a memory's hook passes the
+revised line, never a rendered body:
+
+```python
+refine_log.apply_edit("M", [
+    (memory_path, revised_memory_text),
+    (index_path, refine_log.ReplaceLine("(slug.md)",
+                                        "- [Title](slug.md) — revised hook")),
+], rationale, evidence)
+```
+
+`ReplaceLine(match, line)` replaces the line containing `match` with
+`line` (folding duplicates into one), appends when nothing matches, and
+is idempotent on retry. Line edits — `AppendLine` and `ReplaceLine` —
+fold in order when one call touches the same file repeatedly, including
+on top of a full rewrite earlier in the same proposal. Only a full
+rewrite *after* a line edit raises `DuplicateTarget` — the two orderings
+look symmetric and are not.
+
 `apply_edit` raises before writing anything if the target is protected
 (`ProtectedTarget`, guardrail G3), if the *content* claims harness
 authority or softens a guardrail (`SelfExemption`, also G3 — see below),
@@ -402,8 +436,12 @@ Related: [[other-slug]]
   matched as path *patterns* against the resolved absolute path — so the
   rule holds for the global copies under `~/.claude/` exactly as for this
   project's, and covers the ledger and undo snapshots the cap is counted
-  from, plus `settings*.json` and `hooks/` where a hook can run arbitrary
-  shell. It is not prose-only, and it is not three literal paths. It may never propose anything that weakens verification, testing,
+  from, plus everything that can run arbitrary shell or define MCP
+  servers: `settings*.json`, `hooks/`, `commands/`, `plugins/`,
+  `.claude.json`, and `.mcp.json`. It is not prose-only, and it is not
+  three literal paths.
+
+  Refine may never propose anything that weakens verification, testing,
   or approval requirements: skipping a test, loosening a gate, removing
   a guardrail from another skill. **Every write to rho/G/K/M goes through
   `apply_edit()` — no exceptions, and every file a single proposal touches goes in the *same* call.** `refine` may never
@@ -424,18 +462,32 @@ Related: [[other-slug]]
   that statement is part of what the user is approving in G4, not an
   implementation detail left for later.
 
-  This half of G3 is backed by a **content tripwire**, not just prose:
-  `apply_edit` raises `SelfExemption` when a G or K edit's text references
-  `refine_log`, calls its write API directly, targets `.claude/harness/`,
-  claims standing or implicit approval, or claims a harness-maintenance role — and when an edit at *any* layer proposes
-  raising the cap, skipping approval, or weakening tests or gates. It is a
-  tripwire, not a proof: a determined paraphrase gets past it, and the
-  approval gate remains the real defence. It exists so that the shape the
-  audit found — `~/.claude/skills/harness-maintainer/SKILL.md`, a path no
-  denylist protects — fails closed instead of depending on the constrained
-  party to notice. If it fires on something genuinely innocent, that is
-  the user's file to write by hand; refine does not get to make that class
-  of change on its own authority.
+  This half of G3 is backed by a **content tripwire**, not just prose,
+  and it scans at **every layer** — M and rho included, not only G and K.
+  `apply_edit` raises `SelfExemption` when an edit's text, wherever it is
+  routed, references `refine_log`, calls its write API directly, targets
+  `.claude/harness/`, claims standing or implicit approval, claims a
+  harness-maintenance role, or proposes raising the cap or skipping
+  approval. (Weakening tests or gates is just as forbidden, but by G3's
+  prose and the approval gate, not by any regex — no pattern scans for
+  it.) Two further patterns fire for
+  **G and K edits only**: text that instructs writing `MEMORY.md` or
+  under `.claude/projects/` directly — a skill or subagent telling itself
+  to write memory is claiming the write authority G3 reserves to
+  `apply_edit`, while a memory file's own content may legitimately say
+  where memories live. Two consequences, stated plainly so they are
+  discovered before approval rather than after: a *memory* that quotes
+  harness paths or module names — however honest the lesson — is refused
+  too; that is the tripwire preferring false positives over a second
+  write path, and that file is the user's to write by hand. And when a
+  G/K proposal states its write authority (required above), phrase it
+  without naming those files — "write authority: none" — or the
+  disclosure itself trips the pattern. It is a tripwire, not a proof: a
+  determined paraphrase gets past it, and the approval gate remains the
+  real defence. It exists so that the shape the audit found —
+  `~/.claude/skills/harness-maintainer/SKILL.md`, a path no denylist
+  protects — fails closed instead of depending on the constrained party
+  to notice.
 
   And it may never propose anything —
   in memory, in `CLAUDE.md`, in another skill, anywhere — that softens
@@ -475,15 +527,20 @@ Related: [[other-slug]]
 | Call | Exception | Meaning | Action |
 |---|---|---|---|
 | `refine_log.apply_edit` | `ProtectedTarget` | the target is refine's own rules, horizon's, the harness code, the ledger, or a settings/hooks file | stop. This is G3 refusing, and it is not negotiable — do not propose a softened variant or a different route to the same file. |
-| `refine_log.apply_edit` | `SelfExemption` | the *content* claims harness write authority, standing approval, or softens G1/G2/G4 | stop. Also G3, for the same reason. Report the matched phrase to the user; if the match is genuinely innocent, they can write the file themselves — do not reword it to get past the check. |
+| `refine_log.apply_edit` | `SelfExemption` | the *content* claims harness write authority or standing approval, or softens G2's cap or G4's approval gate | stop. Also G3, for the same reason. Report the matched phrase to the user; if the match is genuinely innocent, they can write the file themselves — do not reword it to get past the check. |
 | `refine_log.apply_edit` | `MisroutedMemory` | the target is under `.claude/projects/` but not this project's memory dir | use `paths.memory_dir()`; a hand-assembled project key is invisible to recall forever |
-| `refine_log.apply_edit` | `DuplicateTarget` | one proposal rewrites the same file twice with full content | pass the final content once. Repeated `AppendLine` edits to one file are fine and are folded in order |
+| `refine_log.apply_edit` | `DuplicateTarget` | one proposal rewrites the same file twice with full content, or rewrites it after a line edit | pass the final content once. Repeated line edits (`AppendLine`, `ReplaceLine`) to one file are fine and fold in order |
 | `refine_log.apply_edit` | `CapReached` | G2's budget for the last 24h is spent | stop and report the count. Only re-run with `override_cap=True` if the user, having seen the count, explicitly says to. |
-| `refine_log.count_recent_edits` | `CorruptEntry` | an entry file under `.claude/harness/undo/` is unreadable | stop and report the paths. Do not fall back to counting the changelog — that is the looser count this design deliberately replaced. |
-| `refine_log.undo` | `NothingToUndo` | no matching entry: nothing un-reverted left, or the requested `entry_id` is unknown or already reverted | report it; the message lists the ids that exist |
+| `refine_log.count_recent_edits` — also surfaced through `apply_edit`'s cap pre-count | `CorruptEntry` | an entry file under `.claude/harness/undo/` is unreadable | stop and report the paths. Do not fall back to counting the changelog — that is the looser count this design deliberately replaced. |
+| `refine_log.undo` | `NothingToUndo` | no matching entry: nothing un-reverted left, or the requested `entry_id` is unknown or already reverted | report it; when a specific `entry_id` was requested, the message lists the ids that exist |
 | `refine_log.undo` | `CorruptEntry` | an undo-log entry file under `.claude/harness/undo/` is unreadable or not valid JSON | stop. Report the exact file path(s) named in the exception to the user. Do not retry, delete the file, skip past it, or fall back to reverting a different entry on your own initiative — guessing past damaged history risks reverting the wrong edit. |
-| any of the above | `filelock.LockTimeout` | another process holds the ledger lock — a second terminal, or a `/loop` firing beside a live session | retry once. If it persists, tell the user which lock file to delete; the exception names it |
+| `apply_edit` / `undo` — the two calls that take the lock | `filelock.LockTimeout` | another process holds the ledger lock — a second terminal, or a `/loop` firing beside a live session | retry once. If it persists, tell the user which lock file to delete; the exception names it. Catching it needs `import filelock` from the harness bin |
 | `refine_log.undo` | `UndoConflict` | the target's current sha256 doesn't match what was recorded when its entry was committed — something changed the target after the approved edit landed | stop. Show the user the target path and that it changed since. Only call `undo(force=True)` after the user explicitly approves discarding that later change — silently forcing would delete an edit nobody agreed to lose. |
+
+`apply_edit`'s checks run in a fixed order — the cap before the
+per-target guards — so with the budget spent, a proposal that would also
+hit `ProtectedTarget` or `SelfExemption` reports `CapReached` instead.
+Do not conclude from that that the other guard "did not fire".
 
 ## `/refine --undo`
 
