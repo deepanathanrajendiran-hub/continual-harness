@@ -313,12 +313,19 @@ def _assert_content_allowed(layer: str, target: Path, content: str) -> None:
     for pattern, why in checks:
         m = pattern.search(content)
         if m:
+            # The audience of this message is the agent, mid-flow, after
+            # user approval. An earlier wording said "write the file
+            # yourself", which read as an instruction to bypass apply_edit
+            # with the agent's own Write/Edit tools -- the exact
+            # unrecorded write path this check exists to refuse.
             raise SelfExemption(
                 f"refine may not write this content to {target}: it {why} "
                 f"(guardrail G3, matched {m.group(0)!r}). If this is a false "
-                f"positive, write the file yourself — the point of the rule is "
-                f"that refine cannot make this class of change on its own "
-                f"authority, not that the text is forbidden to exist."
+                f"positive, the file is the user's to write by hand -- refine "
+                f"does not route around this check with its own editing tools. "
+                f"The point of the rule is that refine cannot make this class "
+                f"of change on its own authority, not that the text is "
+                f"forbidden to exist."
             )
 
 
@@ -481,6 +488,51 @@ class AppendLine:
             base += "\n"
         return base + self.line + "\n"
 
+class ReplaceLine:
+    """Replace the line matching `match` with `line`, resolved at write time.
+
+    `AppendLine` can only add, so revising a memory's index hook used to
+    mean either appending a second line for the same slug -- the exact
+    near-duplicate corruption the dedupe step exists to prevent -- or
+    passing a rendered body, which reintroduces the stale-read lost update
+    `AppendLine` was built to remove. This resolves against the file's
+    current bytes under the same lock instead.
+
+    Semantics, each chosen so a retry cannot corrupt the index:
+
+    - Every line containing `match` -- and any line already equal to
+      `line` -- collapses into a single `line` at the first match's
+      position, so duplicates an earlier append left behind fold away too.
+    - No line matches: `line` is appended, so a fresh index still ends up
+      carrying it (the same fail-safe direction as AppendLine).
+    - Idempotent even when `line` no longer contains `match` (a renamed
+      slug): a second application finds `line` present and changes nothing.
+
+    The file is rebuilt line by line, so output line endings are
+    normalised to "\\n" -- fine for MEMORY.md, which this exists for.
+    """
+
+    def __init__(self, match: str, line: str):
+        if not isinstance(match, str) or not match.strip():
+            raise ValueError("ReplaceLine needs a non-empty match string")
+        if not isinstance(line, str) or not line.strip():
+            raise ValueError("ReplaceLine needs a non-empty replacement line")
+        self.match = match
+        self.line = line.rstrip("\n")
+
+    def render(self, previous: str | None) -> str:
+        out, placed = [], False
+        for existing in (previous or "").splitlines():
+            if self.match in existing or existing == self.line:
+                if not placed:
+                    out.append(self.line)
+                    placed = True
+            else:
+                out.append(existing)
+        if not placed:
+            out.append(self.line)
+        return "\n".join(out) + "\n"
+
 
 def apply_edit(layer: str, edits, rationale: str, evidence: str,
                override_cap: bool = False) -> dict:
@@ -498,10 +550,10 @@ def _apply_edit_locked(layer: str, edits, rationale: str, evidence: str,
     """Apply one approved proposal: write every target, log it, make it undoable.
 
     `edits` is a sequence of (target_path, new_content) pairs, where
-    new_content is a string or an `AppendLine`. All targets are
-    snapshotted before any is written, and if a later write fails the
-    earlier ones are rolled back, so an entry never describes a partially
-    applied proposal.
+    new_content is a string, an `AppendLine`, or a `ReplaceLine`. All
+    targets are snapshotted before any is written, and if a later write
+    fails the earlier ones are rolled back, so an entry never describes a
+    partially applied proposal.
 
     Returns the stored entry.
     """
@@ -533,10 +585,10 @@ def _apply_edit_locked(layer: str, edits, rationale: str, evidence: str,
     # because the file no longer matched either recorded sha.
     folded: dict[str, dict] = {}
     for target, content in edits:
-        if not isinstance(content, (str, AppendLine)):
+        if not isinstance(content, (str, AppendLine, ReplaceLine)):
             raise ValueError(
-                f"content for {target} must be a string or AppendLine, "
-                f"got {type(content).__name__}"
+                f"content for {target} must be a string, AppendLine, or "
+                f"ReplaceLine, got {type(content).__name__}"
             )
         resolved = Path(os.path.realpath(str(target)))
         _assert_allowed(resolved)
@@ -552,26 +604,26 @@ def _apply_edit_locked(layer: str, edits, rationale: str, evidence: str,
             }
         spec = folded[key]
 
-        if isinstance(content, AppendLine):
+        if isinstance(content, (AppendLine, ReplaceLine)):
             if spec["previous_was_base64"]:
                 raise ValueError(
-                    f"cannot append a line to {resolved}: it is not UTF-8 text"
+                    f"cannot apply a line edit to {resolved}: it is not UTF-8 text"
                 )
-            # Only the appended line is scanned. Scanning the rendered file
+            # Only the new line is scanned. Scanning the rendered file
             # would let one old line in MEMORY.md that happens to match a
-            # tripwire block every future append to it.
+            # tripwire block every future line edit to it.
             _assert_content_allowed(layer, resolved, content.line)
             spec["current"] = content.render(spec["current"])
         else:
             if spec["current"] is not spec["previous_content"]:
-                # Two full-content writes to one file, or a rewrite after an
-                # append: which one the user approved is unknowable, and
+                # Two full-content writes to one file, or a rewrite after a
+                # line edit: which one the user approved is unknowable, and
                 # last-one-wins is how the lost update looked from outside.
                 raise DuplicateTarget(
                     f"{resolved} appears more than once in this proposal with "
-                    f"full content. Only repeated AppendLine edits can be "
-                    f"combined; two rewrites of one file cannot be ordered "
-                    f"safely. Pass the final content once."
+                    f"full content. Only repeated line edits (AppendLine, "
+                    f"ReplaceLine) can be combined; two rewrites of one file "
+                    f"cannot be ordered safely. Pass the final content once."
                 )
             _assert_content_allowed(layer, resolved, content)
             spec["current"] = content

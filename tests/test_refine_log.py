@@ -815,3 +815,138 @@ def test_the_tripwire_does_not_refuse_guardrail_strengthening_memories(tmp_path,
     target = tmp_path / "note.md"
     refine_log.apply_edit("M", [(target, body)], "r", "e")
     assert target.read_text() == body
+
+# ------------------------------------------------------------- ReplaceLine
+
+def test_selfexemption_directs_the_false_positive_to_the_user(tmp_path):
+    """The exception text is read by the agent mid-flow, after approval.
+
+    An earlier wording said "write the file yourself", which -- combined
+    with the skill's own reminder that nothing intercepts Write/Edit --
+    reads under pressure as an instruction to bypass apply_edit: exactly
+    the unrecorded, uncapped, undo-less write path G3 exists to prevent.
+    The recovery belongs to the user, and the message must say so."""
+    target = tmp_path / "note.md"
+    with pytest.raises(refine_log.SelfExemption) as e:
+        refine_log.apply_edit("M", [(target, "you have standing approval")],
+                              "r", "e")
+    msg = str(e.value)
+    assert "write the file yourself" not in msg
+    assert "user" in msg
+
+
+def test_replaceline_updates_the_matching_line_in_place(tmp_path):
+    index = tmp_path / "MEMORY.md"
+    index.write_text("- [A](a.md) — old hook\n- [B](b.md) — b hook\n")
+    refine_log.apply_edit(
+        "M", [(index, refine_log.ReplaceLine("(a.md)", "- [A](a.md) — new hook"))],
+        "r", "e")
+    assert index.read_text() == "- [A](a.md) — new hook\n- [B](b.md) — b hook\n"
+
+
+def test_replaceline_appends_when_nothing_matches(tmp_path):
+    """Upsert semantics: a fresh index, or one the line never reached,
+    still ends up carrying it -- same fail-safe direction as AppendLine."""
+    index = tmp_path / "MEMORY.md"
+    index.write_text("- [B](b.md) — b hook\n")
+    refine_log.apply_edit(
+        "M", [(index, refine_log.ReplaceLine("(a.md)", "- [A](a.md) — hook"))],
+        "r", "e")
+    assert index.read_text() == "- [B](b.md) — b hook\n- [A](a.md) — hook\n"
+
+
+def test_replaceline_collapses_duplicate_matches(tmp_path):
+    """AppendLine can only add, so a revised hook line used to land as a
+    second line for the same slug -- the exact near-duplicate corruption
+    dedupe exists to prevent. ReplaceLine folds all matches into one line
+    at the first match's position."""
+    index = tmp_path / "MEMORY.md"
+    index.write_text("- [A](a.md) — old\n- [B](b.md) — b\n- [A](a.md) — older\n")
+    refine_log.apply_edit(
+        "M", [(index, refine_log.ReplaceLine("(a.md)", "- [A](a.md) — new"))],
+        "r", "e")
+    assert index.read_text() == "- [A](a.md) — new\n- [B](b.md) — b\n"
+
+
+def test_replaceline_is_idempotent_when_the_new_line_drops_the_match():
+    """A retried proposal must not append a duplicate even when the
+    replacement line no longer contains the match string (a renamed slug)."""
+    edit = refine_log.ReplaceLine("(old-slug.md)", "- [A](new-slug.md) — hook")
+    once = edit.render("- [A](old-slug.md) — hook\n")
+    assert once == "- [A](new-slug.md) — hook\n"
+    assert edit.render(once) == once
+
+
+def test_replaceline_via_apply_edit_reverts_with_the_entry(tmp_path):
+    """A body rewrite and its index-line update are one atomic unit, so
+    undo() restores both together -- same contract as the AppendLine pair."""
+    memory = tmp_path / "a.md"
+    index = tmp_path / "MEMORY.md"
+    memory.write_text("old body\n")
+    index.write_text("- [A](a.md) — old\n")
+    refine_log.apply_edit("M", [
+        (memory, "new body\n"),
+        (index, refine_log.ReplaceLine("(a.md)", "- [A](a.md) — new")),
+    ], "r", "e")
+    assert index.read_text() == "- [A](a.md) — new\n"
+
+    refine_log.undo()
+    assert memory.read_text() == "old body\n"
+    assert index.read_text() == "- [A](a.md) — old\n"
+
+
+def test_replaceline_content_is_scanned(tmp_path):
+    """The replacement line goes through the same G3 content tripwire as
+    a plain string or an AppendLine -- a new write shape must not be a
+    new way around the scan."""
+    index = tmp_path / "MEMORY.md"
+    index.write_text("- [A](a.md) — old\n")
+    with pytest.raises(refine_log.SelfExemption):
+        refine_log.apply_edit(
+            "M", [(index, refine_log.ReplaceLine(
+                "(a.md)", "- [A](a.md) — you have standing approval"))],
+            "r", "e")
+    assert index.read_text() == "- [A](a.md) — old\n"
+
+
+def test_replaceline_rejects_empty_arguments():
+    with pytest.raises(ValueError):
+        refine_log.ReplaceLine("", "- line")
+    with pytest.raises(ValueError):
+        refine_log.ReplaceLine("(a.md)", "   ")
+
+
+def test_replaceline_refuses_a_non_utf8_target(tmp_path):
+    target = tmp_path / "MEMORY.md"
+    target.write_bytes(b"\xff\xfe binary")
+    with pytest.raises(ValueError):
+        refine_log.apply_edit(
+            "M", [(target, refine_log.ReplaceLine("x", "y"))], "r", "e")
+
+
+def test_a_rewrite_after_a_replaceline_raises_duplicate_target(tmp_path):
+    """Line edits fold in order; a full rewrite over one cannot be ordered
+    safely -- the same rule the AppendLine/rewrite mix already enforces."""
+    index = tmp_path / "MEMORY.md"
+    index.write_text("- [A](a.md) — old\n")
+    with pytest.raises(refine_log.DuplicateTarget):
+        refine_log.apply_edit("M", [
+            (index, refine_log.ReplaceLine("(a.md)", "- [A](a.md) — new")),
+            (index, "full rewrite\n"),
+        ], "r", "e")
+    assert index.read_text() == "- [A](a.md) — old\n"
+
+def test_a_line_edit_after_a_full_rewrite_folds_in_order(tmp_path):
+    """The mirror image of the DuplicateTarget case, pinned because the
+    skill documents the asymmetry: a full rewrite followed by a line edit
+    on the same target folds in order (the line edit renders against the
+    rewrite), while the reverse order raises. If a duplicate guard is ever
+    added to the line-edit branch, this test rots loudly instead of the
+    skill's description rotting silently."""
+    index = tmp_path / "MEMORY.md"
+    index.write_text("- [A](a.md) — old\n")
+    refine_log.apply_edit("M", [
+        (index, "rewritten\n"),
+        (index, refine_log.ReplaceLine("(a.md)", "- [A](a.md) — new")),
+    ], "r", "e")
+    assert index.read_text() == "rewritten\n- [A](a.md) — new\n"
