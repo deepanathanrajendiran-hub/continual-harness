@@ -357,7 +357,7 @@ Related: [[other-slug]]
 | Call | Exception | Meaning | Action |
 |---|---|---|---|
 | `refine_log.apply_edit` | `ProtectedTarget` | the target is refine's own rules, horizon's, the harness code, the ledger, or a settings/hooks file | stop. G3 refusing, not negotiable — no softened variant, no different route to the same file |
-| `refine_log.apply_edit` | `SelfExemption` | the *content* claims harness write authority or standing approval, or softens G2's cap or G4's approval gate | stop. Report the matched phrase; a genuinely innocent match is the user's file to write by hand — do not reword to get past the check |
+| `refine_log.apply_edit` | `SelfExemption` | the *content* claims harness write authority or standing approval, or softens G1's evidence bar, G2's cap, or G4's approval gate | stop. Report the matched phrase; a genuinely innocent match is the user's file to write by hand — do not reword to get past the check, before or after it fires |
 | `refine_log.apply_edit` | `MisroutedMemory` | target under `.claude/projects/` but not this project's memory dir | use `paths.memory_dir()`; a hand-assembled key is invisible to recall forever |
 | `refine_log.apply_edit` | `DuplicateTarget` | one proposal rewrites the same file twice with full content, or rewrites it after a line edit | pass the final content once; repeated line edits (`AppendLine`, `ReplaceLine`) fold in order |
 | `refine_log.apply_edit` | `AmbiguousMatch` | a `ReplaceLine` match hits lines belonging to different entries | anchor the match on one entry's `(slug.md)` link; nothing was written |
