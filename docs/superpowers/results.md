@@ -31,16 +31,17 @@ here.)
 | T7 | Rollback: `/refine --undo` removes a written file and retires its changelog entry | **PASS** | 2026-08-09 | `tests/test_refine_log.py::test_undo_removes_a_created_file` (line 22), docstring: *"T7: a created memory file is removed and the entry retired."* Records + commits a memory-file write, calls `refine_log.undo()`, asserts the file no longer exists and `"REVERTED"` appears in `CHANGELOG.md`. Result: PASSED. |
 | T8 | Gitignored-output regression (§5.2.1): `tree_hash` still detects a write inside a `.gitignore`d directory that `git status --porcelain` is blind to, so the gate still runs | **PASS** | 2026-08-09 | `tests/test_tree_hash.py::test_gitignored_write_is_detected` (line 28), docstring: *"T8 regression: git status --porcelain=v1 cannot see writes inside ignored directories..."* Asserts porcelain output is empty for the ignored write (precondition) while `tree_hash.compute()` still changes. Result: PASSED. |
 | T9 | Memory contract conformance: kebab-case filename matching `name`, required frontmatter, exactly one new `MEMORY.md` line | **PASS** | 2026-08-09 | Inspected all three files T1 produced: filename equals the `name` slug in each, all kebab-case and none numbered/prefixed, `description` non-empty, `metadata.type` in {user, feedback, project, reference}, `**Why:**`/`**How to apply:**` present on both `feedback` entries and the `project` entry, and `MEMORY.md` carries exactly 3 lines for 3 memories. Note: Claude Code normalizes frontmatter on write — it unquotes `description` and auto-stamps `node_type`, `originSessionId`, `modified`. Those are platform fields, not part of the contract. |
-| T10 | Subagent restart safety: entries in `subagents` are treated as dead and respawned from `brief` in a genuinely new Claude Code session, no `SendMessage` against a stale handle | **NOT RUN** | — | Requires populating a goal's `subagents` via `goal.add_subagent(...)` in one live session, then resuming that same goal in a *separate, fresh* Claude Code process (not `goal.load()` called again in the same process/subagent). No subagent can spawn an independent Claude Code session to test this against itself. |
+| T10 | Subagent restart safety: entries in `subagents` are treated as dead and respawned from `brief` in a genuinely new Claude Code session, no `SendMessage` against a stale handle | **PASS** | 2026-08-11 | Run twice, each half in a genuinely separate Claude Code process — `goal.load()` called again inside the same session proves nothing about handle staleness, which is why this row sat at NOT RUN until then. Artifacts in this file: *"T10 — run 2026-08-11, in a genuinely fresh process"* (stale handle treated as dead) and *"T10, second run — the respawn half"* (respawn from the recorded `brief`). |
 
-**Score: 9 PASS (T1, T2, T3, T4, T5, T6, T7, T8, T9) / 1 NOT RUN (T10).**
+**Score: 10 PASS (T1–T10).**
 
 T1, T2, T3 and T9 were run live on 2026-08-09, in the session that built
-this harness, with the user approving all three proposals. T10 is the only
-test still unrun: it needs a goal's `subagents` populated in one Claude Code
-process and that same goal resumed in a genuinely separate process — not
-`goal.load()` called again inside the same session, which would prove
-nothing about handle staleness.
+this harness, with the user approving all three proposals. T10 was the last
+to run, on 2026-08-11: it needs a goal's `subagents` populated in one Claude
+Code process and that same goal resumed in a genuinely separate process —
+not `goal.load()` called again inside the same session, which would prove
+nothing about handle staleness. Both halves are recorded in their own
+sections below.
 
 ### Gap found during the live T1 run
 

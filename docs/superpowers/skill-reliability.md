@@ -67,7 +67,8 @@ itself the signal that the instructions bind rather than merely suggest.
 
 ## Relation to the rest of the evidence
 
-The unit suite (243 tests) proves the *modules* behave; bench 2 proves
+The unit suite proves the *modules* behave (count in README §10 — this
+dated record deliberately does not carry one to rot); bench 2 proves
 the *loop* survives interruption and the dual gate blocks a real cheat;
 this battery proves the *instructions themselves* execute reliably in
 fresh hands — the layer the cold audits kept finding defects in, now
