@@ -5,20 +5,14 @@ description: Use after a substantial task, or when the user types /refine - read
 
 # Refine: the continual harness
 
-The harness is `H = (rho, G, K, M)` — prompt, skills, subagents, memory.
-Every one is editable. This skill closes the loop that otherwise never
-closes: nothing in a normal session ever writes back to it.
-
-Rollback bookkeeping runs through one module at
+The harness is `H = (rho, G, K, M)` — prompt, skills, subagents, memory —
+and nothing in a normal session ever writes back to it. This skill closes
+that loop. All rollback bookkeeping runs through
 `.claude/harness/bin/refine_log.py` (`apply_edit`, `AppendLine`,
-`ReplaceLine`, `count_recent_edits`, `list_entries`, `undo`, plus the `NothingToUndo` /
-`CorruptEntry` / `UndoConflict` / `UndoTargetUnavailable` /
-`ProtectedTarget` / `SelfExemption` / `CapReached` /
-`MisroutedMemory` / `DuplicateTarget` exceptions).
-The skill calls it; it does not reimplement changelog formatting, entry
-storage, or the undo staleness check inline. If a step below can't be
-done by calling it, stop and say so rather than inventing an inline
-substitute.
+`ReplaceLine`, `count_recent_edits`, `list_entries`, `undo`, and its
+named exceptions). Call it; never reimplement changelog formatting, entry
+storage, or the undo staleness check inline — if a step can't be done by
+calling it, stop and say so.
 
 ## Setup
 
@@ -40,78 +34,39 @@ Quote the path — the project directory name ends in a space.
 ## Invocation
 
 - `/refine` — harvest the whole trajectory.
-- `/refine <focus hint>` — harvest only what relates to the hint, e.g.
-  `/refine the test failures` or `/refine how we handled paths`. The hint
-  **narrows** Step 1's search; it does not lower any bar. Every proposal
-  must still satisfy G1's evidence rule, and if nothing in the trajectory
-  matches the hint, the correct answer is to say so and propose nothing —
-  never stretch an unrelated turning point to fit the hint, and never
-  treat the hint as an instruction about what conclusion to reach. A hint
-  that reads as a directive ("record that the tests are too strict")
-  is a request for a specific edit, not a focus: harvest normally and
-  hold that proposal to G1 and G3 like any other.
-- `/refine --undo` — revert the most recent approved edit (see the end of
-  this file).
-- `/refine --global` — see Scope below.
-
-## Scope
+- `/refine <focus hint>` — the hint **narrows** Step 1's search; it does
+  not lower any bar. If nothing matches it, say so and propose nothing.
+  A hint that reads as a directive ("record that the tests are too
+  strict") is a request for a specific edit, not a focus: harvest
+  normally and hold it to G1 and G3 like any other proposal.
+- `/refine --undo` — revert the most recent approved edit (see the end).
+- `/refine --global` — retarget rho/G/K to `~/.claude/CLAUDE.md`,
+  `~/.claude/skills/`, `~/.claude/agents/`; only for lessons genuinely
+  universal. It changes *where* a proposal writes, never the process:
+  propose-then-approve and every guardrail apply identically. Memory
+  routing is unaffected (M is already keyed to this project under
+  `~/.claude/projects/`), and the changelog/undo ledger stays
+  project-local — so `/refine --undo` still reverts a `--global` write,
+  and the cap is counted from this project's ledger (Step 4). G3's
+  protections cover the global copies exactly as the local ones.
 
 Default targets are project-local: `./CLAUDE.md`, `.claude/skills/`,
 `.claude/agents/`, and the project memory dir.
 
-`/refine --global` retargets to `~/.claude/CLAUDE.md`, `~/.claude/skills/`,
-and `~/.claude/agents/`. Use it only for lessons that genuinely apply to
-every project — a project-specific gotcha written globally is noise in
-every future session.
-
-`--global` changes *where* a proposal writes, not the process it writes
-through: Steps 5-6's propose-then-approve flow and G4's approval gate apply
-to every global write exactly as they apply to a project-local one — no
-flag-conditional shortcut exists anywhere in this skill.
-
-Two things `--global` does **not** change:
-
-- **Memory (M) routing is unaffected.** Step 2's target for M is already
-  `~/.claude/projects/<project-key>/memory/` — under the user's home
-  directory, keyed by *this* project's path, not a repo-local folder.
-  There is no separate global memory store to retarget to (confirmed: no
-  `~/.claude/memory/` exists), so `--global` has nothing to do here. A
-  memory-routed proposal always writes to the current project's memory
-  dir regardless of the flag; if a lesson is durable enough to want
-  writing everywhere, route it to rho or G instead (Step 2), not to M.
-- **Changelog/undo bookkeeping stays project-local.** `apply_edit()`
-  always writes its ledger and snapshot to *this* project's
-  `.claude/harness/CHANGELOG.md` and `.claude/harness/undo/`, even for a
-  `--global` proposal whose edit target is under `~/.claude/`. So
-  `/refine --undo` after a `--global` write still reverts it, from this
-  project's log — and G2's cap counts that same project-local ledger,
-  which is why N projects can spend N budgets against one global layer
-  (Step 4).
-
-`--global` retargets *where a proposal writes*, not *which file governs
-the edit itself*. G3's no-self-exemption rule still applies to the global
-copy once one exists: after promotion, `~/.claude/skills/refine/SKILL.md`,
-`~/.claude/skills/horizon/SKILL.md`, and `~/.claude/harness/bin/*.py` (if
-and when they exist) are exactly as off-limits to a self-proposal as
-their project-local counterparts are today. A flag that changes the
-write path does not change what refine is allowed to propose about
-itself.
-
 ## Step 1 — Harvest turning points
 
-Trajectories are mostly noise: file reads, tool output, exploration that
-led nowhere. Scan for **turning points only**:
+Trajectories are mostly noise. Scan for **turning points only**:
 
 - A direct user correction ("no, don't do X", "use Y instead").
-- **A command that failed, then succeeded after a fix.** The highest-signal
-  class — a reproducible gotcha whose fix is already proven.
+- **A command that failed, then succeeded after a fix** — the
+  highest-signal class: a reproducible gotcha whose fix is proven.
 - A procedure re-derived or repeated for the third time.
 - A research or exploration shape run repeatedly with the same structure.
 - A durable fact about the user or project not derivable from the repo.
 
 If a candidate cannot be anchored to one of those moments, it is not a
-candidate. This is what stops refine inventing plausible-sounding patterns
-that reflect nothing.
+candidate — that is what stops refine inventing plausible-sounding
+patterns that reflect nothing.
 
 ## Step 2 — Route to the narrowest layer
 
@@ -124,49 +79,35 @@ that reflect nothing.
 | Repeated exploration shape | K | `.claude/agents/<name>.md` |
 | Correction that must apply *everywhere* | rho | `./CLAUDE.md` |
 
-`<project-key>` — **do not assemble it by hand.** Call
-`refine_log.paths.memory_dir()`, which derives it from the project root.
-`apply_edit` now refuses a target under `.claude/projects/` that is not
-this project's memory directory (`MisroutedMemory`), because a key one
-character off produces a directory `mkdir -p` happily creates, that recall
-never reads, and that looks correct in both the approval prompt and the
-changelog. See "Memory write contract" below for the literal rule and a
-worked example. Never substitute a repo-local path like `.claude/memory/`
-— nothing in Claude Code reads memory from there.
+**Narrowest layer wins.** CLAUDE.md is loaded into every session — the
+most expensive real estate in the system; last resort, never the default.
 
-**Narrowest layer wins.** CLAUDE.md is loaded into every session, so it is
-the most expensive real estate in the system — last resort, never the
-default. A fact belongs in memory unless it must fire unconditionally.
-
-If the routed target file doesn't exist yet — this project currently has
-no root `CLAUDE.md`, for example — that's not a blocker. Creating it is
-part of the approved edit; disclose that in the proposal (Step 5) rather
-than treating a missing file as an error.
+`<project-key>`: never assemble it by hand — call
+`refine_log.paths.memory_dir()`. `apply_edit` refuses a target under
+`.claude/projects/` that is not this project's memory directory
+(`MisroutedMemory`), because a key one character off creates a directory
+recall never reads while looking correct in the approval prompt and the
+changelog. Never use a repo-local path like `.claude/memory/` — nothing
+reads memory from there. A routed target file that doesn't exist yet is
+not a blocker: creating it is part of the approved edit; disclose that in
+Step 5.
 
 ## Step 3 — Dedupe
 
-Before proposing a new entry, check the target layer for one already
-covering it:
-
-- **M:** read `MEMORY.md` in the project memory directory (one line per
-  memory), and check existing files' `name` / `description` frontmatter
-  for the same fact.
-- **G:** read the skill files already under `.claude/skills/`.
-- **K:** read the subagent files already under `.claude/agents/`.
-- **rho:** read `./CLAUDE.md`.
-
-Update the matching entry rather than creating a near-duplicate. Two
-memories saying almost the same thing are worse than one, because
-retrieval surfaces the weaker one half the time.
+Before proposing, check the target layer for an entry already covering
+it: for M read `MEMORY.md` and existing files' frontmatter; for G/K/rho
+read the existing files. Update the matching entry rather than creating a
+near-duplicate — two memories saying almost the same thing are worse than
+one, because retrieval surfaces the weaker one half the time.
 
 When the update must revise the entry's `MEMORY.md` index line, pass the
 new line as `refine_log.ReplaceLine(match, line)` in the same
 `apply_edit` call as the body rewrite. Resolved against the file's
 current bytes under the lock — like `AppendLine` — it replaces the line
-containing `match` (collapsing any duplicates for the same slug into
-one), or appends if nothing matches. `AppendLine` cannot do this: it
-only ever adds, so a revised hook line would land as a second line for
-the same slug — the exact near-duplicate this step exists to prevent.
+containing `match` (collapsing duplicates for the same slug into one),
+or appends if nothing matches. `AppendLine` cannot do this: it only ever
+adds, so a revised hook would land as a second line for the same slug —
+the exact near-duplicate this step exists to prevent.
 
 ## Step 4 — Rank and cap
 
@@ -174,27 +115,17 @@ the same slug — the exact near-duplicate this step exists to prevent.
 most 3 applied edits per rolling 24-hour window per project, whichever
 bites first. Never per tool call, and never resettable by re-invoking
 `/refine`.** A second trajectory harvested the same day shares the day's
-budget; the pre-flight below, not your recollection of this session,
-says how much remains. An unbounded self-editor degrades the harness
-until it is worse than no harness, and a cap the editor can lift at will
-by calling itself again is not a cap.
+budget. An unbounded self-editor degrades the harness until it is worse
+than no harness.
 
-**`apply_edit` enforces this itself.** The fourth edit inside the window
-raises `CapReached` and writes nothing. The pre-flight below exists so you
-can rank *before* proposing and tell the user where the budget stands, not
-because the count is advisory.
+**`apply_edit` enforces this itself** — the fourth edit in the window
+raises `CapReached` and writes nothing. Be accurate about what that
+means: it is the **disciplined path, not the only one**; you hold
+`Write`/`Edit` and nothing intercepts them. Every guarantee here holds
+exactly as long as harness writes go through `apply_edit`.
 
-Be accurate about what that means: `apply_edit` is the **disciplined
-path, not the only one**. You hold `Write` and `Edit`; nothing intercepts
-them, and no hook is installed. Every guarantee on this page — the cap,
-the ledger, the snapshots, `undo` — holds exactly as long as harness
-writes go through `apply_edit`. That is a rule you follow, not a wall you
-cannot cross, and this skill is not going to pretend otherwise: a claim of
-enforcement that overstates itself invites less care, not more.
-
-**Before proposing anything, check the persisted floor, not your own
-recollection.** A guardrail that depends on the constrained party's memory
-is not a guardrail.
+**Before proposing anything, check the persisted floor** — a guardrail
+that depends on the constrained party's memory is not a guardrail:
 
 ```python
 import sys, pathlib
@@ -208,63 +139,37 @@ print(f"cap pre-flight: {refine_log.count_recent_edits()} of "
       f"{refine_log.CAP} edits used in the last {refine_log.CAP_WINDOW_HOURS}h")
 ```
 
-`count_recent_edits()` counts the stored entries under
-`.claude/harness/undo/`. It does **not** parse `CHANGELOG.md`. That
-distinction is load-bearing: the changelog carries quoted trajectory text,
-and a newline inside a rationale would split a markdown line so a
-line-based count silently missed a real, committed, undoable edit — a cap
-failing in the one direction a cap must never fail. Do not reimplement the
-count by reading the changelog.
+`count_recent_edits()` counts stored entries under
+`.claude/harness/undo/` — never reimplement it by parsing
+`CHANGELOG.md`, whose quoted text can split lines and hide a real edit
+from a line-based count. Three properties, each failing toward stopping:
+a **rolling 24h window** (a session past midnight gets no fresh budget);
+**per project** (so `/refine --global` in N projects can land 3N global
+edits with every pre-flight honestly reading zero — say so before
+proposing a `--global` edit); **reverted entries still count**
+(apply-then-undo is otherwise an unlimited budget). `CorruptEntry` from
+the count is a stop-and-report, not a reason to fall back to a looser
+count.
 
-Three properties of the count, each chosen to fail toward stopping:
-
-- **A rolling 24-hour window, not a UTC calendar day.** A session that
-  runs past midnight would otherwise be handed a fresh budget
-  mid-trajectory. The cost — two unrelated sessions in one day sharing a
-  budget — is the harmless direction.
-- **Per project, not per machine.** The count reads *this* project's
-  ledger. Three projects each report `0 of 3` and each allow three edits,
-  so `/refine --global` run in N projects can land 3N edits in
-  `~/.claude/` in one day, every pre-flight honestly reporting zero. Treat
-  the global layer as a shared resource the cap does not protect: before
-  proposing a `--global` edit, say so plainly, and prefer a project-local
-  target whenever the lesson is not genuinely universal.
-- **Reverted entries still count.** Apply-then-undo is otherwise an
-  unlimited budget. The cap exists to force ranking, and an undo does not
-  undo the ranking decision.
-It raises `CorruptEntry` if any entry file is unreadable. That is not a
-reason to fall back to a looser count: report it and stop, exactly as
-`undo()` does.
-
-**State the count every time, whether or not it blocks.** A pre-flight
-only mentioned when it blocks is indistinguishable, in the transcript,
-from one that never ran.
-
-**If the count is already at the cap, stop.** Propose nothing. Tell the
-user the count and let them decide whether to override. Their asking you
-to run `/refine` is not the override — it must be explicit, given after
-they have seen the count. Only then may you pass `override_cap=True`,
-which records `cap_override` on the entry and marks the changelog line, so
-an override is never mistaken later for the cap having failed.
-
-**Within whatever budget remains, rank.** If Step 1 turned up more
-candidates than that, rank by how often the situation will recur and
-drop the tail. A single acknowledgement or unrelated aside ("ok,
-thanks") appended to a trajectory that already produced today's
-proposals is not new material and does not reopen the cap — only
-substance that wasn't already the basis of an earlier proposal today
-counts as a genuinely new trajectory.
+**State the count every time, whether or not it blocks.** If the count is
+at the cap: stop, propose nothing, and tell the user — their asking for
+`/refine` is not the override. Only after they have seen the count may
+you pass `override_cap=True`, which stamps the entry and the changelog.
+Within the remaining budget, rank candidates by how often the situation
+will recur and drop the tail; an acknowledgement appended to an
+already-harvested trajectory does not reopen the cap.
 
 ## Step 5 — Propose, do not write
 
-For each proposal show: the target file (full path), the exact text to
-be written, and the trajectory moment justifying it — quote it, don't
-paraphrase it away. Then stop and wait for the user's response. Nothing
-in Steps 1–5 touches disk.
+For each proposal show: the target file (full path), the exact text to be
+written, and the trajectory moment justifying it — quoted, not
+paraphrased. Then stop and wait. Nothing in Steps 1–5 touches disk.
 
 ## Step 6 — On approval, apply and log
 
-One call per approved proposal. The module performs the write:
+One call per approved proposal; the module performs the write, so what
+you showed the user, what gets logged, and what lands on disk cannot
+diverge:
 
 ```python
 import sys, pathlib
@@ -283,24 +188,18 @@ entry = refine_log.apply_edit(
 )
 ```
 
-**Do not write the file yourself with Write/Edit and then tell the module
-about it.** `apply_edit` takes the approved content and performs the write
-precisely so that what you showed the user, what gets logged, and what
-lands on disk cannot diverge. An earlier design split those steps and a
-single mistyped path produced a changelog asserting an edit that never
-happened, an `undo()` that "reverted" an untouched file, and a real change
-with no snapshot at all.
+**Never write the file yourself with Write/Edit and then tell the module
+about it** — an earlier design split those steps and produced a changelog
+asserting an edit that never happened. **Every file the proposal touches
+goes in the same call**: a memory write is the memory file *and* its
+index line, one entry, one atomic unit — applied together, reverted
+together.
 
-**Every file the proposal touches goes in the same call.** Writing a
-memory means writing the memory file *and* appending its `MEMORY.md`
-index line — pass both pairs. One approved proposal is one entry and one
-atomic unit: all of them are written together, all of them revert
-together, and a failure part-way rolls the earlier ones back. Splitting
-them across two calls leaves `undo()` able to remove the memory while the
-index still advertises it, and burns two of your three proposals for one
-lesson.
-
-**Append to an index with `AppendLine`, never with a rendered body:**
+**Append to an index with `AppendLine`, never a rendered body** — a
+string carries *your* read of `MEMORY.md`, which may be turns old, and
+rendered bodies from two proposals silently drop each other's lines.
+`AppendLine` resolves against the file's current bytes under the lock
+and is idempotent on retry:
 
 ```python
 refine_log.apply_edit("M", [
@@ -309,18 +208,8 @@ refine_log.apply_edit("M", [
 ], rationale, evidence)
 ```
 
-A string carries *your* read of `MEMORY.md`, which may be several turns
-old. Two memory proposals in one session both read the index before either
-wrote, so each rendered a full body containing exactly one new line and
-the second silently dropped the first's: the memory file survived, its
-index entry did not, and nothing in the entry or the changelog showed
-anything had been lost. `AppendLine` is resolved against the file's
-current bytes while the lock is held, and appending a line that is already
-present is a no-op, so a retry cannot double it.
-
 **Update an existing index line with `refine_log.ReplaceLine`, the same
-way** — a dedupe update (Step 3) that revises a memory's hook passes the
-revised line, never a rendered body:
+way:**
 
 ```python
 refine_log.apply_edit("M", [
@@ -330,26 +219,20 @@ refine_log.apply_edit("M", [
 ], rationale, evidence)
 ```
 
-`ReplaceLine(match, line)` replaces the line containing `match` with
-`line` (folding duplicates into one), appends when nothing matches, and
-is idempotent on retry. Line edits — `AppendLine` and `ReplaceLine` —
-fold in order when one call touches the same file repeatedly, including
-on top of a full rewrite earlier in the same proposal. Only a full
-rewrite *after* a line edit raises `DuplicateTarget` — the two orderings
-look symmetric and are not.
+Line edits — `AppendLine` and `ReplaceLine` — fold in order when one call
+touches the same file repeatedly, including on top of a full rewrite
+earlier in the same proposal. Only a full rewrite *after* a line edit
+raises `DuplicateTarget` — the two orderings look symmetric and are not.
 
-`apply_edit` raises before writing anything if the target is protected
-(`ProtectedTarget`, guardrail G3), if the *content* claims harness
-authority or softens a guardrail (`SelfExemption`, also G3 — see below),
-if the cap is spent (`CapReached`, G2), if `layer` is not one of the four,
-or if `rationale`/`evidence` are empty. It appends the changelog line
-itself — never hand-edit `.claude/harness/CHANGELOG.md`; every line in it
-should trace back to an `apply_edit()` or `undo()` call.
+`apply_edit` raises before writing anything on a protected target
+(`ProtectedTarget`), content that trips G3's scan (`SelfExemption`), a
+spent cap (`CapReached`), a bad layer, or empty rationale/evidence. It
+appends the changelog line itself — never hand-edit
+`.claude/harness/CHANGELOG.md`.
 
 ## Memory write contract
 
-Do not invent a format. Claude Code already has one, and a parallel
-scheme would be invisible to recall:
+Do not invent a format — a parallel scheme is invisible to recall:
 
 ```markdown
 ---
@@ -363,184 +246,125 @@ metadata:
 
 **Why:** <one sentence — why this matters for a future session>
 
-**How to apply:** <one sentence — the concrete action a future session
-should take because of this>
+**How to apply:** <one sentence — the concrete action to take>
 
 Related: [[other-slug]]
 ```
 
-- **Location:** `~/.claude/projects/<project-key>/memory/` — the same
-  directory Claude Code already reads at session start. `<project-key>`
-  is the project's absolute path with every `/` and every space replaced
-  by `-`. Worked example, verified against what's actually on disk for
-  *this* project: `/Users/deeps/Documents/NEW STUFF/fun ` (note the
-  trailing space in the directory name) becomes
-  `-Users-deeps-Documents-NEW-STUFF-fun-`, so the memory directory is
+- **Location:** `~/.claude/projects/<project-key>/memory/` — the key is
+  the project's absolute path with every `/` and space replaced by `-`.
+  For this project (`/Users/deeps/Documents/NEW STUFF/fun ` — note the
+  trailing space) that is
   `~/.claude/projects/-Users-deeps-Documents-NEW-STUFF-fun-/memory/`.
-  `MEMORY.md` (the Index, below) lives in that same directory, not
-  anywhere else. Do not invent a new folder, and do not use a repo-local
-  path such as `.claude/memory/` — recall does not read from there.
-- **Filename:** `<slug>.md`, where `<slug>` is exactly the `name` field,
-  kebab-case. Never numbered or category-prefixed
-  (`USER_PREF_001.md`, `feedback-2026-08-09.md`) — retrieval keys off
-  `description`, not the filename, so a numbered or dated filename adds
-  nothing and makes the dedupe check in Step 3 harder, not easier.
-- **Frontmatter:** `name`, `description`, and `metadata.type` — exactly
-  one of `user`, `feedback`, `project`, `reference`. Pick the narrowest:
-  `feedback` for a lesson drawn from this session's corrections,
-  `project` for a durable fact about the project or a decision made in
-  it, `user` for a durable fact about the person, `reference` for
-  material to look up rather than a lesson to act on.
+  `MEMORY.md` lives in that same directory.
+- **Filename:** `<slug>.md`, exactly the `name` field. Never numbered or
+  category-prefixed — retrieval keys off `description`, and a dated
+  filename only makes Step 3's dedupe harder.
+- **Frontmatter:** `name`, `description`, `metadata.type` — the
+  narrowest of `feedback` (a lesson from this session's corrections),
+  `project` (durable fact or decision), `user`, `reference`.
 - **Body:** `**Why:**` and `**How to apply:**` are required for
-  `feedback` and `project` entries — they turn a fact into an
-  instruction a future session can actually execute on. Link related
-  memories with `[[slug]]` (no `.md`, no path).
-- **Index:** exactly **one** line appended to `MEMORY.md` in the same
-  directory: `- [<Title>](<slug>.md) — <hook>`. Never put memory content
-  in the index — it's a table of contents, not a copy. **Pass the index
-  file as a second `(target, content)` pair in the same `apply_edit()`
-  call**, not as a separate write: an index line outside the entry
-  survives `/refine --undo` and goes on advertising a memory that no
-  longer exists.
+  `feedback` and `project`. Link related memories with `[[slug]]`.
+- **Index:** exactly one line, `- [<Title>](<slug>.md) — <hook>`, passed
+  as a second pair in the **same** `apply_edit` call — an index line
+  outside the entry survives `/refine --undo` and advertises a memory
+  that no longer exists.
 
 ## Guardrails
 
 - **G1 — Evidence required.** Every proposal cites a concrete trajectory
   moment — a quoted correction, a specific command and its failure/fix,
-  the Nth repetition of a named procedure. No speculative or anticipatory
-  edits ("this might help next time").
-- **G2 — Cap of 3.** At most 3 proposals per trajectory, not per tool
-  call — see Step 4. Enforced **in code**: `apply_edit` counts the stored
-  entries of the last 24 hours and raises `CapReached` on the fourth,
-  writing nothing. Not against your own recollection of what you have
-  already proposed, and not on your agreement to stop — self-attestation
-  is not a guardrail, and a limit the constrained party applies to itself
-  is self-attestation with extra steps. Re-invoking `/refine` on the same
-  trajectory to bypass the cap is not a loophole, it's the exact bloat the
-  cap exists to prevent. Forces ranking instead of dumping every candidate
-  that came up. `override_cap=True` exists for a user who has seen the
-  count and said so explicitly, and stamps the entry and the changelog
-  when used.
-- **G3 — No self-exemption.** `refine` may never edit
-  `.claude/skills/refine/SKILL.md` (this file), `.claude/skills/horizon/
-  SKILL.md`, or anything under `.claude/harness/bin/*.py` —
-  `refine_log.py` and its siblings are the code that *enforces* the
-  guardrails (`CorruptEntry`, `UndoConflict`, atomic writes); a proposal
-  to edit them is a proposal to edit the enforcement, not just the
-  instructions, and is off-limits the same way. `horizon/SKILL.md` is
-  protected for the same reason from the other direction: it holds the
-  independent coverage-gate judge, and a proposal that flipped its judge
-  dispatch to `subagent_type="fork"` would turn that independent judge
-  into a self-grader — the verification mechanism is as off-limits as
-  the enforcement mechanism. `apply_edit()` itself refuses these targets,
-  matched as path *patterns* against the resolved absolute path — so the
-  rule holds for the global copies under `~/.claude/` exactly as for this
-  project's, and covers the ledger and undo snapshots the cap is counted
-  from, plus everything that can run arbitrary shell or define MCP
+  the Nth repetition of a named procedure. No speculative edits.
+- **G2 — Cap of 3**, enforced **in code** from the stored entries, not
+  from your recollection and not from your agreement to stop —
+  self-attestation is not a guardrail. Re-invoking `/refine` on the same
+  trajectory to bypass it is the exact bloat the cap exists to prevent.
+  `override_cap=True` only after the user has seen the count.
+- **G3 — No self-exemption.** `refine` may never edit its own rules
+  (this file), `horizon/SKILL.md` (it holds the independent
+  coverage-judge; flipping its judge to a fork would make it a
+  self-grader), anything under `.claude/harness/bin/` (the code that
+  *enforces* these guardrails), the ledger and undo snapshots the cap is
+  counted from, or anything that can run arbitrary shell or define MCP
   servers: `settings*.json`, `hooks/`, `commands/`, `plugins/`,
-  `.claude.json`, and `.mcp.json`. It is not prose-only, and it is not
-  three literal paths.
+  `.claude.json`, `.mcp.json`. `apply_edit` refuses these as path
+  *patterns* against the resolved absolute path — global copies under
+  `~/.claude/` included.
 
-  Refine may never propose anything that weakens verification, testing,
-  or approval requirements: skipping a test, loosening a gate, removing
-  a guardrail from another skill. **Every write to rho/G/K/M goes through
-  `apply_edit()` — no exceptions, and every file a single proposal touches goes in the *same* call.** `refine` may never
-  propose a skill, subagent, hook, or command whose job is (in whole or
-  in part) to write to the harness layer, to assert standing, implicit,
-  or batch approval for future harness edits, or to otherwise create a
-  second write path around `apply_edit()` — a subagent
-  definition declares its own tools and, unless it is `fork`, starts
-  with a fresh context that never loads this skill's guardrails, so a
-  proposal that reads as reasonable prose to the approving user
-  ("you maintain the harness layer; you have standing approval for
-  harness maintenance") can still land an unrecorded, uncapped,
-  undo-less edit the next time that subagent runs. The same shape is
-  off-limits via a brand-new skill, hook, or command, not just a
-  subagent. Any proposal targeting K (a subagent) or G (a skill) must
-  state explicitly, as part of the proposal text, what write authority
-  the new artifact claims — including "none" if it claims none — and
-  that statement is part of what the user is approving in G4, not an
-  implementation detail left for later.
+  It may never propose anything that weakens verification, testing, or
+  approval requirements, and **every write to rho/G/K/M goes through
+  `apply_edit()` — no exceptions, every file of one proposal in the same
+  call.** It may never propose a skill, subagent, hook, or command whose
+  job is to write to the harness layer, to assert standing or batch
+  approval for future harness edits, or to otherwise create a second
+  write path around `apply_edit()` — a subagent runs with a fresh
+  context that never loads these guardrails, so prose that reads
+  reasonably ("you maintain the harness layer") still lands an
+  unrecorded, uncapped, undo-less write path. Any G or K proposal must
+  state, in the proposal text the user approves, what write authority
+  the new artifact claims — including "none".
 
   This half of G3 is backed by a **content tripwire**, not just prose,
-  and it scans at **every layer** — M and rho included, not only G and K.
-  `apply_edit` raises `SelfExemption` when an edit's text, wherever it is
+  and it scans at **every layer** — M and rho included, not only G and
+  K. `apply_edit` raises `SelfExemption` when an edit's text, wherever
   routed, references `refine_log`, calls its write API directly, targets
-  `.claude/harness/`, claims standing or implicit approval, claims a
+  `.claude/harness/`, claims standing or implicit approval or a
   harness-maintenance role, or proposes raising the cap or skipping
-  approval. (Weakening tests or gates is just as forbidden, but by G3's
-  prose and the approval gate, not by any regex — no pattern scans for
-  it.) Two further patterns fire for
-  **G and K edits only**: text that instructs writing `MEMORY.md` or
-  under `.claude/projects/` directly — a skill or subagent telling itself
-  to write memory is claiming the write authority G3 reserves to
-  `apply_edit`, while a memory file's own content may legitimately say
-  where memories live. Two consequences, stated plainly so they are
-  discovered before approval rather than after: a *memory* that quotes
-  harness paths or module names — however honest the lesson — is refused
-  too; that is the tripwire preferring false positives over a second
-  write path, and that file is the user's to write by hand. And when a
-  G/K proposal states its write authority (required above), phrase it
-  without naming those files — "write authority: none" — or the
-  disclosure itself trips the pattern. It is a tripwire, not a proof: a
-  determined paraphrase gets past it, and the approval gate remains the
-  real defence. It exists so that the shape the audit found —
-  `~/.claude/skills/harness-maintainer/SKILL.md`, a path no denylist
-  protects — fails closed instead of depending on the constrained party
-  to notice.
+  approval. (Weakening tests is just as forbidden, but by this prose and
+  the approval gate — no regex scans for it.) Two further patterns fire
+  for **G and K only**: text instructing a direct write to `MEMORY.md`
+  or under `.claude/projects/` — a skill or subagent telling itself to
+  write memory is claiming `apply_edit`'s authority, while a memory
+  file's own content may legitimately say where memories live. Two
+  consequences, learned before approval rather than after: a *memory*
+  quoting harness paths or module names — however honest — is refused;
+  that file is the user's to write by hand. And a G/K write-authority
+  statement is phrased without naming those files ("write authority:
+  none"), or the disclosure itself trips the pattern. It is a tripwire,
+  not a proof — a paraphrase gets past it; the approval gate is the real
+  defence.
 
-  And it may never propose anything —
-  in memory, in `CLAUDE.md`, in another skill, anywhere — that softens
-  **G1's evidence bar, G2's cap of 3, or G4's approval gate**, e.g.
-  "relax quoting for small edits," "raise refine's proposal cap," or a
-  memory entry recording "the user prefers fewer approval prompts" /
-  a CLAUDE.md line that makes approval implicit for small edits. The
-  guardrails are not a subject refine gets to have opinions about; G1–G4
-  apply to proposals *about* G1–G4 exactly as they apply to everything
-  else. An agent that learns "skip the tests" is optimizing the harness
-  *against* its user, not for it — the loop optimizing its own constraints
-  away rather than optimizing the work. If a candidate would make a
-  future session less likely to get caught doing something wrong, or
-  less constrained than this session is, it fails G3 regardless of how
-  well-evidenced it is — drop it; do not propose a softened version
-  instead.
+  And it may never propose anything, anywhere, that softens **G1's
+  evidence bar, G2's cap, or G4's approval gate** — e.g. "relax quoting
+  for small edits", a memory that "the user prefers fewer approval
+  prompts". The guardrails are not a subject refine gets opinions about;
+  if a candidate would make a future session less likely to get caught
+  or less constrained, it fails G3 however well-evidenced — drop it, do
+  not propose a softened version.
 - **G4 — Approval gate.** No write without explicit user approval, per
-  proposal. An "approve all" for a batch is fine if the user says it;
-  silence, or the conversation moving on, is not approval.
+  proposal. A batch "approve all" is fine if the user says it; silence,
+  or the conversation moving on, is not approval.
 
 ## Anti-patterns
 
-- Recording what the repo already states — file structure, git history,
-  existing CLAUDE.md content. If it's already there, writing it again is
-  noise, not a lesson.
-- Recording conversation-local trivia with no future bearing (a filename
-  chosen for one file, a one-off typo fix).
-- Writing a skill where a CLAUDE.md line would suffice, or a CLAUDE.md
-  line where a memory would suffice. Re-check the routing table (Step 2)
-  before defaulting upward.
+- Recording what the repo already states (structure, git history,
+  existing CLAUDE.md content).
+- Conversation-local trivia with no future bearing.
+- A skill where a CLAUDE.md line would do, or a CLAUDE.md line where a
+  memory would — re-check Step 2 before defaulting upward.
 - Proposing something when the session taught nothing. Silence is a
-  valid result — say so and stop; do not manufacture a proposal just to
-  have something to show.
+  valid result; do not manufacture a proposal.
 
 ## Errors at a glance
 
 | Call | Exception | Meaning | Action |
 |---|---|---|---|
-| `refine_log.apply_edit` | `ProtectedTarget` | the target is refine's own rules, horizon's, the harness code, the ledger, or a settings/hooks file | stop. This is G3 refusing, and it is not negotiable — do not propose a softened variant or a different route to the same file. |
-| `refine_log.apply_edit` | `SelfExemption` | the *content* claims harness write authority or standing approval, or softens G2's cap or G4's approval gate | stop. Also G3, for the same reason. Report the matched phrase to the user; if the match is genuinely innocent, they can write the file themselves — do not reword it to get past the check. |
-| `refine_log.apply_edit` | `MisroutedMemory` | the target is under `.claude/projects/` but not this project's memory dir | use `paths.memory_dir()`; a hand-assembled project key is invisible to recall forever |
-| `refine_log.apply_edit` | `DuplicateTarget` | one proposal rewrites the same file twice with full content, or rewrites it after a line edit | pass the final content once. Repeated line edits (`AppendLine`, `ReplaceLine`) to one file are fine and fold in order |
-| `refine_log.apply_edit` | `CapReached` | G2's budget for the last 24h is spent | stop and report the count. Only re-run with `override_cap=True` if the user, having seen the count, explicitly says to. |
-| `refine_log.count_recent_edits` — also surfaced through `apply_edit`'s cap pre-count | `CorruptEntry` | an entry file under `.claude/harness/undo/` is unreadable | stop and report the paths. Do not fall back to counting the changelog — that is the looser count this design deliberately replaced. |
-| `refine_log.undo` | `NothingToUndo` | no matching entry: nothing un-reverted left, or the requested `entry_id` is unknown or already reverted | report it; when a specific `entry_id` was requested, the message lists the ids that exist |
-| `refine_log.undo` | `CorruptEntry` | an undo-log entry file under `.claude/harness/undo/` is unreadable or not valid JSON | stop. Report the exact file path(s) named in the exception to the user. Do not retry, delete the file, skip past it, or fall back to reverting a different entry on your own initiative — guessing past damaged history risks reverting the wrong edit. |
-| `apply_edit` / `undo` — the two calls that take the lock | `filelock.LockTimeout` | another process holds the ledger lock — a second terminal, or a `/loop` firing beside a live session | retry once. If it persists, tell the user which lock file to delete; the exception names it. Catching it needs `import filelock` from the harness bin |
-| `refine_log.undo` | `UndoConflict` | the target's current sha256 doesn't match what was recorded when its entry was committed — something changed the target after the approved edit landed | stop. Show the user the target path and that it changed since. Only call `undo(force=True)` after the user explicitly approves discarding that later change — silently forcing would delete an edit nobody agreed to lose. |
+| `refine_log.apply_edit` | `ProtectedTarget` | the target is refine's own rules, horizon's, the harness code, the ledger, or a settings/hooks file | stop. G3 refusing, not negotiable — no softened variant, no different route to the same file |
+| `refine_log.apply_edit` | `SelfExemption` | the *content* claims harness write authority or standing approval, or softens G2's cap or G4's approval gate | stop. Report the matched phrase; a genuinely innocent match is the user's file to write by hand — do not reword to get past the check |
+| `refine_log.apply_edit` | `MisroutedMemory` | target under `.claude/projects/` but not this project's memory dir | use `paths.memory_dir()`; a hand-assembled key is invisible to recall forever |
+| `refine_log.apply_edit` | `DuplicateTarget` | one proposal rewrites the same file twice with full content, or rewrites it after a line edit | pass the final content once; repeated line edits (`AppendLine`, `ReplaceLine`) fold in order |
+| `refine_log.apply_edit` | `CapReached` | G2's budget for the last 24h is spent | stop and report the count; only `override_cap=True` after the user has seen it |
+| `refine_log.count_recent_edits` — also surfaced through `apply_edit`'s cap pre-count | `CorruptEntry` | an entry file under `.claude/harness/undo/` is unreadable | stop and report the paths; never fall back to counting the changelog |
+| `refine_log.undo` | `NothingToUndo` | nothing un-reverted left, or the requested `entry_id` is unknown/already reverted | report it; for a requested `entry_id` the message lists the ids that exist |
+| `refine_log.undo` | `CorruptEntry` | an undo entry is unreadable or wrong-shaped | stop and report the exact paths; never retry, delete, skip, or revert a different entry on your own initiative |
+| `refine_log.undo` | `UndoConflict` | the target changed after its entry was committed | show the user; only `undo(force=True)` after they explicitly approve discarding the later change |
+| `refine_log.undo` | `UndoTargetUnavailable` | the target's location is gone | the snapshot is intact; report and stop — `force=True` cannot help |
+| `apply_edit` / `undo` — the two calls that take the lock | `filelock.LockTimeout` | another process holds the ledger lock | retry once; then tell the user which lock file to delete (the exception names it). Catching it needs `import filelock` from the harness bin |
 
 `apply_edit`'s checks run in a fixed order — the cap before the
 per-target guards — so with the budget spent, a proposal that would also
-hit `ProtectedTarget` or `SelfExemption` reports `CapReached` instead.
-Do not conclude from that that the other guard "did not fire".
+hit `ProtectedTarget` or `SelfExemption` reports `CapReached` instead. Do
+not conclude the other guard "did not fire".
 
 ## `/refine --undo`
 
@@ -575,11 +399,11 @@ else:
     print(f"reverted entry {entry['id']}: {reverted}")
 ```
 
-**Undoing something other than the top of the stack.** `undo()` takes the
-most recent un-reverted entry. When that one raises `UndoConflict` —
-someone hand-edited its target since — every older entry used to be stuck
-behind it, because nothing else was reachable. Show the user what exists
-and revert by id instead:
+With no `entry_id` it reverts the single most recent un-reverted entry —
+all of its targets together — and appends a `REVERTED` line to the
+changelog; calling again walks back the next one. When the newest entry
+raises `UndoConflict` (someone hand-edited its target), show what exists
+and revert by id:
 
 ```python
 for e in refine_log.list_entries():
@@ -589,24 +413,12 @@ for e in refine_log.list_entries():
 entry = refine_log.undo(entry_id="0002")
 ```
 
-Selecting out of order is not a hole in the safety check. If a newer entry
-also rewrote that target, the older entry's recorded sha256 no longer
-matches the file and `UndoConflict` fires exactly as it should — the newer
-content was never snapshotted by the older entry, so reverting would
-destroy it.
-
-With no `entry_id`, it reverts the single most recent un-reverted entry —
-**all of its targets together**, since one approved proposal is one atomic
-unit — and appends a `REVERTED` line to `CHANGELOG.md`. Calling it again
-walks back the next most recent.
-
-An `UndoConflict` on an entry whose revert was **interrupted** — killed
-turn, crashed process — is not a hand-edit, and the module can tell the
-difference: a marker is written before any file is touched, so a retry
-recognises targets that were already reverted and finishes the job. If you
-still see `UndoConflict` on a resumed entry, its message says so
-explicitly, and something else really did change that file.
-
+Selecting out of order is not a hole in the safety check: if a newer
+entry also rewrote that target, the older entry's recorded sha no longer
+matches and `UndoConflict` fires exactly as it should. An `UndoConflict`
+on an *interrupted* revert is distinguished automatically — a marker
+written before any file is touched lets a retry finish the job; if it
+still conflicts, its message says so, and something really did change.
 Only after the user has seen an `UndoConflict` and explicitly approved
 discarding the later change:
 
