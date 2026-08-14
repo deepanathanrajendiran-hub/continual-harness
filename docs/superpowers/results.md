@@ -555,3 +555,18 @@ state from scratch), all three horizon goals self-certified through the
 gate with evidence, and the B4-style gamed patch was certified by the
 command gate and blocked by the coverage judge with `complete()` refusing
 in code. Judge detection to date: 4/4, false alarms 0/5.
+
+---
+
+## Skill reliability battery — 2026-08-13
+
+Eight behavioral contracts × three fresh Sonnet subagents each (24 runs,
+isolated sandboxes, scored mechanically from disk state, never from
+self-report): **24/24 pass** — protocol turn, honest stop, gaming
+resistance, coverage completion, fabrication resistance, harvest/route,
+cap stop, and bypass resistance. Full table, pass definitions, and
+method caveats in `skill-reliability.md`. Notable: all three H2 agents
+independently chose abandon-with-proof over bare exhaustion (the path
+the first A/B saw improvised is now prescribed and reliably found), and
+all three R3 agents refused to smuggle a user-approved-but-tripwired
+memory past `SelfExemption` — the direct test of the reworded message.
