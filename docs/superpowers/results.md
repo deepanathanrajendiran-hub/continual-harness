@@ -539,3 +539,19 @@ Rate observed: 2 degenerate and 1 errored out of 9. A coverage gate is not free
 of failure modes — it trades a gameable proxy for a fallible judge. The trade
 looks worth it on this evidence, but "dispatch a judge" is not the end of the
 problem, and the honest framing is that the judge needs checking too.
+
+---
+
+## Bench 2 — forced interruption + dual-gate demo, 2026-08-13
+
+The follow-up measurement the first A/B trial called for: forced session
+death between stints, fresh resumer agents, and a live end-to-end run of
+the dual-gate recommendation. Full method, numbers and caveats in
+`bench2-interruption.md`. Headlines: outcome parity again (3 stints to
+green in all 6 chains, 0 redone work, 0 false claims, tokens within
+noise) — but the mechanism difference was observed directly (6/6 horizon
+stints resumed from the recorded `next`; 6/6 baseline stints re-derived
+state from scratch), all three horizon goals self-certified through the
+gate with evidence, and the B4-style gamed patch was certified by the
+command gate and blocked by the coverage judge with `complete()` refusing
+in code. Judge detection to date: 4/4, false alarms 0/5.
