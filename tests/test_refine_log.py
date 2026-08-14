@@ -950,3 +950,83 @@ def test_a_line_edit_after_a_full_rewrite_folds_in_order(tmp_path):
         (index, refine_log.ReplaceLine("(a.md)", "- [A](a.md) — new")),
     ], "r", "e")
     assert index.read_text() == "rewritten\n- [A](a.md) — new\n"
+
+# ------------------------------------------- line-edit defects (found live)
+
+def test_replaceline_refuses_a_match_that_spans_entries(tmp_path):
+    """Every mandated index line contains `- [` and `—`, so a match on
+    either hits all of them; the old collapse semantics then wiped the
+    whole index to one line — atomically, ledgered, indistinguishable
+    from success (confirmed: three memories in, one out). A match that
+    hits lines belonging to different entries must refuse and write
+    nothing."""
+    index = tmp_path / "MEMORY.md"
+    index.write_text("- [Alpha](alpha.md) — one\n"
+                     "- [Beta](beta.md) — two\n"
+                     "- [Gamma](gamma.md) — three\n")
+    with pytest.raises(refine_log.AmbiguousMatch):
+        refine_log.apply_edit(
+            "M", [(index, refine_log.ReplaceLine("—", "- [Beta](beta.md) — revised"))],
+            "r", "e")
+    assert index.read_text().count("\n") == 3
+
+
+def test_replaceline_still_collapses_same_entry_duplicates(tmp_path):
+    """The ambiguity guard must not break the case ReplaceLine exists
+    for: several lines for ONE slug (AppendLine leftovers) fold to one."""
+    index = tmp_path / "MEMORY.md"
+    index.write_text("- [A](a.md) — old\n- [B](b.md) — b\n- [A](a.md) — older\n")
+    refine_log.apply_edit(
+        "M", [(index, refine_log.ReplaceLine("(a.md)", "- [A](a.md) — new"))],
+        "r", "e")
+    assert index.read_text() == "- [A](a.md) — new\n- [B](b.md) — b\n"
+
+
+@pytest.mark.parametrize("make", [
+    lambda: refine_log.AppendLine("- [New](n.md) — a\n- [Also](x.md) — b"),
+    lambda: refine_log.ReplaceLine("(beta.md)", "- [B](beta.md) — a\n- [S](s.md) — b"),
+    lambda: refine_log.ReplaceLine("(a.md)\n(b.md)", "- [A](a.md) — x"),
+])
+def test_a_line_edit_refuses_an_embedded_newline(make):
+    """Both classes dedupe against whole split lines, so a `line` carrying
+    an interior newline never matches itself and re-appends on every
+    retry — the exact duplicate corruption both classes exist to prevent.
+    Refused at construction; trailing newlines stay legal."""
+    with pytest.raises(ValueError):
+        make()
+
+
+def test_a_trailing_newline_is_still_legal():
+    assert refine_log.AppendLine("- [A](a.md) — x\n").line == "- [A](a.md) — x"
+    assert refine_log.ReplaceLine("(a.md)", "- [A](a.md) — x\n").line == "- [A](a.md) — x"
+
+
+# --------------------------------------------- tripwire coverage (G1 gap)
+
+@pytest.mark.parametrize("body", [
+    "relax quoting for small edits",                       # the skill's own G1 example
+    "waive the evidence requirement for obvious lessons",  # G1
+    "evidence is optional for small proposals",            # G1
+    "raise refine's proposal cap",                         # G2 — the apostrophe defeated the token matcher
+])
+def test_the_skills_own_softening_examples_are_refused(tmp_path, body):
+    """The skill names example content G3 forbids; the code caught two of
+    three guardrails and zero G1 phrasings — its own example sentence
+    wrote cleanly. The named examples must trip the wire."""
+    target = tmp_path / "note.md"
+    with pytest.raises(refine_log.SelfExemption):
+        refine_log.apply_edit("M", [(target, body)], "r", "e")
+    assert not target.exists()
+
+
+@pytest.mark.parametrize("body", [
+    "Never skip the tests before committing.",
+    "Do not write files without asking the user first.",
+])
+def test_polarity_correct_advice_still_writes(tmp_path, body):
+    """The third audit's lesson stands: a tripwire that fires on the best
+    memories a session can write teaches its user to route around it.
+    Widening for G1 must not re-block these."""
+    target = tmp_path / "note.md"
+    refine_log.apply_edit("M", [(target, body)], "r", "e")
+    assert target.read_text() == body

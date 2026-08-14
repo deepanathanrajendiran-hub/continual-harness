@@ -109,6 +109,17 @@ class DuplicateTarget(ValueError):
     the outside.
     """
 
+class AmbiguousMatch(ValueError):
+    """A ReplaceLine match hit lines belonging to different entries.
+
+    Every mandated index line contains `- [` and an em-dash, so a match on
+    either hits all of them, and the collapse-duplicates semantics would
+    fold the whole index into one line -- atomically, with a normal ledger
+    entry, indistinguishable from success. Matched lines must all belong
+    to one entry (same `](target)` link); anchor the match on the entry's
+    `(slug.md)` link. Raised before anything is written.
+    """
+
 
 class CapReached(Exception):
     """G2: the edit budget for the current window is spent.
@@ -254,19 +265,32 @@ _MEMORY_WRITE_AUTHORITY = [
 # prohibition on weakening tests or gates is now enforced by the user reading
 # the proposal rather than by a regex guessing at intent.
 _GUARDRAIL_SOFTENING = [
+    # Tokens tolerate apostrophes: "raise refine's proposal cap" defeated
+    # a \w+-only matcher at the possessive.
     (re.compile(r"\b(?:raise|lift|increase|remove|ignore|bypass)\w*\s+"
-                r"(?:the\s+|its\s+)?(?:\w+\s+){0,2}cap\b", re.I),
+                r"(?:the\s+|its\s+)?(?:[\w']+\s+){0,2}cap\b", re.I),
      "proposes loosening G2's cap"),
     (re.compile(r"\bcap\s+(?:of|to)\s+(?:[4-9]|\d{2,})\b", re.I),
      "proposes raising G2's cap"),
     (re.compile(r"\bfewer\s+approval", re.I),
      "proposes bypassing G4's approval gate"),
     (re.compile(r"\b(?:skip|skipping|bypass|waive|suppress)\s+"
-                r"(?:the\s+)?(?:\w+\s+){0,2}approval\b", re.I),
+                r"(?:the\s+)?(?:[\w']+\s+){0,2}approval\b", re.I),
      "proposes bypassing G4's approval gate"),
     (re.compile(r"\bapprovals?\s+(?:is|are)\s+(?:implicit|assumed|automatic|"
                 r"not\s+(?:needed|required))\b", re.I),
      "proposes treating approval as already given"),
+    # G1 -- the evidence bar. It had NO patterns at all: the skill's own
+    # example of forbidden content, "relax quoting for small edits",
+    # wrote cleanly. Nouns kept narrow (quoting/evidence/citation) so the
+    # polarity lesson stands: "Never skip the tests" must still write.
+    (re.compile(r"\b(?:relax|loosen|lower|drop|skip|waive)\w*\s+"
+                r"(?:the\s+)?(?:[\w']+\s+){0,2}"
+                r"(?:quoting|quotes|evidence|citations?)\b", re.I),
+     "proposes softening G1's evidence bar"),
+    (re.compile(r"\b(?:quoting|evidence|citations?)\s+(?:is|are)\s+"
+                r"(?:optional|unnecessary|not\s+(?:needed|required))\b", re.I),
+     "proposes softening G1's evidence bar"),
 ]
 
 
@@ -459,6 +483,17 @@ def _append_changelog(line: str) -> None:
 # public API
 # --------------------------------------------------------------------------
 
+_INDEX_LINK = re.compile(r"\]\(([^)]+)\)")
+
+
+def _line_identity(line: str) -> str:
+    """Which entry a matched line belongs to: its first `](target)` link
+    for the mandated index format, else the whole line. Lets same-slug
+    duplicates (differing hooks) fold into one while a match spanning
+    different entries refuses."""
+    m = _INDEX_LINK.search(line)
+    return m.group(1) if m else line
+
 class AppendLine:
     """New content computed at write time, inside the lock, instead of by the caller.
 
@@ -479,6 +514,15 @@ class AppendLine:
         if not isinstance(line, str) or not line.strip():
             raise ValueError("AppendLine needs a non-empty line")
         self.line = line.rstrip("\n")
+        if "\n" in self.line or "\r" in self.line:
+            # The idempotency check compares against whole split lines, so
+            # a multi-line "line" never matches itself and every retry
+            # appends a duplicate -- the exact corruption this class
+            # exists to prevent.
+            raise ValueError(
+                "AppendLine takes a single line; an embedded newline breaks "
+                "the retry-idempotency check and duplicates on every retry"
+            )
 
     def render(self, previous: str | None) -> str:
         base = previous or ""
@@ -519,10 +563,27 @@ class ReplaceLine:
             raise ValueError("ReplaceLine needs a non-empty replacement line")
         self.match = match
         self.line = line.rstrip("\n")
+        if any("\n" in s or "\r" in s for s in (self.match, self.line)):
+            # Same reason as AppendLine: dedupe compares whole split lines,
+            # so an embedded newline re-applies on every retry.
+            raise ValueError(
+                "ReplaceLine works on single lines; an embedded newline "
+                "breaks retry-idempotency and grows the file on every retry"
+            )
 
     def render(self, previous: str | None) -> str:
+        lines = (previous or "").splitlines()
+        matched = [l for l in lines if self.match in l or l == self.line]
+        identities = {_line_identity(l) for l in matched}
+        if len(identities) > 1:
+            raise AmbiguousMatch(
+                f"ReplaceLine match {self.match!r} hits lines belonging to "
+                f"{len(identities)} different entries and would collapse them "
+                f"all into one. Anchor the match to a single entry -- its "
+                f"(slug.md) link. Nothing has been written."
+            )
         out, placed = [], False
-        for existing in (previous or "").splitlines():
+        for existing in lines:
             if self.match in existing or existing == self.line:
                 if not placed:
                     out.append(self.line)

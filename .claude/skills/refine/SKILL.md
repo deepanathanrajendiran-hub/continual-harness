@@ -219,10 +219,15 @@ refine_log.apply_edit("M", [
 ], rationale, evidence)
 ```
 
-Line edits — `AppendLine` and `ReplaceLine` — fold in order when one call
-touches the same file repeatedly, including on top of a full rewrite
-earlier in the same proposal. Only a full rewrite *after* a line edit
-raises `DuplicateTarget` — the two orderings look symmetric and are not.
+**Anchor `match` on the one entry's `(slug.md)` link.** Every index line
+contains `- [` and the em-dash, and a match hitting lines of different
+entries raises `AmbiguousMatch` and writes nothing — unguarded it would
+fold the whole index into one line. Both line edits take a single line;
+an embedded newline is refused at construction (it would re-apply on
+every retry). Line edits fold in order when one call touches the same
+file repeatedly, including on top of a full rewrite earlier in the same
+proposal. Only a full rewrite *after* a line edit raises
+`DuplicateTarget` — the two orderings look symmetric and are not.
 
 `apply_edit` raises before writing anything on a protected target
 (`ProtectedTarget`), content that trips G3's scan (`SelfExemption`), a
@@ -309,9 +314,11 @@ Related: [[other-slug]]
   K. `apply_edit` raises `SelfExemption` when an edit's text, wherever
   routed, references `refine_log`, calls its write API directly, targets
   `.claude/harness/`, claims standing or implicit approval or a
-  harness-maintenance role, or proposes raising the cap or skipping
-  approval. (Weakening tests is just as forbidden, but by this prose and
-  the approval gate — no regex scans for it.) Two further patterns fire
+  harness-maintenance role, or proposes raising the cap, skipping
+  approval, or softening the evidence bar (relaxing/waiving
+  quoting, evidence, or citations). (Weakening tests is just as
+  forbidden, but by this prose and the approval gate — no regex scans
+  for it.) Two further patterns fire
   for **G and K only**: text instructing a direct write to `MEMORY.md`
   or under `.claude/projects/` — a skill or subagent telling itself to
   write memory is claiming `apply_edit`'s authority, while a memory
@@ -353,6 +360,7 @@ Related: [[other-slug]]
 | `refine_log.apply_edit` | `SelfExemption` | the *content* claims harness write authority or standing approval, or softens G2's cap or G4's approval gate | stop. Report the matched phrase; a genuinely innocent match is the user's file to write by hand — do not reword to get past the check |
 | `refine_log.apply_edit` | `MisroutedMemory` | target under `.claude/projects/` but not this project's memory dir | use `paths.memory_dir()`; a hand-assembled key is invisible to recall forever |
 | `refine_log.apply_edit` | `DuplicateTarget` | one proposal rewrites the same file twice with full content, or rewrites it after a line edit | pass the final content once; repeated line edits (`AppendLine`, `ReplaceLine`) fold in order |
+| `refine_log.apply_edit` | `AmbiguousMatch` | a `ReplaceLine` match hits lines belonging to different entries | anchor the match on one entry's `(slug.md)` link; nothing was written |
 | `refine_log.apply_edit` | `CapReached` | G2's budget for the last 24h is spent | stop and report the count; only `override_cap=True` after the user has seen it |
 | `refine_log.count_recent_edits` — also surfaced through `apply_edit`'s cap pre-count | `CorruptEntry` | an entry file under `.claude/harness/undo/` is unreadable | stop and report the paths; never fall back to counting the changelog |
 | `refine_log.undo` | `NothingToUndo` | nothing un-reverted left, or the requested `entry_id` is unknown/already reverted | report it; for a requested `entry_id` the message lists the ids that exist |
