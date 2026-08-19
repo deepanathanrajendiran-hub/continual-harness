@@ -761,10 +761,10 @@ def test_an_interrupted_undo_resumes_instead_of_blaming_the_user(tmp_path, monke
     refine_log.apply_edit("rho", [(a, "v1\n"), (b, "v1\n")], "r", "e")
 
     real_write = refine_log._write_entry
-    def kill_before_marking(entry):
+    def kill_before_marking(entry, scope="project"):
         if entry.get("reverted"):
             raise RuntimeError("killed here")
-        return real_write(entry)
+        return real_write(entry, scope)
     monkeypatch.setattr(refine_log, "_write_entry", kill_before_marking)
 
     with pytest.raises(RuntimeError):
@@ -788,8 +788,9 @@ def test_a_resumed_undo_still_refuses_a_genuine_third_party_edit(tmp_path, monke
 
     real_write = refine_log._write_entry
     monkeypatch.setattr(refine_log, "_write_entry",
-                        lambda e: (_ for _ in ()).throw(RuntimeError("killed"))
-                        if e.get("reverted") else real_write(e))
+                        lambda e, scope="project":
+                        (_ for _ in ()).throw(RuntimeError("killed"))
+                        if e.get("reverted") else real_write(e, scope))
     with pytest.raises(RuntimeError):
         refine_log.undo()
 
@@ -1030,3 +1031,85 @@ def test_polarity_correct_advice_still_writes(tmp_path, body):
     target = tmp_path / "note.md"
     refine_log.apply_edit("M", [(target, body)], "r", "e")
     assert target.read_text() == body
+
+
+# --------------------------------------------------------------------------
+# the global ledger
+# --------------------------------------------------------------------------
+
+@pytest.fixture
+def two_projects(tmp_path, monkeypatch):
+    """Two projects and one shared global ledger, the shape `--global` runs in."""
+    a, b, g = tmp_path / "A", tmp_path / "B", tmp_path / "G"
+    for d in (a, b, g):
+        (d / "undo").mkdir(parents=True)
+    monkeypatch.setattr(refine_log.paths, "global_undo_dir", lambda: g / "undo")
+    monkeypatch.setattr(refine_log.paths, "global_changelog", lambda: g / "CHANGELOG.md")
+
+    def enter(project):
+        monkeypatch.setattr(refine_log.paths, "undo_dir", lambda: project / "undo")
+        monkeypatch.setattr(refine_log.paths, "changelog",
+                            lambda: project / "CHANGELOG.md")
+    enter(a)
+    return a, b, g, enter
+
+
+def test_global_edits_share_one_cap_across_projects(two_projects, tmp_path):
+    """The hole this closes: the cap counted the project's ledger while
+    `--global` wrote to shared targets, so three edits per project against
+    one `~/.claude/` was 3N a day — and every pre-flight honestly reported
+    a number under three."""
+    a, b, g, enter = two_projects
+    for i in range(refine_log.CAP):
+        refine_log.apply_edit("rho", [(tmp_path / f"a{i}.md", "x\n")], "r", "e",
+                              scope="global")
+    enter(b)
+    assert refine_log.count_recent_edits(scope="global") == refine_log.CAP
+    with pytest.raises(refine_log.CapReached):
+        refine_log.apply_edit("rho", [(tmp_path / "b.md", "x\n")], "r", "e",
+                              scope="global")
+
+
+def test_a_global_edit_leaves_the_project_budget_alone(two_projects, tmp_path):
+    """Separate real estate, separate budgets — three each, not six against
+    one store. A global edit must not silently spend the project's."""
+    a, b, g, enter = two_projects
+    refine_log.apply_edit("rho", [(tmp_path / "x.md", "x\n")], "r", "e", scope="global")
+    assert refine_log.count_recent_edits() == 0
+    assert not list((a / "undo").glob("[0-9]*.json"))
+    refine_log.apply_edit("rho", [(tmp_path / "y.md", "y\n")], "r", "e")
+    assert refine_log.count_recent_edits() == 1
+    assert refine_log.count_recent_edits(scope="global") == 1
+
+
+def test_undo_reaches_a_global_edit_from_another_project(two_projects, tmp_path):
+    """The other hole: a global edit made from project A was revertible
+    only from A, so noticing a bad global rule a week later somewhere else
+    left no way to reach it."""
+    a, b, g, enter = two_projects
+    target = tmp_path / "CLAUDE.md"
+    target.write_text("before\n")
+    refine_log.apply_edit("rho", [(target, "after\n")], "r", "e", scope="global")
+    enter(b)
+    entry = refine_log.undo(scope="global")
+    assert entry["reverted"] is True
+    assert target.read_text() == "before\n"
+
+
+def test_the_two_changelogs_do_not_mix(two_projects, tmp_path):
+    a, b, g, enter = two_projects
+    refine_log.apply_edit("rho", [(tmp_path / "p.md", "x\n")], "r", "e")
+    refine_log.apply_edit("rho", [(tmp_path / "q.md", "x\n")], "r", "e", scope="global")
+    assert "p.md" in (a / "CHANGELOG.md").read_text()
+    assert "q.md" not in (a / "CHANGELOG.md").read_text()
+    assert "q.md" in (g / "CHANGELOG.md").read_text()
+    assert "p.md" not in (g / "CHANGELOG.md").read_text()
+
+
+@pytest.mark.parametrize("bad", ["glboal", "GLOBAL", "", None, "user"])
+def test_an_unknown_scope_is_refused_not_defaulted(two_projects, tmp_path, bad):
+    """Defaulting a typo to the project ledger would book a global edit
+    against the wrong budget and hide it from `--undo --global`."""
+    a, b, g, enter = two_projects
+    with pytest.raises(ValueError):
+        refine_log.apply_edit("rho", [(tmp_path / "z.md", "x\n")], "r", "e", scope=bad)

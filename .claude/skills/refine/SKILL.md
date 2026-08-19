@@ -45,9 +45,11 @@ Quote the path — the project directory name ends in a space.
   universal. It changes *where* a proposal writes, never the process:
   propose-then-approve and every guardrail apply identically. Memory
   routing is unaffected (M is already keyed to this project under
-  `~/.claude/projects/`), and the changelog/undo ledger stays
-  project-local — so `/refine --undo` still reverts a `--global` write,
-  and the cap is counted from this project's ledger (Step 4). G3's
+  `~/.claude/projects/`). Bookkeeping is **not** project-local: pass
+  `scope="global"` to `apply_edit`, `count_recent_edits` and `undo`, and
+  the entry lands in the shared ledger under `~/.claude/harness/`, so
+  the cap bounds global edits across every project and
+  `/refine --undo --global` reaches them from any of them. G3's
   protections cover the global copies exactly as the local ones.
 
 Default targets are project-local: `./CLAUDE.md`, `.claude/skills/`,
@@ -144,9 +146,9 @@ print(f"cap pre-flight: {refine_log.count_recent_edits()} of "
 `CHANGELOG.md`, whose quoted text can split lines and hide a real edit
 from a line-based count. Three properties, each failing toward stopping:
 a **rolling 24h window** (a session past midnight gets no fresh budget);
-**per project** (so `/refine --global` in N projects can land 3N global
-edits with every pre-flight honestly reading zero — say so before
-proposing a `--global` edit); **reverted entries still count**
+**one ledger per scope** — project edits count against this project,
+global edits against the shared `~/.claude/harness/` ledger, so state
+both counts when a session touches both; **reverted entries still count**
 (apply-then-undo is otherwise an unlimited budget). `CorruptEntry` from
 the count is a stop-and-report, not a reason to fall back to a looser
 count.

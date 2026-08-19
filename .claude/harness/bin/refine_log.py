@@ -424,7 +424,30 @@ def _atomic_write(path: Path, content: str, is_b64: bool = False,
 ENTRY_KEYS = ("id", "at", "layer", "targets", "reverted")
 
 
-def _entries() -> tuple[list[dict], list[str]]:
+SCOPES = ("project", "global")
+
+
+def _assert_scope(scope: str) -> str:
+    if scope not in SCOPES:
+        raise ValueError(f"scope must be one of {SCOPES}, got {scope!r}")
+    return scope
+
+
+def _undo_dir(scope: str):
+    """Which ledger a call reads and writes.
+
+    Separate functions rather than a `scope` argument on `paths.undo_dir`
+    so the project path keeps its zero-argument signature -- every caller
+    and every test that substitutes it goes on working untouched.
+    """
+    return paths.global_undo_dir() if scope == "global" else paths.undo_dir()
+
+
+def _changelog_path(scope: str):
+    return paths.global_changelog() if scope == "global" else paths.changelog()
+
+
+def _entries(scope: str = "project") -> tuple[list[dict], list[str]]:
     """Parsed entries, and the paths of any this module cannot use.
 
     Shape is validated, not just JSON syntax. An entry written by an older
@@ -434,7 +457,7 @@ def _entries() -> tuple[list[dict], list[str]]:
     is corruption for our purposes: undo must refuse rather than guess.
     """
     good, corrupt = [], []
-    for p in sorted(paths.undo_dir().glob("*.json")):
+    for p in sorted(_undo_dir(scope).glob("*.json")):
         try:
             entry = json.loads(p.read_text())
         except (json.JSONDecodeError, OSError):
@@ -448,8 +471,8 @@ def _entries() -> tuple[list[dict], list[str]]:
     return good, corrupt
 
 
-def _write_entry(entry: dict) -> None:
-    p = paths.undo_dir() / f"{entry['id']}.json"
+def _write_entry(entry: dict, scope: str = "project") -> None:
+    p = _undo_dir(scope) / f"{entry['id']}.json"
     tmp = p.parent / f".{p.name}.tmp-{os.getpid()}-{uuid.uuid4().hex}"
     try:
         tmp.write_text(json.dumps(entry, indent=2) + "\n")
@@ -461,17 +484,17 @@ def _write_entry(entry: dict) -> None:
             pass
 
 
-def _next_id() -> str:
+def _next_id(scope: str = "project") -> str:
     """max(existing) + 1, so pruning a file never mints a colliding id."""
     highest = 0
-    for p in paths.undo_dir().glob("*.json"):
+    for p in _undo_dir(scope).glob("*.json"):
         if p.stem.isdigit():
             highest = max(highest, int(p.stem))
     return f"{highest + 1:04d}"
 
 
-def _append_changelog(line: str) -> None:
-    log = paths.changelog()
+def _append_changelog(line: str, scope: str = "project") -> None:
+    log = _changelog_path(scope)
     if not log.exists():
         log.parent.mkdir(parents=True, exist_ok=True)
         log.write_text("# Harness changelog\n\n")
@@ -596,18 +619,28 @@ class ReplaceLine:
 
 
 def apply_edit(layer: str, edits, rationale: str, evidence: str,
-               override_cap: bool = False) -> dict:
+               override_cap: bool = False, scope: str = "project") -> dict:
     """See _apply_edit_locked. Serialised on the undo directory because
     _next_id() is check-then-write: two concurrent proposals would both
     read the same highest id and one would overwrite the other's snapshot,
     losing the ability to undo it. The cap check lives inside the same
-    lock, so two proposals cannot both read `used == 2` and both apply."""
-    with filelock.locked(paths.undo_dir() / "ENTRIES"):
-        return _apply_edit_locked(layer, edits, rationale, evidence, override_cap)
+    lock, so two proposals cannot both read `used == 2` and both apply.
+
+    `scope="global"` books the edit against the shared ledger under
+    `~/.claude/harness/` instead of this project's. Use it for, and only
+    for, `--global` writes: their targets are shared, so a per-project
+    ledger meant the cap bounded nothing across N projects and undo could
+    not reach them from anywhere else. The two budgets are separate by
+    design -- three project edits and three global edits a day are three
+    each against different real estate, not six against one."""
+    _assert_scope(scope)
+    with filelock.locked(_undo_dir(scope) / "ENTRIES"):
+        return _apply_edit_locked(layer, edits, rationale, evidence,
+                                  override_cap, scope)
 
 
 def _apply_edit_locked(layer: str, edits, rationale: str, evidence: str,
-                       override_cap: bool = False) -> dict:
+                       override_cap: bool = False, scope: str = "project") -> dict:
     """Apply one approved proposal: write every target, log it, make it undoable.
 
     `edits` is a sequence of (target_path, new_content) pairs, where
@@ -627,7 +660,7 @@ def _apply_edit_locked(layer: str, edits, rationale: str, evidence: str,
     if not edits:
         raise ValueError("apply_edit needs at least one (target, content) pair")
 
-    used = count_recent_edits()
+    used = count_recent_edits(scope=scope)
     if used >= CAP and not override_cap:
         raise CapReached(
             f"G2: {used} harness edits already applied in the last "
@@ -705,7 +738,7 @@ def _apply_edit_locked(layer: str, edits, rationale: str, evidence: str,
         })
 
     entry = {
-        "id": _next_id(),
+        "id": _next_id(scope),
         "at": _now(),
         "layer": layer,
         "rationale": rationale,
@@ -728,7 +761,7 @@ def _apply_edit_locked(layer: str, edits, rationale: str, evidence: str,
         for spec, content in zip(targets, contents):
             _atomic_write(Path(spec["path"]), content, create_parents=True)
             written.append(spec)
-        _write_entry(entry)
+        _write_entry(entry, scope)
         entry_written = True
         # Full paths, not basenames. A memory written to a mistyped project key
         # produced a changelog line byte-identical to a correct write -- the one
@@ -737,7 +770,7 @@ def _apply_edit_locked(layer: str, edits, rationale: str, evidence: str,
         _append_changelog(
             f"{entry['at'][:10]} | {layer}{' (CAP OVERRIDE)' if override_cap else ''} | "
             f"{', '.join(t['path'] for t in targets)} | "
-            f"{rationale_flat} | {evidence_flat}"
+            f"{rationale_flat} | {evidence_flat}", scope
         )
     except Exception:
         for spec in reversed(written):          # roll back a partial proposal
@@ -751,7 +784,7 @@ def _apply_edit_locked(layer: str, edits, rationale: str, evidence: str,
                 pass
         if entry_written:
             try:
-                (paths.undo_dir() / f"{entry['id']}.json").unlink()
+                (_undo_dir(scope) / f"{entry['id']}.json").unlink()
             except OSError:
                 pass
         raise
@@ -759,7 +792,8 @@ def _apply_edit_locked(layer: str, edits, rationale: str, evidence: str,
     return entry
 
 
-def count_recent_edits(hours: int = CAP_WINDOW_HOURS) -> int:
+def count_recent_edits(hours: int = CAP_WINDOW_HOURS,
+                       scope: str = "project") -> int:
     """Entries applied within the last `hours`. This is the cap's floor.
 
     Counted from the JSON entries rather than by parsing CHANGELOG.md.
@@ -780,7 +814,7 @@ def count_recent_edits(hours: int = CAP_WINDOW_HOURS) -> int:
     cost is that two unrelated sessions within a day share one budget —
     the other direction of error, and the one worth paying.
     """
-    entries, corrupt = _entries()
+    entries, corrupt = _entries(scope)
     if corrupt:
         raise CorruptEntry(
             "cannot count recent edits: unreadable entry file(s): " + ", ".join(corrupt)
@@ -800,13 +834,13 @@ def count_recent_edits(hours: int = CAP_WINDOW_HOURS) -> int:
     return n
 
 
-def list_entries() -> list[dict]:
+def list_entries(scope: str = "project") -> list[dict]:
     """Every readable entry, oldest first, for showing the user what is undoable.
 
     Undo needs an id to select; nothing else exposes one. Content is
     omitted — this is a picker, not a diff viewer.
     """
-    entries, corrupt = _entries()
+    entries, corrupt = _entries(scope)
     if corrupt:
         raise CorruptEntry(
             "cannot list entries: unreadable entry file(s): " + ", ".join(corrupt)
@@ -821,13 +855,17 @@ def list_entries() -> list[dict]:
     } for e in entries]
 
 
-def undo(force: bool = False, entry_id=None) -> dict:
-    """Serialised against apply_edit for the same reason."""
-    with filelock.locked(paths.undo_dir() / "ENTRIES"):
-        return _undo_locked(force, entry_id)
+def undo(force: bool = False, entry_id=None, scope: str = "project") -> dict:
+    """Serialised against apply_edit for the same reason.
+
+    `scope="global"` reverts from the shared ledger, from any project."""
+    _assert_scope(scope)
+    with filelock.locked(_undo_dir(scope) / "ENTRIES"):
+        return _undo_locked(force, entry_id, scope)
 
 
-def _undo_locked(force: bool = False, entry_id=None) -> dict:
+def _undo_locked(force: bool = False, entry_id=None,
+                 scope: str = "project") -> dict:
     """Revert one entry, all its targets together.
 
     Without `entry_id`, the most recent un-reverted entry. With one, that
@@ -840,7 +878,7 @@ def _undo_locked(force: bool = False, entry_id=None) -> dict:
     comparison below, exactly as it should, because the newer content was
     never snapshotted by the older entry.
     """
-    entries, corrupt = _entries()
+    entries, corrupt = _entries(scope)
     if corrupt:
         raise CorruptEntry(
             "cannot undo: unreadable entry file(s): " + ", ".join(corrupt)
@@ -899,7 +937,7 @@ def _undo_locked(force: bool = False, entry_id=None) -> dict:
 
     if not resuming:
         entry["revert_started_at"] = _now()
-        _write_entry(entry)
+        _write_entry(entry, scope)
 
     # Reverting is itself a multi-file write and needs the same all-or-nothing
     # treatment as applying. A failure on the second target used to leave the
@@ -932,10 +970,10 @@ def _undo_locked(force: bool = False, entry_id=None) -> dict:
 
     entry["reverted"] = True
     entry["reverted_at"] = _now()
-    _write_entry(entry)
+    _write_entry(entry, scope)
     _append_changelog(
         f"{entry['reverted_at'][:10]} | REVERTED | "
         f"{', '.join(t['path'] for t in entry['targets'])} | "
-        f"undo of entry {entry['id']} | -"
+        f"undo of entry {entry['id']} | -", scope
     )
     return entry
