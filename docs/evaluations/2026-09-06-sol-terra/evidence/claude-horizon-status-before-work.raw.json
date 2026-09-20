@@ -1,0 +1,22 @@
+{
+  "slug": "create-ready-txt-containing-exactly-ready-followed-by-one-ne",
+  "goal": "Create ready.txt containing exactly ready followed by one newline.",
+  "status": "active",
+  "runtime": "claude",
+  "gate": {
+    "kind": "command",
+    "value": "python3 -c 'from pathlib import Path; p=Path(\"ready.txt\"); raise SystemExit(0 if p.is_file() and p.read_bytes()==b\"ready\\n\" else 1)'"
+  },
+  "budget": {
+    "max_turns": 2,
+    "max_minutes": 30
+  },
+  "used": {
+    "turns": 0,
+    "started": "2026-09-06T23:09:29.863121+00:00"
+  },
+  "budget_exhausted": false,
+  "last_checkpoint": null,
+  "reviews": [],
+  "gate_evidence": null
+}

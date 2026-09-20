@@ -1,0 +1,34 @@
+{
+  "slug": "create-foundation-txt-and-delivery-txt-each-containing-exact",
+  "goal": "Create foundation.txt and delivery.txt, each containing exactly ready on one line.",
+  "status": "complete",
+  "runtime": "codex",
+  "gate": {
+    "kind": "command",
+    "value": "python3 -c 'from pathlib import Path; expected={\"foundation.txt\":\"ready\\n\",\"delivery.txt\":\"ready\\n\"}; bad={name:(Path(name).read_text() if Path(name).exists() else None) for name in expected if not Path(name).exists() or Path(name).read_text()!=expected[name]}; print({\"mismatches\":bad}); raise SystemExit(0 if not bad else 1)'"
+  },
+  "budget": {
+    "max_turns": 3,
+    "max_minutes": 60
+  },
+  "used": {
+    "turns": 2,
+    "started": "2026-09-06T23:02:31.417138+00:00"
+  },
+  "budget_exhausted": false,
+  "last_checkpoint": {
+    "turn": 2,
+    "at": "2026-09-06T23:06:13.944428+00:00",
+    "did": "Created delivery.txt containing exactly ready on one line, preserving foundation.txt.",
+    "next": "Complete the goal because the configured content gate should pass on the current artifacts.",
+    "tree_hash": "ce3171d86e70a1216fb6ac59aabf46fa4331dc5d9d164c399a0babd63115502a",
+    "gate": "pass",
+    "gate_output": "{'mismatches': {}}\n",
+    "gate_spec": {
+      "kind": "command",
+      "value": "python3 -c 'from pathlib import Path; expected={\"foundation.txt\":\"ready\\n\",\"delivery.txt\":\"ready\\n\"}; bad={name:(Path(name).read_text() if Path(name).exists() else None) for name in expected if not Path(name).exists() or Path(name).read_text()!=expected[name]}; print({\"mismatches\":bad}); raise SystemExit(0 if not bad else 1)'"
+    }
+  },
+  "reviews": [],
+  "gate_evidence": "{'mismatches': {}}"
+}

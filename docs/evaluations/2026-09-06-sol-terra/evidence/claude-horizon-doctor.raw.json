@@ -1,0 +1,13 @@
+{
+  "runtime": "claude",
+  "project": "/private/tmp/skills-sol-terra-20260906.12qRC0/claude-portability",
+  "implementation": "/Users/deeps/Documents/NEW STUFF/fun /harness",
+  "state": "/private/tmp/skills-sol-terra-20260906.12qRC0/claude-portability/.claude/harness",
+  "targets": {
+    "rho": "/private/tmp/skills-sol-terra-20260906.12qRC0/claude-portability/CLAUDE.md",
+    "G": "/private/tmp/skills-sol-terra-20260906.12qRC0/claude-portability/.claude/skills",
+    "K": "/private/tmp/skills-sol-terra-20260906.12qRC0/claude-portability/.claude/agents",
+    "M": "/Users/deeps/.claude/projects/-private-tmp-skills-sol-terra-20260906.12qRC0-claude-portability/memory"
+  },
+  "memory_mode": "Claude project memory"
+}

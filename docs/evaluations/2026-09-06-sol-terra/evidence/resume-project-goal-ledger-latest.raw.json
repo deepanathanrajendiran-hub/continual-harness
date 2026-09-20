@@ -1,0 +1,53 @@
+{
+  "slug": "create-foundation-txt-and-delivery-txt-each-containing-exact",
+  "goal": "Create foundation.txt and delivery.txt, each containing exactly ready on one line.",
+  "cwd": "/private/tmp/skills-sol-terra-20260906.12qRC0/resume-project",
+  "gate": {
+    "kind": "command",
+    "value": "python3 -c 'from pathlib import Path; expected={\"foundation.txt\":\"ready\\n\",\"delivery.txt\":\"ready\\n\"}; bad={name:(Path(name).read_text() if Path(name).exists() else None) for name in expected if not Path(name).exists() or Path(name).read_text()!=expected[name]}; print({\"mismatches\":bad}); raise SystemExit(0 if not bad else 1)'"
+  },
+  "watch_paths": [
+    "/private/tmp/skills-sol-terra-20260906.12qRC0/resume-project/foundation.txt",
+    "/private/tmp/skills-sol-terra-20260906.12qRC0/resume-project/delivery.txt"
+  ],
+  "budget": {
+    "max_turns": 3,
+    "max_minutes": 60
+  },
+  "used": {
+    "turns": 2,
+    "started": "2026-09-06T23:02:31.417138+00:00"
+  },
+  "status": "complete",
+  "subagents": [],
+  "checkpoints": [
+    {
+      "turn": 1,
+      "at": "2026-09-06T23:03:00.430343+00:00",
+      "did": "Created foundation.txt containing exactly ready on one line; intentionally left delivery.txt absent for the session-boundary resume test.",
+      "next": "Create delivery.txt containing exactly ready on one line, then run the configured check once and complete only if the gate passes.",
+      "tree_hash": "512c617892bca47d2558d7b406b183c98c874a1343e6e4853001213079f4561c",
+      "gate": "fail",
+      "gate_output": "{'mismatches': {'delivery.txt': None}}\n",
+      "gate_spec": {
+        "kind": "command",
+        "value": "python3 -c 'from pathlib import Path; expected={\"foundation.txt\":\"ready\\n\",\"delivery.txt\":\"ready\\n\"}; bad={name:(Path(name).read_text() if Path(name).exists() else None) for name in expected if not Path(name).exists() or Path(name).read_text()!=expected[name]}; print({\"mismatches\":bad}); raise SystemExit(0 if not bad else 1)'"
+      }
+    },
+    {
+      "turn": 2,
+      "at": "2026-09-06T23:06:13.944428+00:00",
+      "did": "Created delivery.txt containing exactly ready on one line, preserving foundation.txt.",
+      "next": "Complete the goal because the configured content gate should pass on the current artifacts.",
+      "tree_hash": "ce3171d86e70a1216fb6ac59aabf46fa4331dc5d9d164c399a0babd63115502a",
+      "gate": "pass",
+      "gate_output": "{'mismatches': {}}\n",
+      "gate_spec": {
+        "kind": "command",
+        "value": "python3 -c 'from pathlib import Path; expected={\"foundation.txt\":\"ready\\n\",\"delivery.txt\":\"ready\\n\"}; bad={name:(Path(name).read_text() if Path(name).exists() else None) for name in expected if not Path(name).exists() or Path(name).read_text()!=expected[name]}; print({\"mismatches\":bad}); raise SystemExit(0 if not bad else 1)'"
+      }
+    }
+  ],
+  "gate_evidence": "{'mismatches': {}}",
+  "completed_at": "2026-09-06T23:06:21.286559+00:00"
+}

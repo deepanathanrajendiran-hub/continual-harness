@@ -1,0 +1,1 @@
+FAIL — includes an owner placeholder and three ordered steps, but omits prerequisites, backup placeholder, explicit production verification/failure handling, rollback triggers, and rollback actions.

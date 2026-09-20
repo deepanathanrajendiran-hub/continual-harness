@@ -1,0 +1,66 @@
+{
+  "slug": "produce-a-brief-actionable-web-app-release-runbook-with-prer",
+  "goal": "Produce a brief actionable web-app release runbook with prerequisites, ordered deployment steps, production verification with explicit failure handling, rollback triggers and actions, and owner/backup placeholders.",
+  "cwd": "/private/tmp/skills-sol-terra-20260906.12qRC0/sol-horizon",
+  "gate": {
+    "kind": "command",
+    "value": "python3 -c 'from pathlib import Path; import re; s=Path(\"runbook.md\").read_text(); checks={\"prerequisites\":r\"(?im)^##?\\s*Prerequisites\\b\",\"owner\":r\"(?im)^Owner:\\s*\\[[^\\]]+\\]\",\"backup\":r\"(?im)^Backup:\\s*\\[[^\\]]+\\]\",\"production verification\":r\"(?i)production.{0,120}(verify|verification)|(?:verify|verification).{0,120}production\",\"failure handling\":r\"(?i)(if|when).{0,80}(fail|unhealthy|error)\",\"rollback triggers\":r\"(?im)^##?\\s*Rollback triggers\\b\",\"rollback actions\":r\"(?im)^##?\\s*Rollback actions\\b\"}; missing=[k for k,p in checks.items() if not re.search(p,s,re.S if k==\"production verification\" else 0)]; steps=len(re.findall(r\"(?m)^\\d+\\.\\s+\",s)); print({\"missing\":missing,\"ordered_steps\":steps}); raise SystemExit(0 if not missing and steps>=4 else 1)'",
+    "review_criterion": "Review runbook.md for a brief, actionable web-app release procedure that includes prerequisites, ordered deployment steps, production verification with explicit failure handling, rollback triggers and rollback actions, plus owner and backup placeholders. Return pass or fail with concrete evidence and omissions."
+  },
+  "watch_paths": [
+    "/private/tmp/skills-sol-terra-20260906.12qRC0/sol-horizon/runbook.md"
+  ],
+  "budget": {
+    "max_turns": 3,
+    "max_minutes": 60
+  },
+  "used": {
+    "turns": 2,
+    "started": "2026-09-06T23:01:40.655239+00:00"
+  },
+  "status": "complete",
+  "subagents": [],
+  "checkpoints": [
+    {
+      "turn": 1,
+      "at": "2026-09-06T23:02:05.057424+00:00",
+      "did": "Assessed the supplied runbook in its original unchanged state and ran the configured acceptance gate.",
+      "next": "Request fresh independent review of the unchanged checkpoint, record its actual verdict, then repair only the confirmed gaps.",
+      "tree_hash": "dd030d010d5fbdc19713b80769848c25713b54147c7cf97816af361940c22be6",
+      "gate": "fail",
+      "gate_output": "{'missing': ['prerequisites', 'backup', 'production verification', 'failure handling', 'rollback triggers', 'rollback actions'], 'ordered_steps': 3}\n",
+      "gate_spec": {
+        "kind": "command",
+        "value": "python3 -c 'from pathlib import Path; import re; s=Path(\"runbook.md\").read_text(); checks={\"prerequisites\":r\"(?im)^##?\\s*Prerequisites\\b\",\"owner\":r\"(?im)^Owner:\\s*\\[[^\\]]+\\]\",\"backup\":r\"(?im)^Backup:\\s*\\[[^\\]]+\\]\",\"production verification\":r\"(?i)production.{0,120}(verify|verification)|(?:verify|verification).{0,120}production\",\"failure handling\":r\"(?i)(if|when).{0,80}(fail|unhealthy|error)\",\"rollback triggers\":r\"(?im)^##?\\s*Rollback triggers\\b\",\"rollback actions\":r\"(?im)^##?\\s*Rollback actions\\b\"}; missing=[k for k,p in checks.items() if not re.search(p,s,re.S if k==\"production verification\" else 0)]; steps=len(re.findall(r\"(?m)^\\d+\\.\\s+\",s)); print({\"missing\":missing,\"ordered_steps\":steps}); raise SystemExit(0 if not missing and steps>=4 else 1)'",
+        "review_criterion": "Review runbook.md for a brief, actionable web-app release procedure that includes prerequisites, ordered deployment steps, production verification with explicit failure handling, rollback triggers and rollback actions, plus owner and backup placeholders. Return pass or fail with concrete evidence and omissions."
+      }
+    },
+    {
+      "turn": 2,
+      "at": "2026-09-06T23:04:09.680134+00:00",
+      "did": "Repaired runbook.md to add owner and backup placeholders, prerequisites, ordered staged deployment, production verification with explicit failure handling, rollback triggers, and rollback actions.",
+      "next": "Request fresh independent review of this passing checkpoint and record the actual verdict; complete only if the review passes.",
+      "tree_hash": "9a450e9c698416f6b8bd4ac7db1f233b1e7a641996843cf2e6a6ec9d458f76ae",
+      "gate": "pass",
+      "gate_output": "{'missing': [], 'ordered_steps': 9}\n",
+      "gate_spec": {
+        "kind": "command",
+        "value": "python3 -c 'from pathlib import Path; import re; s=Path(\"runbook.md\").read_text(); checks={\"prerequisites\":r\"(?im)^##?\\s*Prerequisites\\b\",\"owner\":r\"(?im)^Owner:\\s*\\[[^\\]]+\\]\",\"backup\":r\"(?im)^Backup:\\s*\\[[^\\]]+\\]\",\"production verification\":r\"(?i)production.{0,120}(verify|verification)|(?:verify|verification).{0,120}production\",\"failure handling\":r\"(?i)(if|when).{0,80}(fail|unhealthy|error)\",\"rollback triggers\":r\"(?im)^##?\\s*Rollback triggers\\b\",\"rollback actions\":r\"(?im)^##?\\s*Rollback actions\\b\"}; missing=[k for k,p in checks.items() if not re.search(p,s,re.S if k==\"production verification\" else 0)]; steps=len(re.findall(r\"(?m)^\\d+\\.\\s+\",s)); print({\"missing\":missing,\"ordered_steps\":steps}); raise SystemExit(0 if not missing and steps>=4 else 1)'",
+        "review_criterion": "Review runbook.md for a brief, actionable web-app release procedure that includes prerequisites, ordered deployment steps, production verification with explicit failure handling, rollback triggers and rollback actions, plus owner and backup placeholders. Return pass or fail with concrete evidence and omissions."
+      }
+    }
+  ],
+  "reviews": [
+    {
+      "turn": 2,
+      "tree_hash": "9a450e9c698416f6b8bd4ac7db1f233b1e7a641996843cf2e6a6ec9d458f76ae",
+      "at": "2026-09-06T23:04:46.979636+00:00",
+      "judge": "/root/sol_horizon_trial/runbook_review_final",
+      "criterion": "Review runbook.md for a brief, actionable web-app release procedure that includes prerequisites, ordered deployment steps, production verification with explicit failure handling, rollback triggers and rollback actions, plus owner and backup placeholders. Return pass or fail with concrete evidence and omissions.",
+      "result": "pass",
+      "evidence": "PASS \u2014 Includes owner/backup placeholders, four prerequisites, five ordered deployment steps, production checks with failure handling, three explicit rollback triggers, and four ordered rollback actions. No omissions against the acceptance criterion."
+    }
+  ],
+  "gate_evidence": "{'missing': [], 'ordered_steps': 9}",
+  "completed_at": "2026-09-06T23:04:56.872576+00:00"
+}

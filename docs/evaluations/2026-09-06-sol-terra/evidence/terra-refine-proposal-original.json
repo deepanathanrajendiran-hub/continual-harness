@@ -1,0 +1,17 @@
+{
+  "layer": "M",
+  "rationale": "Two supplied tasks had the same pytest test-discovery failure when run from tools/, and both collected and passed after changing to the repository root. A project-memory note is the narrowest reusable layer.",
+  "evidence": "Task A: \"pytest exited 5 with \\\"no tests ran\\\" after being invoked from the tools/ subdirectory. The agent changed to the repository root and ran the project's test command successfully.\" Task B: \"pytest again exited 5 with \\\"no tests ran\\\" from tools/. Running from the repository root collected the intended suite and passed.\" Task C was a one-time missing external credential and supplies no recurring-process evidence.",
+  "edits": [
+    {
+      "path": "/private/tmp/skills-sol-terra-20260906.12qRC0/terra-refine/.codex/memory/test-discovery.md",
+      "kind": "text",
+      "content": "# Test discovery\\n\\nWhen validating this project with pytest, begin at the repository root and use the project's test command. If pytest exits 5 with `no tests ran` from `tools/`, check the current working directory before treating it as a test failure.\\n"
+    },
+    {
+      "path": "/private/tmp/skills-sol-terra-20260906.12qRC0/terra-refine/.codex/memory/MEMORY.md",
+      "kind": "append_line",
+      "content": "- [Test discovery](test-discovery.md): Run pytest from the repository root; `tools/` can collect no tests."
+    }
+  ]
+}

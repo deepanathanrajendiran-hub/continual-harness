@@ -1,0 +1,21 @@
+{
+  "slug": "produce-a-brief-actionable-web-app-release-runbook-with-prer",
+  "goal": "Produce a brief actionable web-app release runbook with prerequisites, ordered deployment steps, production verification with explicit failure handling, rollback triggers and actions, and owner/backup placeholders.",
+  "status": "active",
+  "runtime": "codex",
+  "budget": {"max_turns": 3, "max_minutes": 60},
+  "used": {"turns": 1, "started": "2026-09-06T23:01:40.655239+00:00"},
+  "budget_exhausted": false,
+  "last_checkpoint": {
+    "turn": 1,
+    "at": "2026-09-06T23:02:05.057424+00:00",
+    "did": "Assessed the supplied runbook in its original unchanged state and ran the configured acceptance gate.",
+    "next": "Request fresh independent review of the unchanged checkpoint, record its actual verdict, then repair only the confirmed gaps.",
+    "tree_hash": "dd030d010d5fbdc19713b80769848c25713b54147c7cf97816af361940c22be6",
+    "gate": "fail",
+    "gate_output": "{'missing': ['prerequisites', 'backup', 'production verification', 'failure handling', 'rollback triggers', 'rollback actions'], 'ordered_steps': 3}\n"
+  },
+  "reviews": [],
+  "gate_evidence": null,
+  "review_required": false
+}

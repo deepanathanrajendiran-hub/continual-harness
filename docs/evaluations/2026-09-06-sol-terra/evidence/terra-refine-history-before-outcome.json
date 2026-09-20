@@ -1,0 +1,16 @@
+{
+  "entries": [
+    {
+      "id": "0001",
+      "at": "2026-09-06T23:03:18.520137+00:00",
+      "layer": "M",
+      "rationale": "Two supplied tasks had the same pytest test-discovery failure when run from tools/, and both collected and passed after changing to the repository root. A project-memory note is the narrowest reusable layer.",
+      "reverted": false,
+      "outcomes": [],
+      "targets": [
+        "/private/tmp/skills-sol-terra-20260906.12qRC0/terra-refine/.codex/memory/test-discovery.md",
+        "/private/tmp/skills-sol-terra-20260906.12qRC0/terra-refine/.codex/memory/MEMORY.md"
+      ]
+    }
+  ]
+}

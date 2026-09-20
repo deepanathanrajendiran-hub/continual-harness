@@ -1,0 +1,14 @@
+$ pwd
+/private/tmp/skills-sol-terra-20260906.12qRC0/terra-refine/tools
+
+$ python3 /Users/deeps/Documents/NEW STUFF/fun\ /.agents/skills/refine/scripts/harness.py --runtime codex --project /tmp/skills-sol-terra-20260906.12qRC0/terra-refine recall --query 'pytest test discovery'
+{
+  "directory": "/private/tmp/skills-sol-terra-20260906.12qRC0/terra-refine/.codex/memory",
+  "index": "- [Test discovery](test-discovery.md): Run pytest from the repository root; `tools/` can collect no tests.\\n",
+  "notes": [
+    {
+      "path": "/private/tmp/skills-sol-terra-20260906.12qRC0/terra-refine/.codex/memory/test-discovery.md",
+      "text": "# Test discovery\\n\\nWhen validating this project with pytest, begin at the repository root and use the project's test command. If pytest exits 5 with `no tests ran` from `tools/`, check the current working directory before treating it as a test failure.\\n"
+    }
+  ]
+}

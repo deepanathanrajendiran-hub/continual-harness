@@ -1,0 +1,1 @@
+The later task began in `tools/`. Explicit recall returned entry 0001's note directing pytest to the repository root. The suite was then run from the repository root and passed: 1 passed in 0.00s. The sole test verifies that `trajectory.md` is visible from the current directory, so it exercises the root-working-directory condition.

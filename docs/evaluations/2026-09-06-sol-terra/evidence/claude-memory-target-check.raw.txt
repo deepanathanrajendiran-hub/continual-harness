@@ -1,0 +1,1 @@
+{'path': '/Users/deeps/.claude/projects/-private-tmp-skills-sol-terra-20260906.12qRC0-claude-portability/memory', 'exists': False}

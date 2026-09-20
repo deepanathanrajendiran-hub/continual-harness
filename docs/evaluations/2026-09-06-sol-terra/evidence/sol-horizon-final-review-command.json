@@ -1,0 +1,19 @@
+{
+  "slug": "produce-a-brief-actionable-web-app-release-runbook-with-prer",
+  "status": "active",
+  "runtime": "codex",
+  "used": {"turns": 2, "started": "2026-09-06T23:01:40.655239+00:00"},
+  "last_checkpoint": {"turn": 2, "tree_hash": "9a450e9c698416f6b8bd4ac7db1f233b1e7a641996843cf2e6a6ec9d458f76ae", "gate": "pass", "gate_output": "{'missing': [], 'ordered_steps': 9}\n"},
+  "reviews": [
+    {
+      "turn": 2,
+      "tree_hash": "9a450e9c698416f6b8bd4ac7db1f233b1e7a641996843cf2e6a6ec9d458f76ae",
+      "at": "2026-09-06T23:04:46.979636+00:00",
+      "judge": "/root/sol_horizon_trial/runbook_review_final",
+      "criterion": "Review runbook.md for a brief, actionable web-app release procedure that includes prerequisites, ordered deployment steps, production verification with explicit failure handling, rollback triggers and rollback actions, plus owner and backup placeholders. Return pass or fail with concrete evidence and omissions.",
+      "result": "pass",
+      "evidence": "PASS — Includes owner/backup placeholders, four prerequisites, five ordered deployment steps, production checks with failure handling, three explicit rollback triggers, and four ordered rollback actions. No omissions against the acceptance criterion."
+    }
+  ],
+  "gate_evidence": null
+}

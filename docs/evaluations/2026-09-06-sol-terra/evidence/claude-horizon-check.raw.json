@@ -1,0 +1,35 @@
+{
+  "slug": "create-ready-txt-containing-exactly-ready-followed-by-one-ne",
+  "goal": "Create ready.txt containing exactly ready followed by one newline.",
+  "status": "active",
+  "runtime": "claude",
+  "gate": {
+    "kind": "command",
+    "value": "python3 -c 'from pathlib import Path; p=Path(\"ready.txt\"); raise SystemExit(0 if p.is_file() and p.read_bytes()==b\"ready\\n\" else 1)'"
+  },
+  "budget": {
+    "max_turns": 2,
+    "max_minutes": 30
+  },
+  "used": {
+    "turns": 1,
+    "started": "2026-09-06T23:09:29.863121+00:00"
+  },
+  "budget_exhausted": false,
+  "last_checkpoint": {
+    "turn": 1,
+    "at": "2026-09-06T23:09:53.935371+00:00",
+    "did": "Created ready.txt containing exactly ready followed by one newline.",
+    "next": "Complete the goal because the configured command gate passes on the current watched artifact.",
+    "tree_hash": "1af0aa18790570524ee69a6ddceb5a2fd2e9ffb6d2ea1cd7a7044d99489772a8",
+    "gate": "pass",
+    "gate_output": "",
+    "gate_spec": {
+      "kind": "command",
+      "value": "python3 -c 'from pathlib import Path; p=Path(\"ready.txt\"); raise SystemExit(0 if p.is_file() and p.read_bytes()==b\"ready\\n\" else 1)'"
+    }
+  },
+  "reviews": [],
+  "gate_evidence": null,
+  "review_required": false
+}

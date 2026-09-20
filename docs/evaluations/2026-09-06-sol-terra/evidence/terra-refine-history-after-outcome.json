@@ -1,0 +1,23 @@
+{
+  "entries": [
+    {
+      "id": "0001",
+      "at": "2026-09-06T23:03:18.520137+00:00",
+      "layer": "M",
+      "rationale": "Two supplied tasks had the same pytest test-discovery failure when run from tools/, and both collected and passed after changing to the repository root. A project-memory note is the narrowest reusable layer.",
+      "reverted": false,
+      "outcomes": [
+        {
+          "at": "2026-09-06T23:04:24.952681+00:00",
+          "task": "later pytest task from tools/ (evaluation fixture)",
+          "outcome": "helpful",
+          "evidence": "The later task began in `tools/`. Explicit recall returned entry 0001's note directing pytest to the repository root. The suite was then run from the repository root and passed: 1 passed in 0.00s. The sole test verifies that `trajectory.md` is visible from the current directory, so it exercises the root-working-directory condition.\\n"
+        }
+      ],
+      "targets": [
+        "/private/tmp/skills-sol-terra-20260906.12qRC0/terra-refine/.codex/memory/test-discovery.md",
+        "/private/tmp/skills-sol-terra-20260906.12qRC0/terra-refine/.codex/memory/MEMORY.md"
+      ]
+    }
+  ]
+}
