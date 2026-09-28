@@ -15,7 +15,7 @@ TRIAL_HOME = absolute trial-scoped state/home path
 EVIDENCE_DIR = absolute manifest-matched run-evidence path
 SKILL_FILE = absolute frozen .agents/skills/horizon/SKILL.md path
 HARNESS = absolute scripts/harness.py beside SKILL_FILE
-SHARED_REFERENCE = absolute path to this frozen trial-briefs.md
+SHARED_REFERENCE = absolute frozen .agents/skills/horizon/references/commands.md
 ```
 
 `SKILL_FILE`, `HARNESS`, and `SHARED_REFERENCE` are environment/path
@@ -35,11 +35,13 @@ and `--project "$TRIAL_PROJECT"`; the lifecycle commands do not set `HOME` or
 You are the native coordinator for one frozen Horizon state-mode pilot row.
 
 Environment: TRIAL_PROJECT, TRIAL_HOME, EVIDENCE_DIR, SKILL_FILE, HARNESS, and
-SHARED_REFERENCE are resolved above.  Work only in TRIAL_PROJECT.  Create its
-own .codex or .agents marker before every Horizon CLI lifecycle command.  Keep
-state/home project scoped at TRIAL_HOME; never repurpose global HOME or
-CODEX_HOME.  Read SKILL_FILE and SHARED_REFERENCE.  The shared reference is
-protocol-only; do not access reference-only material or known repairs.
+SHARED_REFERENCE are resolved above.  Make source edits only in TRIAL_PROJECT;
+write raw evidence and the report only in EVIDENCE_DIR and trial scratch only
+in TRIAL_HOME.  Create the trial project's own .codex or .agents marker before
+every Horizon CLI lifecycle command.  Keep state/home project scoped at
+TRIAL_HOME; never repurpose global HOME or CODEX_HOME.  Read SKILL_FILE and
+SHARED_REFERENCE.  The shared reference supplies the Packet and update schema;
+do not access reference-only material or known repairs.
 
 This row is MODEL / MODE / REPEAT, with all native coordinator, worker, and
 independent reviewer roles set to MODEL at high reasoning.  You may dispatch
@@ -49,20 +51,34 @@ create a sidebar task or a native goal outside the trial project.  State-mode
 editing roles start in fresh contexts.  Conversation-mode work retains its
 conversation context except at the explicitly forced fresh-coordinator barrier.
 
-Before launch, restore and hash-check the exact seed bytes named by this
-fixture.  Treat every protected artifact as evaluator-owned: do not edit,
-remove, move, or regenerate it.  The fixed fingerprint watch input is --watch
-. from goal creation through every phase; it covers source, new tests, and
-acceptance while Horizon's built-in bookkeeping exclusions remain in effect.
+For Python/config edits, discover the AST editor, call list_symbols, then use
+the narrowest structural edit.  Pass this rule and the resolved shared Packet
+and update schema to every editing worker.  No generic code-file editing
+fallback.
 
-Run these lifecycle setup commands exactly, retaining stdout/stderr, returned
-goal/packet/audit bytes and hashes in EVIDENCE_DIR:
+Root has restored and hash-checked the seed before first dispatch.  Inspect the
+provided seed-hash record on initial launch.  On resumption or forced
+fresh-coordinator handoff, preserve and inspect the existing project and saved
+goal; never restore the seed or create a replacement goal.  Treat every
+protected artifact as evaluator-owned: do not edit, remove, move, or regenerate
+it.  The fixed fingerprint watch input is --watch . from goal creation through
+every phase; it covers source, new tests, and acceptance while Horizon's
+built-in bookkeeping exclusions remain in effect.
+
+For initial goal creation only, run these lifecycle setup commands exactly,
+retaining stdout/stderr and returned goal/packet/audit bytes and hashes in
+EVIDENCE_DIR:
 
   python3 "$HARNESS" --runtime codex --project "$TRIAL_PROJECT" doctor
   python3 "$HARNESS" --runtime codex --project "$TRIAL_PROJECT" start \
     "$OBJECTIVE" --execution "$MODE" --gate "$GATE" \
     --review "$REVIEW_CRITERION" --max-turns 4 --max-minutes 15 --watch .
   python3 "$HARNESS" --runtime codex --project "$TRIAL_PROJECT" status
+
+For an existing supplied SLUG, do not run `start`.  Run `doctor` and
+`status "$SLUG"` with the same `HARNESS` and `TRIAL_PROJECT`, then continue
+that saved goal through the skill protocol while preserving its original
+budgets, objective, gate, review criterion, and `--watch .` input.
 
 Use at most four increments/attempts and 15 minutes.  Before each increment,
 inspect saved status and honor the fixture barrier.  In state mode, reserve,
@@ -73,6 +89,11 @@ evidence.  Run the fixed gate when allowed.  Preserve source/test hashes, gate
 output, packet byte counts, role records, lifecycle JSON, evaluator events,
 host-handle observations, and deviations in EVIDENCE_DIR.  Report completion
 only after the gate and independently recorded review pass.
+
+Write EVIDENCE_DIR/report.md before returning.  It must record the actual goal
+slug, native handles and roles, gate/review outcome, format repairs, and
+protocol deviations.  Label coordinator-written tool accounts separately from
+exported tool transcripts.
 
 The reviewer independently evaluates the raw evidence and must use exactly the
 frozen REVIEW_CRITERION for this fixture.  It records omissions as unknown;
