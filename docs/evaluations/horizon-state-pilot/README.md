@@ -33,6 +33,15 @@ project and use project-scoped state/home paths.  This prevents root discovery
 from climbing to this checkout's ancestor marker.  Do not change host-level
 Codex configuration; record any host-isolation limitation as a trial deviation.
 
+Every disposable `TRIAL_PROJECT` must also be outside **any** Git repository.
+Before dispatch, from that project, `git rev-parse --show-toplevel` must fail;
+retain its exit/status output with the row evidence.  This guard prevents an
+unrelated evaluator log from changing a project fingerprint through ancestor
+Git status.  The probe in `evidence/environment-isolation-probe.txt` proves the
+distinction: an external log changes a nested project's fingerprint, while the
+same log outside a repository does not.  Keep the trial-local marker after this
+check.
+
 Use [trial-briefs.md](trial-briefs.md) to instantiate a coordinator/worker
 brief.  Only the listed model, mode, repeat, and environment path placeholders
 may change.  All 72 manifest-matched
@@ -42,6 +51,15 @@ placeholder state by adding raw command output, goal/audit bytes and hashes,
 worker/reviewer records, evaluator observations, source hashes, and any
 protocol deviation.  A reserved directory or a completed-looking JSON record
 is not evidence.
+
+The original `module-bug` / Sol / state / repeat 1 native run remains retained
+at `runs/module-bug-sol-state-1/` as a supplemental setup-contaminated record:
+it completed with two accepted attempts, one reported format-only repair, a
+passing gate, and an independent passing review, but evaluator-log fingerprint
+contamination forced a second no-edit attempt/review.  It is excluded from the
+canonical comparison.  Its canonical repeat is pending under
+`runs/module-bug-sol-state-1/isolated-rerun/` and is the only record eligible
+for that manifest row.  The 72-row manifest itself is unchanged.
 
 [results.jsonl](results.jsonl) is intentionally empty.  Append exactly one
 schema-valid record only after independent evaluator scoring of a run's raw

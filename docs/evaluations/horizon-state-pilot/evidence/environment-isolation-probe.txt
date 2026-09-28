@@ -1,0 +1,18 @@
+Disposable evaluator-isolation probe using unchanged harness/tree_hash.py. No live trial or product source was edited. Nested test changes only an evaluator log outside the watched trial; isolated test uses a separate temporary project outside any repository.
+{
+  "nested": {
+    "before": "7e16caf6f27abb0d56420132bc190ddcf52186066b86c4790cf9eac7cd709c99",
+    "after": "7f0e07451fe8f6f09abf0bf791dddd718cd33ec1bde8c62428a3fcff063276ab",
+    "same_task_file": "unchanged task artifact",
+    "hash_changed_for_external_log": true,
+    "git_root": "/private/var/folders/04/6t6rss393pb365x36mxnhk2m0000gn/T/horizon-pilot-isolation-n5ynd0z_/outer-repo\n",
+    "git_status": "?? evaluator-log.txt\n?? trial/source.txt\n"
+  },
+  "isolated": {
+    "before": "e2630675ccd62f6de49a9dccc7c041810a83b6f9560de257529f71d44710fe91",
+    "after": "e2630675ccd62f6de49a9dccc7c041810a83b6f9560de257529f71d44710fe91",
+    "hash_changed_for_external_log": false,
+    "git_root": null
+  }
+}
+Assertions passed.

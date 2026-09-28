@@ -1,9 +1,18 @@
 # Horizon state-mode pilot report — incomplete
 
-No measured native trial has run as of the protocol-freeze commit.  There are
-therefore no success counts, false-completion counts, recovery outcomes,
-elapsed-time measurements, packet sizes, token totals, costs, or mode claims
-to report.
+No canonical manifest row has been scored.  The original module-bug / Sol /
+state / repeat 1 run is retained as supplemental raw evidence but excluded from
+the comparison: it completed with two accepted attempts, a reported format-only
+repair, passing gate and independent review, then required a second no-edit
+attempt/review because evaluator-log changes in an ancestor Git repository
+changed its fingerprint.  The setup probe retained at
+`evidence/environment-isolation-probe.txt` distinguishes this from a product
+defect.  Its canonical isolated rerun is pending at
+`runs/module-bug-sol-state-1/isolated-rerun/`; `results.jsonl` remains empty.
+
+There are therefore no canonical success counts, false-completion counts,
+recovery outcomes, elapsed-time measurements, packet sizes, token totals,
+costs, or mode claims to report.
 
 When raw trial evidence exists, independently score one JSON object per
 manifest row in `results.jsonl` and replace this section with raw counts by

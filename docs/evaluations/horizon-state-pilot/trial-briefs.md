@@ -10,7 +10,7 @@ fixture values below.
 MODEL = gpt-5.6-sol | gpt-5.6-terra
 MODE = conversation | state
 REPEAT = 1 | 2 | 3
-TRIAL_PROJECT = absolute disposable project path
+TRIAL_PROJECT = absolute disposable project path outside any Git repository
 TRIAL_HOME = absolute trial-scoped state/home path
 EVIDENCE_DIR = absolute manifest-matched run-evidence path
 SKILL_FILE = absolute frozen .agents/skills/horizon/SKILL.md path
@@ -42,6 +42,13 @@ every Horizon CLI lifecycle command.  Keep state/home project scoped at
 TRIAL_HOME; never repurpose global HOME or CODEX_HOME.  Read SKILL_FILE and
 SHARED_REFERENCE.  The shared reference supplies the Packet and update schema;
 do not access reference-only material or known repairs.
+
+Before creating the marker or dispatching any role, run `git rev-parse
+--show-toplevel` from TRIAL_PROJECT.  It must fail because TRIAL_PROJECT is
+outside every Git repository; retain its exit/status output in EVIDENCE_DIR.
+This pre-dispatch check prevents evaluator-created logs from changing the
+fingerprint through an ancestor repository.  Then create the trial-local
+.codex or .agents marker and continue the fixed lifecycle.
 
 This row is MODEL / MODE / REPEAT, with all native coordinator, worker, and
 independent reviewer roles set to MODEL at high reasoning.  You may dispatch
@@ -92,8 +99,8 @@ only after the gate and independently recorded review pass.
 
 Write EVIDENCE_DIR/report.md before returning.  It must record the actual goal
 slug, native handles and roles, gate/review outcome, format repairs, and
-protocol deviations.  Label coordinator-written tool accounts separately from
-exported tool transcripts.
+protocol deviations, including the Git-isolation precheck.  Label
+coordinator-written tool accounts separately from exported tool transcripts.
 
 The reviewer independently evaluates the raw evidence and must use exactly the
 frozen REVIEW_CRITERION for this fixture.  It records omissions as unknown;
