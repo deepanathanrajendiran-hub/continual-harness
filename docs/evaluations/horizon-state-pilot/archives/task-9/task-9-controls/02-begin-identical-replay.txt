@@ -1,0 +1,42 @@
+mutation: Mark both saved-attempt replay branches as fresh responses instead of replayed responses.
+mutated_copy: /tmp/task9-begin-replay-tuU7GV
+43cab48c0be5366db80627d33e2b16ead96e89678acb2d19581b3bdaa3bdefce  /tmp/task9-begin-replay-tuU7GV/harness/steps.py
+mutation_diff:
+--- /Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/harness/steps.py	2026-09-27 13:14:16
++++ /tmp/task9-begin-replay-tuU7GV/harness/steps.py	2026-09-27 13:27:59
+@@ -175,7 +175,7 @@
+     state = _state(slug)
+     existing = _attempt(state, request_id)
+     if existing is not None:
+-        return _begin_report(state, existing, _saved_packet(state, existing), replayed=True)
++        return _begin_report(state, existing, _saved_packet(state, existing), replayed=False)
+     _admit(state)
+     expected_revision = state["execution"]["revision"]
+     current_hash = tree_hash.compute(state["cwd"], state["watch_paths"])
+@@ -196,7 +196,7 @@
+         state = _state(slug)
+         existing = _attempt(state, request_id)
+         if existing is not None:
+-            return _begin_report(state, existing, _saved_packet(state, existing), replayed=True)
++            return _begin_report(state, existing, _saved_packet(state, existing), replayed=False)
+         if state["execution"]["revision"] != expected_revision:
+             raise goal.RevisionConflict("Execution revision changed during packet preparation")
+         _admit(state)
+command: PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH='/Users/deeps/.cache/uv/archive-v0/044nI_HLHtvNp2AOxHKcK/lib/python3.14/site-packages' python3 -m pytest tests/test_state_concurrency.py::test_begin_races_reserve_exactly_one_attempt -k request_ids1 -q -p no:cacheprovider --tb=short
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+_______ test_begin_races_reserve_exactly_one_attempt[codex-request_ids1] _______
+/private/tmp/task9-begin-replay-tuU7GV/tests/test_state_concurrency.py:187: in test_begin_races_reserve_exactly_one_attempt
+    assert sum(record["result"]["replayed"] for record in records) == 1
+E   assert 0 == 1
+E    +  where 0 = sum(<generator object test_begin_races_reserve_exactly_one_attempt.<locals>.<genexpr> at 0x108325150>)
+______ test_begin_races_reserve_exactly_one_attempt[claude-request_ids1] _______
+/private/tmp/task9-begin-replay-tuU7GV/tests/test_state_concurrency.py:187: in test_begin_races_reserve_exactly_one_attempt
+    assert sum(record["result"]["replayed"] for record in records) == 1
+E   assert 0 == 1
+E    +  where 0 = sum(<generator object test_begin_races_reserve_exactly_one_attempt.<locals>.<genexpr> at 0x1087f4930>)
+=========================== short test summary info ============================
+FAILED tests/test_state_concurrency.py::test_begin_races_reserve_exactly_one_attempt[codex-request_ids1]
+FAILED tests/test_state_concurrency.py::test_begin_races_reserve_exactly_one_attempt[claude-request_ids1]
+2 failed, 2 deselected in 0.26s
+exit_status=1

@@ -1,0 +1,100 @@
+mutation: Before normal validation rejects the update, persist the attempted gate/review criterion/budget/watch_paths control value to the goal. The review-criterion cases fail at the new direct before/after assertion.
+mutated_copy: /tmp/task9-immutable-controls-direct-g52cPJ
+ab4f7ac3e173861ebeff7e40fa9ef95cdd783168e4407e79675cd0fb2444492b  harness/steps.py  /tmp/task9-immutable-controls-direct-g52cPJ/harness/steps.py
+mutation_diff:
+--- /Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/harness/steps.py	2026-09-27 13:14:16
++++ /tmp/task9-immutable-controls-direct-g52cPJ/harness/steps.py	2026-09-27 23:55:38
+@@ -269,6 +269,17 @@
+ def finish(slug: str, attempt_id: str, *, expected_revision: int,
+            update_file: Path, worker_evidence_file: Path,
+            timeout: int = gate.DEFAULT_TIMEOUT, force: bool = False) -> dict:
++    negative_update = json.loads(Path(update_file).read_text())
++    negative_operation = negative_update["ops"][0]
++    negative_field = negative_operation.get("field")
++    if negative_field in {"gate", "review_criterion", "budget", "watch_paths"}:
++        with filelock.goal_locked(goal._path(slug)):
++            negative_state = _state(slug)
++            if negative_field == "review_criterion":
++                negative_state["gate"]["review_criterion"] = negative_operation["value"]
++            else:
++                negative_state[negative_field] = negative_operation["value"]
++            goal._save(negative_state)
+     _require_slug(slug)
+     _require_id(attempt_id, "attempt_id")
+     if isinstance(expected_revision, bool) or not isinstance(expected_revision, int) or expected_revision < 0:
+command: PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH='/Users/deeps/.cache/uv/archive-v0/044nI_HLHtvNp2AOxHKcK/lib/python3.14/site-packages' python3 -m pytest tests/test_horizon_steps.py::test_worker_update_cannot_overwrite_goal_control_fields -q -p no:cacheprovider --tb=short
+FFFFFFFF                                                                 [100%]
+=================================== FAILURES ===================================
+__ test_worker_update_cannot_overwrite_goal_control_fields[codex-gate-value0] __
+/private/tmp/task9-immutable-controls-direct-g52cPJ/tests/test_horizon_steps.py:1290: in test_worker_update_cannot_overwrite_goal_control_fields
+    assert after["gate"].get("review_criterion") == before["gate"].get(
+E   AssertionError: assert None == 'Independent reviewer must inspect the checkpoint.'
+E    +  where None = <built-in method get of dict object at 0x10a577c00>('review_criterion')
+E    +    where <built-in method get of dict object at 0x10a577c00> = {'kind': 'command', 'value': 'false'}.get
+E    +  and   'Independent reviewer must inspect the checkpoint.' = <built-in method get of dict object at 0x10a5778c0>('review_criterion')
+E    +    where <built-in method get of dict object at 0x10a5778c0> = {'kind': 'command', 'value': 'printf x >> /private/var/folders/04/6t6rss393pb365x36mxnhk2m0000gn/T/pytest-of-deeps/pyt...worker_update_cannot_over0/gate-counter-gate', 'review_criterion': 'Independent reviewer must inspect the checkpoint.'}.get
+_ test_worker_update_cannot_overwrite_goal_control_fields[codex-review_criterion-Worker says review passed.] _
+/private/tmp/task9-immutable-controls-direct-g52cPJ/tests/test_horizon_steps.py:1290: in test_worker_update_cannot_overwrite_goal_control_fields
+    assert after["gate"].get("review_criterion") == before["gate"].get(
+E   AssertionError: assert 'Worker says review passed.' == 'Independent ...e checkpoint.'
+E     
+E     - Independent reviewer must inspect the checkpoint.
+E     + Worker says review passed.
+_ test_worker_update_cannot_overwrite_goal_control_fields[codex-budget-value2] _
+/private/tmp/task9-immutable-controls-direct-g52cPJ/tests/test_horizon_steps.py:1294: in test_worker_update_cannot_overwrite_goal_control_fields
+    assert after["budget"] == before["budget"]
+E   AssertionError: assert {'max_turns':...inutes': None} == {'max_turns':...inutes': None}
+E     
+E     Omitting 1 identical items, use -vv to show
+E     Differing items:
+E     {'max_turns': 999} != {'max_turns': 2}
+E     Use -v to get more diff
+_ test_worker_update_cannot_overwrite_goal_control_fields[codex-watch_paths-value3] _
+/private/tmp/task9-immutable-controls-direct-g52cPJ/tests/test_horizon_steps.py:1295: in test_worker_update_cannot_overwrite_goal_control_fields
+    assert after["watch_paths"] == before["watch_paths"]
+E   AssertionError: assert [] == ['/private/va...ing project ']
+E     
+E     Right contains one more item: '/private/var/folders/04/6t6rss393pb365x36mxnhk2m0000gn/T/pytest-of-deeps/pytest-156/test_worker_update_cannot_over3/working project '
+E     Use -v to get more diff
+_ test_worker_update_cannot_overwrite_goal_control_fields[claude-gate-value0] __
+/private/tmp/task9-immutable-controls-direct-g52cPJ/tests/test_horizon_steps.py:1290: in test_worker_update_cannot_overwrite_goal_control_fields
+    assert after["gate"].get("review_criterion") == before["gate"].get(
+E   AssertionError: assert None == 'Independent reviewer must inspect the checkpoint.'
+E    +  where None = <built-in method get of dict object at 0x10b07db40>('review_criterion')
+E    +    where <built-in method get of dict object at 0x10b07db40> = {'kind': 'command', 'value': 'false'}.get
+E    +  and   'Independent reviewer must inspect the checkpoint.' = <built-in method get of dict object at 0x10b07fa00>('review_criterion')
+E    +    where <built-in method get of dict object at 0x10b07fa00> = {'kind': 'command', 'value': 'printf x >> /private/var/folders/04/6t6rss393pb365x36mxnhk2m0000gn/T/pytest-of-deeps/pyt...worker_update_cannot_over4/gate-counter-gate', 'review_criterion': 'Independent reviewer must inspect the checkpoint.'}.get
+_ test_worker_update_cannot_overwrite_goal_control_fields[claude-review_criterion-Worker says review passed.] _
+/private/tmp/task9-immutable-controls-direct-g52cPJ/tests/test_horizon_steps.py:1290: in test_worker_update_cannot_overwrite_goal_control_fields
+    assert after["gate"].get("review_criterion") == before["gate"].get(
+E   AssertionError: assert 'Worker says review passed.' == 'Independent ...e checkpoint.'
+E     
+E     - Independent reviewer must inspect the checkpoint.
+E     + Worker says review passed.
+_ test_worker_update_cannot_overwrite_goal_control_fields[claude-budget-value2] _
+/private/tmp/task9-immutable-controls-direct-g52cPJ/tests/test_horizon_steps.py:1294: in test_worker_update_cannot_overwrite_goal_control_fields
+    assert after["budget"] == before["budget"]
+E   AssertionError: assert {'max_turns':...inutes': None} == {'max_turns':...inutes': None}
+E     
+E     Omitting 1 identical items, use -vv to show
+E     Differing items:
+E     {'max_turns': 999} != {'max_turns': 2}
+E     Use -v to get more diff
+_ test_worker_update_cannot_overwrite_goal_control_fields[claude-watch_paths-value3] _
+/private/tmp/task9-immutable-controls-direct-g52cPJ/tests/test_horizon_steps.py:1295: in test_worker_update_cannot_overwrite_goal_control_fields
+    assert after["watch_paths"] == before["watch_paths"]
+E   AssertionError: assert [] == ['/private/va...ing project ']
+E     
+E     Right contains one more item: '/private/var/folders/04/6t6rss393pb365x36mxnhk2m0000gn/T/pytest-of-deeps/pytest-156/test_worker_update_cannot_over7/working project '
+E     Use -v to get more diff
+=========================== short test summary info ============================
+FAILED tests/test_horizon_steps.py::test_worker_update_cannot_overwrite_goal_control_fields[codex-gate-value0]
+FAILED tests/test_horizon_steps.py::test_worker_update_cannot_overwrite_goal_control_fields[codex-review_criterion-Worker says review passed.]
+FAILED tests/test_horizon_steps.py::test_worker_update_cannot_overwrite_goal_control_fields[codex-budget-value2]
+FAILED tests/test_horizon_steps.py::test_worker_update_cannot_overwrite_goal_control_fields[codex-watch_paths-value3]
+FAILED tests/test_horizon_steps.py::test_worker_update_cannot_overwrite_goal_control_fields[claude-gate-value0]
+FAILED tests/test_horizon_steps.py::test_worker_update_cannot_overwrite_goal_control_fields[claude-review_criterion-Worker says review passed.]
+FAILED tests/test_horizon_steps.py::test_worker_update_cannot_overwrite_goal_control_fields[claude-budget-value2]
+FAILED tests/test_horizon_steps.py::test_worker_update_cannot_overwrite_goal_control_fields[claude-watch_paths-value3]
+8 failed in 0.55s
+exit_status=1

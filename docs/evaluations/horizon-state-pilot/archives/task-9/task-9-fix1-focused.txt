@@ -1,0 +1,4 @@
+command: PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH='/Users/deeps/.cache/uv/archive-v0/044nI_HLHtvNp2AOxHKcK/lib/python3.14/site-packages' python3 -m pytest tests/test_state_concurrency.py tests/test_concurrency.py::test_goal_create_waits_for_process_owned_create_lock tests/test_horizon_steps.py::test_worker_update_cannot_overwrite_goal_control_fields tests/test_tree_hash.py::test_goal_bookkeeping_does_not_change_hash -q -p no:cacheprovider --tb=short
+.................................                                        [100%]
+33 passed in 3.53s
+exit_status=0

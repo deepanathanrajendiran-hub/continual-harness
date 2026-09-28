@@ -22,8 +22,10 @@ The evaluator material is deliberately separated from worker material:
   acceptance cases.  Root and the evaluator may consult it for fixture
   validation, but it must not be copied into a trial project, packet, worker
   prompt, or coordinator context.
-* `archives/` retains byte-identical Task 1–8 implementation-review and native
-  smoke evidence.  Those records are historical evidence, not Task 10 runs.
+* `archives/` retains byte-identical Task 1–8 implementation-review/native
+  smoke evidence and finalized Task 9 reports, raw outputs, controller
+  resolution, and controls.  Those records are historical evidence, not Task
+  10 runs.
 
 Root runs one native trial at a time.  Before `doctor`, `status`, or `start`,
 root must create the trial-local `.codex` or `.agents` marker in that disposable
@@ -33,11 +35,13 @@ Codex configuration; record any host-isolation limitation as a trial deviation.
 
 Use [trial-briefs.md](trial-briefs.md) to instantiate a coordinator/worker
 brief.  Only the listed model, mode, repeat, and environment path placeholders
-may change.  `runs/<fixture>-<sol|terra>-<state|conversation>-<repeat>/` is
-created only when its manifest row actually begins; it must retain the raw
-command output, goal/audit bytes and hashes, worker/reviewer records, evaluator
-observations, source hashes, and any protocol deviation.  Empty reserved
-directories or a completed-looking JSON record are not evidence.
+may change.  All 72 manifest-matched
+`runs/<fixture>-<sol|terra>-<state|conversation>-<repeat>/` directories are
+already reserved placeholders.  A row begins only when root replaces its
+placeholder state by adding raw command output, goal/audit bytes and hashes,
+worker/reviewer records, evaluator observations, source hashes, and any
+protocol deviation.  A reserved directory or a completed-looking JSON record
+is not evidence.
 
 [results.jsonl](results.jsonl) is intentionally empty.  Append exactly one
 schema-valid record only after independent evaluator scoring of a run's raw

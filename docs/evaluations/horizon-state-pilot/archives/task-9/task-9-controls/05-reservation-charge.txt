@@ -1,0 +1,33 @@
+mutation: Erase the valid reserved attempt and charged turn immediately after the durable begin commit.
+mutated_copy: /tmp/task9-reservation-charge-BAe1ht
+b3ea418de3a8d27b6fb82f76a13b5dcd82141eac67ef68ca3755ea9b8fb23c0d  /tmp/task9-reservation-charge-BAe1ht/harness/steps.py
+mutation_diff:
+--- /Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/harness/steps.py	2026-09-27 13:14:16
++++ /tmp/task9-reservation-charge-BAe1ht/harness/steps.py	2026-09-27 13:29:24
+@@ -229,6 +229,10 @@
+         state["execution"]["active_attempt"] = request_id
+         state["execution"]["attempts"].append(attempt)
+         state = goal.commit_revision(state, expected_revision=expected_revision)
++    state["used"]["turns"] = 0
++    state["execution"]["active_attempt"] = None
++    state["execution"]["attempts"] = []
++    goal._save(state)
+     return _begin_report(state, attempt, packet, replayed=False)
+ 
+ 
+command: PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH='/Users/deeps/.cache/uv/archive-v0/044nI_HLHtvNp2AOxHKcK/lib/python3.14/site-packages' python3 -m pytest tests/test_state_concurrency.py::test_reserved_attempt_survives_crash_before_dispatch -q -p no:cacheprovider --tb=short
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+_________ test_reserved_attempt_survives_crash_before_dispatch[codex] __________
+/private/tmp/task9-reservation-charge-BAe1ht/tests/test_state_concurrency.py:266: in test_reserved_attempt_survives_crash_before_dispatch
+    assert saved["used"]["turns"] == 1
+E   assert 0 == 1
+_________ test_reserved_attempt_survives_crash_before_dispatch[claude] _________
+/private/tmp/task9-reservation-charge-BAe1ht/tests/test_state_concurrency.py:266: in test_reserved_attempt_survives_crash_before_dispatch
+    assert saved["used"]["turns"] == 1
+E   assert 0 == 1
+=========================== short test summary info ============================
+FAILED tests/test_state_concurrency.py::test_reserved_attempt_survives_crash_before_dispatch[codex]
+FAILED tests/test_state_concurrency.py::test_reserved_attempt_survives_crash_before_dispatch[claude]
+2 failed in 0.21s
+exit_status=1

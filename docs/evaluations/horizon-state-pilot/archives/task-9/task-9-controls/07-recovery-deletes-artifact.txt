@@ -1,0 +1,46 @@
+mutation: Delete artifact.txt during recovery before committing the failed checkpoint.
+mutated_copy: /tmp/task9-artifact-delete-RbFxmB
+80a8e3b77bb5148a544aa44e70f222f7f5bec149ea64e13e1d5940e8d5617017  /tmp/task9-artifact-delete-RbFxmB/harness/steps.py
+mutation_diff:
+--- /Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/harness/steps.py	2026-09-27 13:14:16
++++ /tmp/task9-artifact-delete-RbFxmB/harness/steps.py	2026-09-27 13:29:50
+@@ -514,6 +514,9 @@
+         with filelock.goal_locked(runner, timeout=0):
+             with filelock.goal_locked(goal._path(slug)):
+                 state = _state(slug)
++                artifact = Path(state["cwd"]) / "artifact.txt"
++                if artifact.exists():
++                    artifact.unlink()
+                 attempt = _attempt(state, attempt_id)
+                 if attempt is None:
+                     raise StepConflict(f"unknown attempt: {attempt_id}")
+command: PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH='/Users/deeps/.cache/uv/archive-v0/044nI_HLHtvNp2AOxHKcK/lib/python3.14/site-packages' python3 -m pytest tests/test_state_concurrency.py::test_artifact_edit_survives_crash_and_marks_old_evidence_stale -q -p no:cacheprovider --tb=short
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+____ test_artifact_edit_survives_crash_and_marks_old_evidence_stale[codex] _____
+/private/tmp/task9-artifact-delete-RbFxmB/tests/test_state_concurrency.py:344: in test_artifact_edit_survives_crash_and_marks_old_evidence_stale
+    assert artifact.read_text() == "version two"
+           ^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.4/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.4/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/private/var/folders/04/6t6rss393pb365x36mxnhk2m0000gn/T/pytest-of-deeps/pytest-145/test_artifact_edit_survives_cr0/working project /artifact.txt'
+____ test_artifact_edit_survives_crash_and_marks_old_evidence_stale[claude] ____
+/private/tmp/task9-artifact-delete-RbFxmB/tests/test_state_concurrency.py:344: in test_artifact_edit_survives_crash_and_marks_old_evidence_stale
+    assert artifact.read_text() == "version two"
+           ^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.4/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.4/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:771: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/private/var/folders/04/6t6rss393pb365x36mxnhk2m0000gn/T/pytest-of-deeps/pytest-145/test_artifact_edit_survives_cr1/working project /artifact.txt'
+=========================== short test summary info ============================
+FAILED tests/test_state_concurrency.py::test_artifact_edit_survives_crash_and_marks_old_evidence_stale[codex]
+FAILED tests/test_state_concurrency.py::test_artifact_edit_survives_crash_and_marks_old_evidence_stale[claude]
+2 failed in 0.41s
+exit_status=1

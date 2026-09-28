@@ -1,0 +1,38 @@
+mutation: Disable the mutable Horizon bookkeeping exclusion from tree hashing.
+mutated_copy: /tmp/task9-tree-bookkeeping-jZc5a6
+31b7e27063ff3d2cb8bd3428a8523a2014b4f8a4ad67b1e36d29ead62752a0bc  harness/tree_hash.py  /tmp/task9-tree-bookkeeping-jZc5a6/harness/tree_hash.py
+mutation_diff:
+--- /Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/harness/tree_hash.py	2026-09-05 00:23:39
++++ /tmp/task9-tree-bookkeeping-jZc5a6/harness/tree_hash.py	2026-09-27 23:56:49
+@@ -45,11 +45,6 @@
+ 
+ 
+ def _bookkeeping(path: Path) -> bool:
+-    parts = path.parts
+-    for i, part in enumerate(parts):
+-        if part.lower() in ('.claude', '.codex') and parts[i + 1:i + 2] == ('harness',):
+-            tail = parts[i + 2:]
+-            return bool(tail) and tail[0] in ('goals', 'undo', 'CHANGELOG.md')
+     return False
+ 
+ 
+command: PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH='/Users/deeps/.cache/uv/archive-v0/044nI_HLHtvNp2AOxHKcK/lib/python3.14/site-packages' python3 -m pytest tests/test_tree_hash.py::test_goal_bookkeeping_does_not_change_hash -q -p no:cacheprovider --tb=short
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+______________ test_goal_bookkeeping_does_not_change_hash[codex] _______________
+/private/tmp/task9-tree-bookkeeping-jZc5a6/tests/test_tree_hash.py:208: in test_goal_bookkeeping_does_not_change_hash
+    steps.begin(state["slug"], "r1")
+/private/tmp/task9-tree-bookkeeping-jZc5a6/harness/steps.py:204: in begin
+    raise goal.RevisionConflict("Project snapshot changed during packet preparation")
+E   goal.RevisionConflict: Project snapshot changed during packet preparation
+______________ test_goal_bookkeeping_does_not_change_hash[claude] ______________
+/private/tmp/task9-tree-bookkeeping-jZc5a6/tests/test_tree_hash.py:208: in test_goal_bookkeeping_does_not_change_hash
+    steps.begin(state["slug"], "r1")
+/private/tmp/task9-tree-bookkeeping-jZc5a6/harness/steps.py:204: in begin
+    raise goal.RevisionConflict("Project snapshot changed during packet preparation")
+E   goal.RevisionConflict: Project snapshot changed during packet preparation
+=========================== short test summary info ============================
+FAILED tests/test_tree_hash.py::test_goal_bookkeeping_does_not_change_hash[codex]
+FAILED tests/test_tree_hash.py::test_goal_bookkeeping_does_not_change_hash[claude]
+2 failed in 0.17s
+exit_status=1

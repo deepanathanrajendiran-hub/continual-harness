@@ -1,0 +1,37 @@
+mutation: Re-run the command gate while reporting an already accepted terminal replay.
+mutated_copy: /tmp/task9-terminal-replay-WXFn27
+e0a77038d3b52ec3b44521ec211a74844d750ab9c73eb5ba6c83bb79b93fc9a3  harness/steps.py  /tmp/task9-terminal-replay-WXFn27/harness/steps.py
+mutation_diff:
+--- /Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/harness/steps.py	2026-09-27 13:14:16
++++ /tmp/task9-terminal-replay-WXFn27/harness/steps.py	2026-09-27 13:37:10
+@@ -139,6 +139,10 @@
+ 
+ 
+ def report(state: dict, attempt: dict, *, replayed: bool = False) -> dict:
++    if replayed and attempt["status"] == "accepted":
++        replay_state = copy.deepcopy(state)
++        replay_state["checkpoints"] = []
++        gate.run_gate_at(replay_state)
+     """Return current goal status plus this attempt's durable outcome."""
+     status = attempt["status"]
+     result = {
+command: PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH='/Users/deeps/.cache/uv/archive-v0/044nI_HLHtvNp2AOxHKcK/lib/python3.14/site-packages' python3 -m pytest tests/test_state_concurrency.py::test_crash_after_atomic_commit_replays_without_gate_or_checkpoint -q -p no:cacheprovider --tb=short
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+___ test_crash_after_atomic_commit_replays_without_gate_or_checkpoint[codex] ___
+/private/tmp/task9-terminal-replay-WXFn27/tests/test_state_concurrency.py:624: in test_crash_after_atomic_commit_replays_without_gate_or_checkpoint
+    assert counter.read_bytes() == b"x"
+E   AssertionError: assert b'xx' == b'x'
+E     
+E     Use -v to get more diff
+__ test_crash_after_atomic_commit_replays_without_gate_or_checkpoint[claude] ___
+/private/tmp/task9-terminal-replay-WXFn27/tests/test_state_concurrency.py:624: in test_crash_after_atomic_commit_replays_without_gate_or_checkpoint
+    assert counter.read_bytes() == b"x"
+E   AssertionError: assert b'xx' == b'x'
+E     
+E     Use -v to get more diff
+=========================== short test summary info ============================
+FAILED tests/test_state_concurrency.py::test_crash_after_atomic_commit_replays_without_gate_or_checkpoint[codex]
+FAILED tests/test_state_concurrency.py::test_crash_after_atomic_commit_replays_without_gate_or_checkpoint[claude]
+2 failed in 0.31s
+exit_status=1

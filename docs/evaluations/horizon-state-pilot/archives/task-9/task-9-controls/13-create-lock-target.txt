@@ -1,0 +1,33 @@
+mutation: Acquire WRONG-CREATE instead of the shared CREATE lock in both goal.create branches.
+mutated_copy: /tmp/task9-create-lock-clean-shbb5V
+a316ec7bcfc9a366d735e7c4794185faaa7c584236f45b8c3aea70af599a0461  harness/goal.py  /tmp/task9-create-lock-clean-shbb5V/harness/goal.py
+mutation_diff:
+--- /Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/harness/goal.py	2026-09-23 08:08:07
++++ /tmp/task9-create-lock-clean-shbb5V/harness/goal.py	2026-09-27 23:53:32
+@@ -329,10 +329,10 @@
+             )
+         except task_state.StateError as error:
+             raise GoalStateError(f"initial packet cannot be created: {error}") from error
+-        with filelock.goal_locked(paths.goals_dir() / "CREATE"):
++        with filelock.goal_locked(paths.goals_dir() / "WRONG-CREATE"):
+             state["slug"] = _unique_slug(state["slug"])
+             return _save(state)
+-    with filelock.goal_locked(paths.goals_dir() / "CREATE"):
++    with filelock.goal_locked(paths.goals_dir() / "WRONG-CREATE"):
+         return _create_locked(goal, cwd, gate_kind, gate_value, max_turns,
+                               max_minutes, watch_paths, review_criterion)
+ 
+command: PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH='/Users/deeps/.cache/uv/archive-v0/044nI_HLHtvNp2AOxHKcK/lib/python3.14/site-packages' python3 -m pytest tests/test_concurrency.py::test_goal_create_waits_for_process_owned_create_lock -q -p no:cacheprovider --tb=short
+F                                                                        [100%]
+=================================== FAILURES ===================================
+_____________ test_goal_create_waits_for_process_owned_create_lock _____________
+tests/test_concurrency.py:147: in test_goal_create_waits_for_process_owned_create_lock
+    assert list(state_dir.glob("*.json")) == []
+E   AssertionError: assert [PosixPath('/...shared.json')] == []
+E     
+E     Left contains one more item: PosixPath('/private/var/folders/04/6t6rss393pb365x36mxnhk2m0000gn/T/pytest-of-deeps/pytest-154/test_goal_create_waits_for_pro0/goals/shared.json')
+E     Use -v to get more diff
+=========================== short test summary info ============================
+FAILED tests/test_concurrency.py::test_goal_create_waits_for_process_owned_create_lock
+1 failed in 0.07s
+exit_status=1

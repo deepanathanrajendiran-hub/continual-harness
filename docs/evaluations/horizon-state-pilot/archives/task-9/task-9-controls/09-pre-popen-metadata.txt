@@ -1,0 +1,36 @@
+mutation: Inject gate_process metadata into the durable finishing commit before any Popen exists.
+mutated_copy: /tmp/task9-pre-popen-d6RU4x
+e58c25ff21c1630fd1f7c405f17207d242f9a77baffc09b0fdff1a836dd32894  harness/goal.py  /tmp/task9-pre-popen-d6RU4x/harness/goal.py
+mutation_diff:
+--- /Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/harness/goal.py	2026-09-23 08:08:07
++++ /tmp/task9-pre-popen-d6RU4x/harness/goal.py	2026-09-27 13:35:10
+@@ -696,6 +696,13 @@
+ 
+ 
+ def commit_revision(state: dict, *, expected_revision: int) -> dict:
++    for attempt in state.get("execution", {}).get("attempts", []):
++        if attempt.get("status") == "finishing" and attempt.get("gate_process") is None:
++            attempt["gate_process"] = {
++                "pid": 999999, "pgid": 999999,
++                "started_at": _now(),
++                "finish_nonce": attempt.get("finish_nonce"),
++            }
+     """Commit one state-mode mutation while the caller holds the strict goal lock."""
+     current = load(state["slug"])
+     if execution_mode(current) != "state":
+command: PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH='/Users/deeps/.cache/uv/archive-v0/044nI_HLHtvNp2AOxHKcK/lib/python3.14/site-packages' python3 -m pytest tests/test_state_concurrency.py::test_crash_after_finishing_marker_records_only_recovery_failure -q -p no:cacheprovider --tb=short
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+____ test_crash_after_finishing_marker_records_only_recovery_failure[codex] ____
+/private/tmp/task9-pre-popen-d6RU4x/tests/test_state_concurrency.py:382: in test_crash_after_finishing_marker_records_only_recovery_failure
+    assert attempt["gate_process"] is None
+E   AssertionError: assert {'pid': 999999, 'pgid': 999999, 'started_at': '2026-09-27T17:35:14.964170+00:00', 'finish_nonce': '00e73d4233ed0e98dd1e1dc5ac6126d2'} is None
+___ test_crash_after_finishing_marker_records_only_recovery_failure[claude] ____
+/private/tmp/task9-pre-popen-d6RU4x/tests/test_state_concurrency.py:382: in test_crash_after_finishing_marker_records_only_recovery_failure
+    assert attempt["gate_process"] is None
+E   AssertionError: assert {'pid': 999999, 'pgid': 999999, 'started_at': '2026-09-27T17:35:15.074004+00:00', 'finish_nonce': '3be68a45c1edf2893a293672ab8150e2'} is None
+=========================== short test summary info ============================
+FAILED tests/test_state_concurrency.py::test_crash_after_finishing_marker_records_only_recovery_failure[codex]
+FAILED tests/test_state_concurrency.py::test_crash_after_finishing_marker_records_only_recovery_failure[claude]
+2 failed in 0.24s
+exit_status=1

@@ -1,0 +1,34 @@
+mutation: Persist a gate PID one greater than the live owned Popen handle while keeping fixture cleanup on that live handle.
+mutated_copy: /tmp/task9-live-handle-binding-AyrJMw
+1a53f69381fb9577957852b8f3385afe4b09c9dee854be307483d94220162c98  harness/goal.py  /tmp/task9-live-handle-binding-AyrJMw/harness/goal.py
+mutation_diff:
+--- /Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/harness/goal.py	2026-09-23 08:08:07
++++ /tmp/task9-live-handle-binding-AyrJMw/harness/goal.py	2026-09-27 23:58:01
+@@ -696,6 +696,9 @@
+ 
+ 
+ def commit_revision(state: dict, *, expected_revision: int) -> dict:
++    for attempt in state.get("execution", {}).get("attempts", []):
++        if attempt.get("status") == "finishing" and attempt.get("gate_process") is not None:
++            attempt["gate_process"]["pid"] += 1
+     """Commit one state-mode mutation while the caller holds the strict goal lock."""
+     current = load(state["slug"])
+     if execution_mode(current) != "state":
+command: PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH='/Users/deeps/.cache/uv/archive-v0/044nI_HLHtvNp2AOxHKcK/lib/python3.14/site-packages' python3 -m pytest tests/test_state_concurrency.py::test_crash_during_gate_uses_live_handle_for_cleanup -q -p no:cacheprovider --tb=short
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+__________ test_crash_during_gate_uses_live_handle_for_cleanup[codex] __________
+/private/tmp/task9-live-handle-binding-AyrJMw/tests/test_state_concurrency.py:492: in test_crash_during_gate_uses_live_handle_for_cleanup
+    assert gate_process["pid"] == owned[0].pid
+E   AssertionError: assert 36480 == 36479
+E    +  where 36479 = <Popen: returncode: None args: ['/opt/homebrew/opt/python@3.14/bin/python3.1...>.pid
+_________ test_crash_during_gate_uses_live_handle_for_cleanup[claude] __________
+/private/tmp/task9-live-handle-binding-AyrJMw/tests/test_state_concurrency.py:492: in test_crash_during_gate_uses_live_handle_for_cleanup
+    assert gate_process["pid"] == owned[0].pid
+E   AssertionError: assert 36489 == 36488
+E    +  where 36488 = <Popen: returncode: None args: ['/opt/homebrew/opt/python@3.14/bin/python3.1...>.pid
+=========================== short test summary info ============================
+FAILED tests/test_state_concurrency.py::test_crash_during_gate_uses_live_handle_for_cleanup[codex]
+FAILED tests/test_state_concurrency.py::test_crash_during_gate_uses_live_handle_for_cleanup[claude]
+2 failed in 0.21s
+exit_status=1

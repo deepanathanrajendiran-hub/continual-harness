@@ -1,0 +1,45 @@
+mutation: Signal the diagnostic saved gate PID during recovery despite having no live owned handle.
+mutated_copy: /tmp/task9-saved-pid-signal-KGpCy4
+cca3cac267b58ebbfc242656340e32da29e1a98d15cfe032f57c3e3104161835  harness/steps.py  /tmp/task9-saved-pid-signal-KGpCy4/harness/steps.py
+mutation_diff:
+--- /Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/harness/steps.py	2026-09-27 13:14:16
++++ /tmp/task9-saved-pid-signal-KGpCy4/harness/steps.py	2026-09-27 13:35:48
+@@ -488,6 +488,10 @@
+ 
+ def recover(slug: str, attempt_id: str, *, expected_revision: int,
+             reason: str, worker_state: str, evidence_file: Path) -> dict:
++    negative_state = goal.load(slug)
++    negative_attempt = _attempt(negative_state, attempt_id)
++    if negative_attempt is not None and negative_attempt.get("gate_process") is not None:
++        os.killpg(negative_attempt["gate_process"]["pid"], 9)
+     _require_slug(slug)
+     _require_id(attempt_id, "attempt_id")
+     if isinstance(expected_revision, bool) or not isinstance(expected_revision, int) or expected_revision < 0:
+command: PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH='/Users/deeps/.cache/uv/archive-v0/044nI_HLHtvNp2AOxHKcK/lib/python3.14/site-packages' python3 -m pytest tests/test_state_concurrency.py::test_crash_during_gate_uses_live_handle_for_cleanup -q -p no:cacheprovider --tb=short
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+__________ test_crash_during_gate_uses_live_handle_for_cleanup[codex] __________
+/private/tmp/task9-saved-pid-signal-KGpCy4/tests/test_state_concurrency.py:511: in test_crash_during_gate_uses_live_handle_for_cleanup
+    recovered = steps.recover(
+/private/tmp/task9-saved-pid-signal-KGpCy4/harness/steps.py:494: in recover
+    os.killpg(negative_attempt["gate_process"]["pid"], 9)
+/private/tmp/task9-saved-pid-signal-KGpCy4/tests/test_state_concurrency.py:502: in <lambda>
+    lambda *_args: (_ for _ in ()).throw(
+/private/tmp/task9-saved-pid-signal-KGpCy4/tests/test_state_concurrency.py:502: in <genexpr>
+    lambda *_args: (_ for _ in ()).throw(
+E   AssertionError: recovery must not signal the diagnostic saved PID
+_________ test_crash_during_gate_uses_live_handle_for_cleanup[claude] __________
+/private/tmp/task9-saved-pid-signal-KGpCy4/tests/test_state_concurrency.py:511: in test_crash_during_gate_uses_live_handle_for_cleanup
+    recovered = steps.recover(
+/private/tmp/task9-saved-pid-signal-KGpCy4/harness/steps.py:494: in recover
+    os.killpg(negative_attempt["gate_process"]["pid"], 9)
+/private/tmp/task9-saved-pid-signal-KGpCy4/tests/test_state_concurrency.py:502: in <lambda>
+    lambda *_args: (_ for _ in ()).throw(
+/private/tmp/task9-saved-pid-signal-KGpCy4/tests/test_state_concurrency.py:502: in <genexpr>
+    lambda *_args: (_ for _ in ()).throw(
+E   AssertionError: recovery must not signal the diagnostic saved PID
+=========================== short test summary info ============================
+FAILED tests/test_state_concurrency.py::test_crash_during_gate_uses_live_handle_for_cleanup[codex]
+FAILED tests/test_state_concurrency.py::test_crash_during_gate_uses_live_handle_for_cleanup[claude]
+2 failed in 0.23s
+exit_status=1

@@ -1,0 +1,44 @@
+$ python3 .agents/skills/horizon/scripts/harness.py --runtime codex --project /Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state doctor
+{
+  "runtime": "codex",
+  "project": "/Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state",
+  "implementation": "/Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/harness",
+  "state": "/Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/.codex/harness",
+  "targets": {
+    "rho": "/Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/AGENTS.md",
+    "G": "/Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/.agents/skills",
+    "K": "/Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/.codex/agents",
+    "M": "/Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/.codex/memory"
+  },
+  "memory_mode": "explicit recall",
+  "state_supported": true,
+  "worker_availability": "Determined by the host; the Python CLI does not dispatch or inspect workers."
+}
+codex_doctor_exit=0
+$ python3 .agents/skills/horizon/scripts/harness.py --runtime codex --project /Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state status
+{
+  "goals": []
+}
+codex_status_exit=0
+$ python3 .claude/skills/horizon/scripts/harness.py --runtime claude --project /Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state doctor
+{
+  "runtime": "claude",
+  "project": "/Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state",
+  "implementation": "/Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/harness",
+  "state": "/Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/.claude/harness",
+  "targets": {
+    "rho": "/Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/CLAUDE.md",
+    "G": "/Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/.claude/skills",
+    "K": "/Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/.claude/agents",
+    "M": "/Users/deeps/.claude/projects/-Users-deeps-Documents-NEW-STUFF-fun--.superpowers-worktrees-horizon-state/memory"
+  },
+  "memory_mode": "Claude project memory",
+  "state_supported": true,
+  "worker_availability": "Determined by the host; the Python CLI does not dispatch or inspect workers."
+}
+claude_doctor_exit=0
+$ python3 .claude/skills/horizon/scripts/harness.py --runtime claude --project /Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state status
+{
+  "goals": []
+}
+claude_status_exit=0

@@ -1,0 +1,36 @@
+mutation: Run the goal gate before returning StepBusy when the shared finish runner lock is already owned.
+mutated_copy: /tmp/task9-duplicate-finish-tO48H5
+6fb8f58ce6d2bcc40b75648293a952d0559e5cfdf1a6547d00ecd4d5fc9c3bab  /tmp/task9-duplicate-finish-tO48H5/harness/steps.py
+mutation_diff:
+--- /Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/harness/steps.py	2026-09-27 13:14:16
++++ /tmp/task9-duplicate-finish-tO48H5/harness/steps.py	2026-09-27 13:28:09
+@@ -429,6 +429,9 @@
+                 state = goal.commit_revision(state, expected_revision=finishing_revision)
+             return report(state, attempt)
+     except filelock.LockTimeout as error:
++        duplicate_state = _state(slug)
++        duplicate_state["checkpoints"] = []
++        gate.run_gate_at(duplicate_state, timeout=timeout)
+         raise StepBusy("another finish invocation owns this attempt") from error
+     except task_state.StateError as error:
+         raise StepError(f"invalid worker update or candidate: {error}") from error
+command: PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH='/Users/deeps/.cache/uv/archive-v0/044nI_HLHtvNp2AOxHKcK/lib/python3.14/site-packages' python3 -m pytest tests/test_state_concurrency.py::test_duplicate_finish_cannot_start_a_second_gate -q -p no:cacheprovider --tb=short
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+___________ test_duplicate_finish_cannot_start_a_second_gate[codex] ____________
+/private/tmp/task9-duplicate-finish-tO48H5/tests/test_state_concurrency.py:215: in test_duplicate_finish_cannot_start_a_second_gate
+    assert counter.read_bytes() == b"x"
+E   AssertionError: assert b'xx' == b'x'
+E     
+E     Use -v to get more diff
+___________ test_duplicate_finish_cannot_start_a_second_gate[claude] ___________
+/private/tmp/task9-duplicate-finish-tO48H5/tests/test_state_concurrency.py:215: in test_duplicate_finish_cannot_start_a_second_gate
+    assert counter.read_bytes() == b"x"
+E   AssertionError: assert b'xx' == b'x'
+E     
+E     Use -v to get more diff
+=========================== short test summary info ============================
+FAILED tests/test_state_concurrency.py::test_duplicate_finish_cannot_start_a_second_gate[codex]
+FAILED tests/test_state_concurrency.py::test_duplicate_finish_cannot_start_a_second_gate[claude]
+2 failed in 10.87s
+exit_status=1

@@ -1,0 +1,33 @@
+mutation: Acquire a distinct recovery lock instead of the live finish runner lock.
+mutated_copy: /tmp/task9-live-recovery-UflIBr
+63680bce1b62ff46eb4b92f861dc219f13e63a212b9cc6b2535ac1c468d22404  /tmp/task9-live-recovery-UflIBr/harness/steps.py
+mutation_diff:
+--- /Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/harness/steps.py	2026-09-27 13:14:16
++++ /tmp/task9-live-recovery-UflIBr/harness/steps.py	2026-09-27 13:28:33
+@@ -509,7 +509,7 @@
+     except Exception:
+         observed_hash = gate.UNKNOWN_HASH
+ 
+-    runner = goal._path(slug).with_name(f"{slug}.{attempt_id}.runner")
++    runner = goal._path(slug).with_name(f"{slug}.{attempt_id}.recovery-negative-control")
+     try:
+         with filelock.goal_locked(runner, timeout=0):
+             with filelock.goal_locked(goal._path(slug)):
+command: PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH='/Users/deeps/.cache/uv/archive-v0/044nI_HLHtvNp2AOxHKcK/lib/python3.14/site-packages' python3 -m pytest tests/test_state_concurrency.py::test_recovery_is_refused_while_finish_runner_is_live -q -p no:cacheprovider --tb=short
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+_________ test_recovery_is_refused_while_finish_runner_is_live[codex] __________
+/private/tmp/task9-live-recovery-UflIBr/tests/test_state_concurrency.py:231: in test_recovery_is_refused_while_finish_runner_is_live
+    with pytest.raises(steps.StepBusy):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE StepBusy
+_________ test_recovery_is_refused_while_finish_runner_is_live[claude] _________
+/private/tmp/task9-live-recovery-UflIBr/tests/test_state_concurrency.py:231: in test_recovery_is_refused_while_finish_runner_is_live
+    with pytest.raises(steps.StepBusy):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE StepBusy
+=========================== short test summary info ============================
+FAILED tests/test_state_concurrency.py::test_recovery_is_refused_while_finish_runner_is_live[codex]
+FAILED tests/test_state_concurrency.py::test_recovery_is_refused_while_finish_runner_is_live[claude]
+2 failed in 0.36s
+exit_status=1

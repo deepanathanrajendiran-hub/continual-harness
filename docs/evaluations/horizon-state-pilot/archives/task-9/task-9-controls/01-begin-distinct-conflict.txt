@@ -1,0 +1,42 @@
+mutation: Replace the three distinct-request snapshot/procedure revision conflicts in begin() with generic StepError classifications.
+mutated_copy: /tmp/task9-begin-distinct-a0ITMm
+f78e7e8dcec2ef07295c91387b2bc2f8ad3c361f2d2f26c62c0001a62292dde5  harness/steps.py  /tmp/task9-begin-distinct-a0ITMm/harness/steps.py
+mutation_diff:
+--- /Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/harness/steps.py	2026-09-27 13:14:16
++++ /tmp/task9-begin-distinct-a0ITMm/harness/steps.py	2026-09-27 13:34:03
+@@ -198,16 +198,16 @@
+         if existing is not None:
+             return _begin_report(state, existing, _saved_packet(state, existing), replayed=True)
+         if state["execution"]["revision"] != expected_revision:
+-            raise goal.RevisionConflict("Execution revision changed during packet preparation")
++            raise StepError("negative control erased the required conflict classification")
+         _admit(state)
+         if tree_hash.compute(state["cwd"], state["watch_paths"]) != current_hash:
+-            raise goal.RevisionConflict("Project snapshot changed during packet preparation")
++            raise StepError("negative control erased the required snapshot conflict")
+         try:
+             current_procedure = task_state.procedure(paths.runtime())
+         except task_state.StateError as error:
+             raise StepConflict(f"cannot verify Horizon procedure: {error}") from error
+         if current_procedure["sha256"] != packet["procedure"]["sha256"]:
+-            raise goal.RevisionConflict("Horizon procedure changed during packet preparation")
++            raise StepError("negative control erased the required procedure conflict")
+         if read_blob(packet_ref, Path(state["cwd"])) != packet_bytes:
+             raise StepConflict("saved packet bytes changed during preparation")
+         attempt = {
+command: PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH='/Users/deeps/.cache/uv/archive-v0/044nI_HLHtvNp2AOxHKcK/lib/python3.14/site-packages' python3 -m pytest tests/test_state_concurrency.py::test_begin_races_reserve_exactly_one_attempt -k request_ids0 -q -p no:cacheprovider --tb=short
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+_______ test_begin_races_reserve_exactly_one_attempt[codex-request_ids0] _______
+/private/tmp/task9-begin-distinct-a0ITMm/tests/test_state_concurrency.py:191: in test_begin_races_reserve_exactly_one_attempt
+    assert loser["error"] in {"StepBusy", "RevisionConflict"}
+E   AssertionError: assert 'StepError' in {'RevisionConflict', 'StepBusy'}
+______ test_begin_races_reserve_exactly_one_attempt[claude-request_ids0] _______
+/private/tmp/task9-begin-distinct-a0ITMm/tests/test_state_concurrency.py:191: in test_begin_races_reserve_exactly_one_attempt
+    assert loser["error"] in {"StepBusy", "RevisionConflict"}
+E   AssertionError: assert 'StepError' in {'RevisionConflict', 'StepBusy'}
+=========================== short test summary info ============================
+FAILED tests/test_state_concurrency.py::test_begin_races_reserve_exactly_one_attempt[codex-request_ids0]
+FAILED tests/test_state_concurrency.py::test_begin_races_reserve_exactly_one_attempt[claude-request_ids0]
+2 failed, 2 deselected in 0.27s
+exit_status=1
