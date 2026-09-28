@@ -1,0 +1,51 @@
+{
+  "slug": "fix-the-parser-so-empty-input-is-rejected-while-valid-intege",
+  "goal": "Fix the parser so empty input is rejected while valid integers, including zero, remain accepted; preserve evaluator-owned acceptance tests; use exactly two state-mode increments: investigation without parser source changes, then implementation.",
+  "status": "complete",
+  "runtime": "codex",
+  "gate": {
+    "kind": "command",
+    "value": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v",
+    "review_criterion": "Confirm empty input is rejected, valid integers including zero are preserved, evaluator-owned tests are unchanged, the source change is minimal, and the two increments respected investigation-before-editing."
+  },
+  "budget": {
+    "max_turns": 2,
+    "max_minutes": 60
+  },
+  "used": {
+    "turns": 2,
+    "started": "2026-09-24T23:25:37.772911+00:00"
+  },
+  "budget_exhausted": true,
+  "last_checkpoint": {
+    "turn": 2,
+    "at": "2026-09-24T23:33:43.636148+00:00",
+    "did": "Replaced parse_number's empty-input fallback with direct integer conversion, preserved the evaluator-owned test file, and recorded a passing three-test verification run.",
+    "next": "Inspect the one-line parser change and implementation evidence, then perform coordinator-owned acceptance and independent review.",
+    "tree_hash": "c9453ecc61e7947cd15227303ed318cb669df5fc3123c6b5f1fede65e73ba6d9",
+    "gate": "pass",
+    "gate_output": "test_empty_input_is_rejected (test_parser_example.ParserTests.test_empty_input_is_rejected) ... ok\ntest_valid_integer_is_preserved (test_parser_example.ParserTests.test_valid_integer_is_preserved) ... ok\ntest_zero_is_preserved (test_parser_example.ParserTests.test_zero_is_preserved) ... ok\n\n----------------------------------------------------------------------\nRan 3 tests in 0.000s\n\nOK\n",
+    "gate_spec": {
+      "kind": "command",
+      "value": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v",
+      "review_criterion": "Confirm empty input is rejected, valid integers including zero are preserved, evaluator-owned tests are unchanged, the source change is minimal, and the two increments respected investigation-before-editing."
+    }
+  },
+  "reviews": [
+    {
+      "turn": 2,
+      "tree_hash": "c9453ecc61e7947cd15227303ed318cb669df5fc3123c6b5f1fede65e73ba6d9",
+      "at": "2026-09-24T23:36:10.285808+00:00",
+      "judge": "/root/native_confirmed_codex/horizon_independent_review",
+      "criterion": "Confirm empty input is rejected, valid integers including zero are preserved, evaluator-owned tests are unchanged, the source change is minimal, and the two increments respected investigation-before-editing.",
+      "result": "pass",
+      "evidence": "PASS — all review criteria are satisfied.\n\n- Fresh acceptance run exited `0`: all three tests passed, including empty-input rejection and preservation of `\"0\"` and `\"12\"`.\n- Current parser is the minimal one-line fix: `int(value)`. Reconstructing the original `int(value or \"0\")` source produced the recorded initial SHA-256 exactly, confirming only the fallback expression changed.\n- Evaluator test SHA-256 remains `e280cf...ab86`, matching the recorded initial and final digest.\n- State records show exactly two increments: `request-001` investigated with the initial watched-tree hash and expected failing gate; `request-002` followed afterward, changed the tree hash, and passed the gate. Only two begin/finish/update record sets exist.\n- Evidence-file hashes match their worker-update references.\n\nOmission: complete native collaboration and AST-editor transcripts were unavailable; spawn records are coordinator-written accounts. Thus edit-tool provenance cannot be independently audited, but this does not undermine the stated review criterion or the artifact-based sequencing evidence."
+    }
+  ],
+  "gate_evidence": "test_empty_input_is_rejected (test_parser_example.ParserTests.test_empty_input_is_rejected) ... ok\ntest_valid_integer_is_preserved (test_parser_example.ParserTests.test_valid_integer_is_preserved) ... ok\ntest_zero_is_preserved (test_parser_example.ParserTests.test_zero_is_preserved) ... ok\n\n----------------------------------------------------------------------\nRan 3 tests in 0.000s\n\nOK",
+  "execution_mode": "state",
+  "turn_unit": "worker_attempt",
+  "execution_revision": 12,
+  "active_attempt": null,
+  "next_action": "Inspect the one-line parser change and implementation evidence, then perform coordinator-owned acceptance and independent review."
+}

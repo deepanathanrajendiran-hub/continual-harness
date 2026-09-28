@@ -1,0 +1,88 @@
+{
+  "slug": "fix-the-parser-so-empty-input-is-rejected-while-valid-intege",
+  "goal": "Fix the parser so empty input is rejected while valid integers, including zero, remain accepted; preserve evaluator-owned acceptance tests; use exactly two state-mode increments: investigation without parser source changes, then implementation.",
+  "status": "active",
+  "runtime": "codex",
+  "gate": {
+    "kind": "command",
+    "value": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v",
+    "review_criterion": "Confirm empty input is rejected, valid integers including zero are preserved, evaluator-owned tests are unchanged, the source change is minimal, and the two increments respected investigation-before-editing."
+  },
+  "budget": {
+    "max_turns": 2,
+    "max_minutes": 60
+  },
+  "used": {
+    "turns": 1,
+    "started": "2026-09-24T23:25:37.772911+00:00"
+  },
+  "budget_exhausted": false,
+  "last_checkpoint": null,
+  "reviews": [],
+  "gate_evidence": null,
+  "execution_mode": "state",
+  "turn_unit": "worker_attempt",
+  "execution_revision": 1,
+  "active_attempt": {
+    "id": "request-001",
+    "status": "reserved",
+    "worker": null,
+    "packet": {
+      "path": ".codex/harness/goals/fix-the-parser-so-empty-input-is-rejected-while-valid-intege.d/objects/d0d0127ec31900a09cef9172f53b336f327114ed33ed2e9f9e89a81053859d7a.json",
+      "sha256": "d0d0127ec31900a09cef9172f53b336f327114ed33ed2e9f9e89a81053859d7a"
+    }
+  },
+  "next_action": "Inspect the project and establish the next useful increment.",
+  "attempt_id": "request-001",
+  "attempt_status": "reserved",
+  "replayed": false,
+  "update_accepted": false,
+  "attempt_closed": false,
+  "exit_code": 0,
+  "packet": {
+    "schema_version": 1,
+    "attempt_id": "request-001",
+    "base_revision": 1,
+    "objective": "Fix the parser so empty input is rejected while valid integers, including zero, remain accepted; preserve evaluator-owned acceptance tests; use exactly two state-mode increments: investigation without parser source changes, then implementation.",
+    "gate": {
+      "kind": "command",
+      "value": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v",
+      "review_criterion": "Confirm empty input is rejected, valid integers including zero are preserved, evaluator-owned tests are unchanged, the source change is minimal, and the two increments respected investigation-before-editing."
+    },
+    "watch_paths": [
+      "/Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/.superpowers/sdd/2026-09-19-horizon-state-mode/native-confirmed-project/parser_example.py",
+      "/Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/.superpowers/sdd/2026-09-19-horizon-state-mode/native-confirmed-project/tests/test_parser_example.py"
+    ],
+    "budget": {
+      "max_turns": 2,
+      "max_minutes": 60
+    },
+    "used": {
+      "turns": 0,
+      "started": "2026-09-24T23:25:37.772911+00:00"
+    },
+    "procedure": {
+      "schema_version": 1,
+      "instructions": "Return one schema-version-1 JSON update. Include only set, upsert, and archive operations. Do not include lifecycle fields or entry provenance. Evidence references must name files inside the project.",
+      "sha256": "886a692f47bd47c0ef5bd6c6c86961938a8e06986fed4050a54adf2fe3287a94"
+    },
+    "task": {
+      "summary": "",
+      "entries": [],
+      "next_action": "Inspect the project and establish the next useful increment."
+    },
+    "snapshot": {
+      "tree_hash": "731bd10c5f77ef791aec7e8ecdc5416978e38dcd9afc837269c167d7bd62af71",
+      "evidence": []
+    },
+    "latest_checkpoint": null,
+    "latest_review": null,
+    "audit_path": ".codex/harness/goals/fix-the-parser-so-empty-input-is-rejected-while-valid-intege.json"
+  },
+  "packet_ref": {
+    "path": ".codex/harness/goals/fix-the-parser-so-empty-input-is-rejected-while-valid-intege.d/objects/d0d0127ec31900a09cef9172f53b336f327114ed33ed2e9f9e89a81053859d7a.json",
+    "sha256": "d0d0127ec31900a09cef9172f53b336f327114ed33ed2e9f9e89a81053859d7a"
+  },
+  "packet_path": ".codex/harness/goals/fix-the-parser-so-empty-input-is-rejected-while-valid-intege.d/objects/d0d0127ec31900a09cef9172f53b336f327114ed33ed2e9f9e89a81053859d7a.json",
+  "packet_sha256": "d0d0127ec31900a09cef9172f53b336f327114ed33ed2e9f9e89a81053859d7a"
+}

@@ -1,0 +1,7 @@
+def parse_count(value):
+    if isinstance(value, bool):
+        raise ValueError("booleans are not counts")
+    count = int(value)
+    if count < 0:
+        raise ValueError("counts must be nonnegative")
+    return count

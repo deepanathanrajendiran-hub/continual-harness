@@ -1,0 +1,3 @@
+Coordinator-written host observation; complete collaboration tool transcript export was unavailable.
+
+The native collaboration wait returned completed for /root/native_confirmed_codex/horizon_increment_001. A subsequent collaboration.list_agents observation showed the handle in completed status with the same JSON returned in worker-update-001.json. The coordinator then inspected parser_example.py, tests/test_parser_example.py, evidence/investigation.md, and the saved update. The parser and test hashes match the hashes recorded by the investigation, and the evidence hash matches the update reference. The worker is stopped and request-001 is safe to finish.

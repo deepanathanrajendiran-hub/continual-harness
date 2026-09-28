@@ -1,0 +1,1 @@
+Native reviewer handle `/root/native_updated_codex/independent_review` reached completed status and returned the review saved verbatim in `17-independent-review.txt`. This coordinator-authored terminal observation records host status and is not an exported complete native tool transcript; native transcript export was unavailable.

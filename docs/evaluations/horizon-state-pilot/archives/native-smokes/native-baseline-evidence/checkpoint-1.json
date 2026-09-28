@@ -1,0 +1,17 @@
+{
+  "slug": "fix-the-parser-so-it-rejects-empty-input-while-preserving-va",
+  "status": "active",
+  "used": {"turns": 1},
+  "budget_exhausted": false,
+  "last_checkpoint": {
+    "turn": 1,
+    "at": "2026-09-23T17:30:06.897589+00:00",
+    "did": "Investigated parser_example.parse_number without changing parser source or tests; saved cause, failing test evidence, and minimal fix proposal in the designated evidence directory.",
+    "next": "Apply the minimal parser fix with the AST editor while preserving evaluator-owned tests, then run the second and final checkpoint.",
+    "tree_hash": "56474875829db74f5b88d5e60090a7e7c3055b1427f9c1681f0e0dc0adae52b1",
+    "gate": "fail",
+    "gate_output": "test_empty_input_is_rejected (test_parser_example.ParserTests.test_empty_input_is_rejected) ... FAIL\ntest_valid_integer_is_preserved (test_parser_example.ParserTests.test_valid_integer_is_preserved) ... ok\ntest_zero_is_preserved (test_parser_example.ParserTests.test_zero_is_preserved) ... ok\n\nFAIL: test_empty_input_is_rejected (test_parser_example.ParserTests.test_empty_input_is_rejected)\nAssertionError: ValueError not raised\n\nRan 3 tests in 0.000s\n\nFAILED (failures=1)\n"
+  },
+  "review_required": false,
+  "next_action": "Apply the minimal parser fix with the AST editor while preserving evaluator-owned tests, then run the second and final checkpoint."
+}

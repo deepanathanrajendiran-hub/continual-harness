@@ -1,0 +1,4 @@
+def parse_number(value):
+    if value == "":
+        raise ValueError("empty input is invalid")
+    return int(value)

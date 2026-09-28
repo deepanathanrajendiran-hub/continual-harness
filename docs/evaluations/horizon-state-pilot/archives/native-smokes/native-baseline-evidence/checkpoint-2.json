@@ -1,0 +1,17 @@
+{
+  "slug": "fix-the-parser-so-it-rejects-empty-input-while-preserving-va",
+  "status": "active",
+  "used": {"turns": 2},
+  "budget_exhausted": true,
+  "last_checkpoint": {
+    "turn": 2,
+    "at": "2026-09-23T17:32:49.105323+00:00",
+    "did": "Used the AST editor after list_symbols to replace parser_example.parse_number body with return int(value); preserved evaluator-owned tests; focused acceptance suite passed all three tests.",
+    "next": "Dispatch a fresh independent reviewer against this exact checkpoint, record its actual verdict, then complete only if the review passes.",
+    "tree_hash": "16309561339ce143d5f1d8ae947670b3681b29fb72c74a27e6b5d92f539e2672",
+    "gate": "pass",
+    "gate_output": "test_empty_input_is_rejected (test_parser_example.ParserTests.test_empty_input_is_rejected) ... ok\ntest_valid_integer_is_preserved (test_parser_example.ParserTests.test_valid_integer_is_preserved) ... ok\ntest_zero_is_preserved (test_parser_example.ParserTests.test_zero_is_preserved) ... ok\n\nRan 3 tests in 0.000s\n\nOK\n"
+  },
+  "review_required": true,
+  "next_action": "Dispatch a fresh independent reviewer against this exact checkpoint, record its actual verdict, then complete only if the review passes."
+}

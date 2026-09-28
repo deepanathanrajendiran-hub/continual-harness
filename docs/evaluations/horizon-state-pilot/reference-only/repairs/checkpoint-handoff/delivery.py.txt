@@ -1,0 +1,4 @@
+from foundation import slug
+
+def slugs(values):
+    return [slug(value) for value in values]

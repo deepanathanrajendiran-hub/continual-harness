@@ -1,0 +1,62 @@
+{
+  "slug": "fix-the-parser-so-empty-input-is-rejected-while-valid-intege",
+  "goal": "Fix the parser so empty input is rejected while valid integers, including zero, remain accepted; preserve evaluator-owned acceptance tests; use exactly two state-mode increments with investigation first and implementation second.",
+  "status": "active",
+  "runtime": "codex",
+  "gate": {
+    "kind": "command",
+    "value": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v",
+    "review_criterion": "Independently verify the parser behavior and source change, that evaluator-owned acceptance tests were preserved, and that the first accepted increment only investigated and saved findings while the second implemented the fix."
+  },
+  "budget": {
+    "max_turns": 2,
+    "max_minutes": 30
+  },
+  "used": {
+    "turns": 2,
+    "started": "2026-09-24T03:07:46.471779+00:00"
+  },
+  "budget_exhausted": true,
+  "last_checkpoint": {
+    "turn": 2,
+    "at": "2026-09-24T03:13:33.899818+00:00",
+    "did": "Used the AST editor after listing symbols to replace `parse_number`'s body with `return int(value)`, preserved the evaluator-owned test file byte-for-byte, documented the change, and confirmed the exact unittest gate passes all 3 tests.",
+    "next": "Independently review the source change, passing gate output, unchanged evaluator test hash, and the required investigation-first/implementation-second increment split, then complete the goal if the review passes.",
+    "tree_hash": "8a061927c872725195d5665b748d4ee17222d670f5846032f633abb0eed93d47",
+    "gate": "pass",
+    "gate_output": "test_empty_input_is_rejected (test_parser_example.ParserTests.test_empty_input_is_rejected) ... ok\ntest_valid_integer_is_preserved (test_parser_example.ParserTests.test_valid_integer_is_preserved) ... ok\ntest_zero_is_preserved (test_parser_example.ParserTests.test_zero_is_preserved) ... ok\n\n----------------------------------------------------------------------\nRan 3 tests in 0.000s\n\nOK\n",
+    "gate_spec": {
+      "kind": "command",
+      "value": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v",
+      "review_criterion": "Independently verify the parser behavior and source change, that evaluator-owned acceptance tests were preserved, and that the first accepted increment only investigated and saved findings while the second implemented the fix."
+    }
+  },
+  "reviews": [],
+  "gate_evidence": null,
+  "execution_mode": "state",
+  "turn_unit": "worker_attempt",
+  "execution_revision": 10,
+  "active_attempt": null,
+  "next_action": "Independently review the source change, passing gate output, unchanged evaluator test hash, and the required investigation-first/implementation-second increment split, then complete the goal if the review passes.",
+  "attempt_id": "increment-2-fix",
+  "attempt_status": "accepted",
+  "replayed": false,
+  "update_accepted": true,
+  "attempt_closed": true,
+  "exit_code": 0,
+  "checkpoint": {
+    "turn": 2,
+    "at": "2026-09-24T03:13:33.899818+00:00",
+    "did": "Used the AST editor after listing symbols to replace `parse_number`'s body with `return int(value)`, preserved the evaluator-owned test file byte-for-byte, documented the change, and confirmed the exact unittest gate passes all 3 tests.",
+    "next": "Independently review the source change, passing gate output, unchanged evaluator test hash, and the required investigation-first/implementation-second increment split, then complete the goal if the review passes.",
+    "tree_hash": "8a061927c872725195d5665b748d4ee17222d670f5846032f633abb0eed93d47",
+    "gate": "pass",
+    "gate_output": "test_empty_input_is_rejected (test_parser_example.ParserTests.test_empty_input_is_rejected) ... ok\ntest_valid_integer_is_preserved (test_parser_example.ParserTests.test_valid_integer_is_preserved) ... ok\ntest_zero_is_preserved (test_parser_example.ParserTests.test_zero_is_preserved) ... ok\n\n----------------------------------------------------------------------\nRan 3 tests in 0.000s\n\nOK\n",
+    "gate_spec": {
+      "kind": "command",
+      "value": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v",
+      "review_criterion": "Independently verify the parser behavior and source change, that evaluator-owned acceptance tests were preserved, and that the first accepted increment only investigated and saved findings while the second implemented the fix."
+    }
+  },
+  "review_required": true
+}

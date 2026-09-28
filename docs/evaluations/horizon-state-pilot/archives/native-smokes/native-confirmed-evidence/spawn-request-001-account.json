@@ -1,0 +1,12 @@
+{
+  "account_type": "coordinator-written account of native tool call; complete native tool transcript export was unavailable",
+  "tool": "collaboration.spawn_agent",
+  "task_name": "horizon_increment_001",
+  "fork_turns": "none",
+  "model": "gpt-5.6-sol",
+  "reasoning_effort": "high",
+  "message_copy": "dispatch-request-001.txt",
+  "returned": {
+    "task_name": "/root/native_confirmed_codex/horizon_increment_001"
+  }
+}

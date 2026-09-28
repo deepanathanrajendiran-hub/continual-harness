@@ -1,0 +1,28 @@
+{
+  "slug": "fix-the-parser-so-empty-input-is-rejected-while-valid-intege",
+  "goal": "Fix the parser so empty input is rejected while valid integers, including zero, remain accepted; preserve evaluator-owned acceptance tests; use exactly two state-mode increments with investigation first and implementation second.",
+  "status": "active",
+  "runtime": "codex",
+  "gate": {
+    "kind": "command",
+    "value": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v",
+    "review_criterion": "Independently verify the parser behavior and source change, that evaluator-owned acceptance tests were preserved, and that the first accepted increment only investigated and saved findings while the second implemented the fix."
+  },
+  "budget": {
+    "max_turns": 2,
+    "max_minutes": 30
+  },
+  "used": {
+    "turns": 0,
+    "started": "2026-09-24T03:07:46.471779+00:00"
+  },
+  "budget_exhausted": false,
+  "last_checkpoint": null,
+  "reviews": [],
+  "gate_evidence": null,
+  "execution_mode": "state",
+  "turn_unit": "worker_attempt",
+  "execution_revision": 0,
+  "active_attempt": null,
+  "next_action": "Inspect the project and establish the next useful increment."
+}

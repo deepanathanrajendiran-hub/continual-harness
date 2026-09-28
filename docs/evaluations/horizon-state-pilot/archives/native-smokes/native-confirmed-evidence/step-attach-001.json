@@ -1,0 +1,45 @@
+{
+  "slug": "fix-the-parser-so-empty-input-is-rejected-while-valid-intege",
+  "goal": "Fix the parser so empty input is rejected while valid integers, including zero, remain accepted; preserve evaluator-owned acceptance tests; use exactly two state-mode increments: investigation without parser source changes, then implementation.",
+  "status": "active",
+  "runtime": "codex",
+  "gate": {
+    "kind": "command",
+    "value": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v",
+    "review_criterion": "Confirm empty input is rejected, valid integers including zero are preserved, evaluator-owned tests are unchanged, the source change is minimal, and the two increments respected investigation-before-editing."
+  },
+  "budget": {
+    "max_turns": 2,
+    "max_minutes": 60
+  },
+  "used": {
+    "turns": 1,
+    "started": "2026-09-24T23:25:37.772911+00:00"
+  },
+  "budget_exhausted": false,
+  "last_checkpoint": null,
+  "reviews": [],
+  "gate_evidence": null,
+  "execution_mode": "state",
+  "turn_unit": "worker_attempt",
+  "execution_revision": 2,
+  "active_attempt": {
+    "id": "request-001",
+    "status": "attached",
+    "worker": {
+      "runtime": "codex",
+      "handle": "/root/native_confirmed_codex/horizon_increment_001"
+    },
+    "packet": {
+      "path": ".codex/harness/goals/fix-the-parser-so-empty-input-is-rejected-while-valid-intege.d/objects/d0d0127ec31900a09cef9172f53b336f327114ed33ed2e9f9e89a81053859d7a.json",
+      "sha256": "d0d0127ec31900a09cef9172f53b336f327114ed33ed2e9f9e89a81053859d7a"
+    }
+  },
+  "next_action": "Inspect the project and establish the next useful increment.",
+  "attempt_id": "request-001",
+  "attempt_status": "attached",
+  "replayed": false,
+  "update_accepted": false,
+  "attempt_closed": false,
+  "exit_code": 0
+}

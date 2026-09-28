@@ -1,0 +1,7 @@
+VERDICT: pass
+
+`parser_example.py` now uses `return int(value)`. An independent run of the exact acceptance command passed all three tests, confirming empty input raises `ValueError` while `"12"` and `"0"` remain accepted.
+
+The evaluator test SHA-256 is `e280cf50…a6ebab86`, matching the frozen seed, and its timestamps remain unchanged. The state audit records exactly two accepted attempts: increment 1 preserved the original parser hash, saved investigation evidence, and failed only the empty-input test; increment 2 changed the parser, saved implementation evidence, and passed the gate at checkpoint `8a061927…93d47`.
+
+Limitation: full native worker transcripts were unavailable, so increment boundaries rely on coordinator records, content hashes, timestamps, and saved artifacts rather than exported tool-call transcripts.

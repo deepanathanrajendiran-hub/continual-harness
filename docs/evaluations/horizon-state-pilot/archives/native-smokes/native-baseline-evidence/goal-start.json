@@ -1,0 +1,28 @@
+{
+  "slug": "fix-the-parser-so-it-rejects-empty-input-while-preserving-va",
+  "goal": "Fix the parser so it rejects empty input while preserving valid integers and zero, using exactly two increments: investigate and save findings without changing parser source, then implement the fix while preserving evaluator-owned acceptance tests.",
+  "status": "active",
+  "runtime": "codex",
+  "gate": {
+    "kind": "command",
+    "value": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v",
+    "review_criterion": "Verify the parser rejects empty input, preserves valid integers including zero, acceptance tests are unchanged, the implementation is appropriately scoped, and the saved first-increment findings predate any parser source change."
+  },
+  "budget": {
+    "max_turns": 2,
+    "max_minutes": 60
+  },
+  "used": {
+    "turns": 0,
+    "started": "2026-09-23T17:27:34.032169+00:00"
+  },
+  "budget_exhausted": false,
+  "last_checkpoint": null,
+  "reviews": [],
+  "gate_evidence": null,
+  "execution_mode": "conversation",
+  "turn_unit": "checkpoint",
+  "execution_revision": null,
+  "active_attempt": null,
+  "next_action": ""
+}

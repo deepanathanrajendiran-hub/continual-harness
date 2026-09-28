@@ -1,0 +1,8 @@
+test_empty_input_is_rejected (test_parser_example.ParserTests.test_empty_input_is_rejected) ... ok
+test_valid_integer_is_preserved (test_parser_example.ParserTests.test_valid_integer_is_preserved) ... ok
+test_zero_is_preserved (test_parser_example.ParserTests.test_zero_is_preserved) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.000s
+
+OK

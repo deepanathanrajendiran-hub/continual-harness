@@ -1,0 +1,24 @@
+test_current_parser_contract (test_acceptance.AcceptanceTests.test_current_parser_contract) ... FAIL
+
+======================================================================
+FAIL: test_current_parser_contract (test_acceptance.AcceptanceTests.test_current_parser_contract)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/.superpowers/sdd/2026-09-19-horizon-state-mode/pilot-reference-repairs/stale-fact/tests/test_acceptance.py", line 9, in test_current_parser_contract
+    expected = parser.parse_number("")
+  File "/Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/.superpowers/sdd/2026-09-19-horizon-state-mode/pilot-reference-repairs/stale-fact/parser.py", line 3, in parse_number
+    raise ValueError("empty input is invalid")
+ValueError: empty input is invalid
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/.superpowers/sdd/2026-09-19-horizon-state-mode/pilot-reference-repairs/stale-fact/tests/test_acceptance.py", line 11, in test_current_parser_contract
+    with self.assertRaises(ValueError):
+         ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+AssertionError: ValueError not raised
+
+----------------------------------------------------------------------
+Ran 1 test in 0.000s
+
+FAILED (failures=1)

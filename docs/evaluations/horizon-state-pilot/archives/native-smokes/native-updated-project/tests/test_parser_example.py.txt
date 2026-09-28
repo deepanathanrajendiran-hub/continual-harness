@@ -1,0 +1,13 @@
+import unittest
+from parser_example import parse_number
+
+class ParserTests(unittest.TestCase):
+    def test_empty_input_is_rejected(self):
+        with self.assertRaises(ValueError):
+            parse_number("")
+
+    def test_valid_integer_is_preserved(self):
+        self.assertEqual(parse_number("12"), 12)
+
+    def test_zero_is_preserved(self):
+        self.assertEqual(parse_number("0"), 0)

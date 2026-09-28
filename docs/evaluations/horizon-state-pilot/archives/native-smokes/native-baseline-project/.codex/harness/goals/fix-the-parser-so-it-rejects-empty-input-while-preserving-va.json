@@ -1,0 +1,66 @@
+{
+  "slug": "fix-the-parser-so-it-rejects-empty-input-while-preserving-va",
+  "goal": "Fix the parser so it rejects empty input while preserving valid integers and zero, using exactly two increments: investigate and save findings without changing parser source, then implement the fix while preserving evaluator-owned acceptance tests.",
+  "cwd": "/Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/.superpowers/sdd/2026-09-19-horizon-state-mode/native-baseline-project",
+  "gate": {
+    "kind": "command",
+    "value": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v",
+    "review_criterion": "Verify the parser rejects empty input, preserves valid integers including zero, acceptance tests are unchanged, the implementation is appropriately scoped, and the saved first-increment findings predate any parser source change."
+  },
+  "watch_paths": [
+    "/Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/.superpowers/sdd/2026-09-19-horizon-state-mode/native-baseline-project"
+  ],
+  "budget": {
+    "max_turns": 2,
+    "max_minutes": 60
+  },
+  "used": {
+    "turns": 2,
+    "started": "2026-09-23T17:27:34.032169+00:00"
+  },
+  "status": "complete",
+  "subagents": [],
+  "checkpoints": [
+    {
+      "turn": 1,
+      "at": "2026-09-23T17:30:06.897589+00:00",
+      "did": "Investigated parser_example.parse_number without changing parser source or tests; saved cause, failing test evidence, and minimal fix proposal in the designated evidence directory.",
+      "next": "Apply the minimal parser fix with the AST editor while preserving evaluator-owned tests, then run the second and final checkpoint.",
+      "tree_hash": "56474875829db74f5b88d5e60090a7e7c3055b1427f9c1681f0e0dc0adae52b1",
+      "gate": "fail",
+      "gate_output": "test_empty_input_is_rejected (test_parser_example.ParserTests.test_empty_input_is_rejected) ... FAIL\ntest_valid_integer_is_preserved (test_parser_example.ParserTests.test_valid_integer_is_preserved) ... ok\ntest_zero_is_preserved (test_parser_example.ParserTests.test_zero_is_preserved) ... ok\n\n======================================================================\nFAIL: test_empty_input_is_rejected (test_parser_example.ParserTests.test_empty_input_is_rejected)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/.superpowers/sdd/2026-09-19-horizon-state-mode/native-baseline-project/tests/test_parser_example.py\", line 6, in test_empty_input_is_rejected\n    with self.assertRaises(ValueError):\n         ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^\nAssertionError: ValueError not raised\n\n----------------------------------------------------------------------\nRan 3 tests in 0.000s\n\nFAILED (failures=1)\n",
+      "gate_spec": {
+        "kind": "command",
+        "value": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v",
+        "review_criterion": "Verify the parser rejects empty input, preserves valid integers including zero, acceptance tests are unchanged, the implementation is appropriately scoped, and the saved first-increment findings predate any parser source change."
+      }
+    },
+    {
+      "turn": 2,
+      "at": "2026-09-23T17:32:49.105323+00:00",
+      "did": "Used the AST editor after list_symbols to replace parser_example.parse_number body with return int(value); preserved evaluator-owned tests; focused acceptance suite passed all three tests.",
+      "next": "Dispatch a fresh independent reviewer against this exact checkpoint, record its actual verdict, then complete only if the review passes.",
+      "tree_hash": "16309561339ce143d5f1d8ae947670b3681b29fb72c74a27e6b5d92f539e2672",
+      "gate": "pass",
+      "gate_output": "test_empty_input_is_rejected (test_parser_example.ParserTests.test_empty_input_is_rejected) ... ok\ntest_valid_integer_is_preserved (test_parser_example.ParserTests.test_valid_integer_is_preserved) ... ok\ntest_zero_is_preserved (test_parser_example.ParserTests.test_zero_is_preserved) ... ok\n\n----------------------------------------------------------------------\nRan 3 tests in 0.000s\n\nOK\n",
+      "gate_spec": {
+        "kind": "command",
+        "value": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v",
+        "review_criterion": "Verify the parser rejects empty input, preserves valid integers including zero, acceptance tests are unchanged, the implementation is appropriately scoped, and the saved first-increment findings predate any parser source change."
+      }
+    }
+  ],
+  "reviews": [
+    {
+      "turn": 2,
+      "tree_hash": "16309561339ce143d5f1d8ae947670b3681b29fb72c74a27e6b5d92f539e2672",
+      "at": "2026-09-24T03:02:03.207244+00:00",
+      "judge": "/root/native_baseline_codex/native_reviewer",
+      "criterion": "Verify the parser rejects empty input, preserves valid integers including zero, acceptance tests are unchanged, the implementation is appropriately scoped, and the saved first-increment findings predate any parser source change.",
+      "result": "pass",
+      "evidence": "pass\n\nIndependent review evidence:\n\n- `parser_example.py` now contains only `return int(value)`, a narrowly scoped one-line correction. Python therefore raises `ValueError` for `parse_number(\"\")` while preserving `parse_number(\"12\") == 12` and `parse_number(\"0\") == 0`.\n- An independent run of `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v` ran exactly three tests: `test_empty_input_is_rejected`, `test_valid_integer_is_preserved`, and `test_zero_is_preserved`. All passed; the runner reported `Ran 3 tests` and `OK`.\n- The first-increment findings accurately record the original implementation (`return int(value or \"0\")`), its empty-input failure, the two passing preservation cases, and the minimal proposed fix. `increment-1-findings.md` has mtime/ctime 2026-09-23T13:29:31-0400 and `checkpoint-1.json` has 2026-09-23T13:30:32-0400; both predate the parser source mtime/ctime 2026-09-23T13:31:31-0400. `increment-2-worker.md` follows at 2026-09-23T13:32:14-0400. The checkpoint reports `used.turns: 1`, and the worker record documents the second increment, supporting the required two-increment sequence.\n- The evaluator-owned test file still contains only the three required acceptance tests and has SHA-256 `e280cf50c2b5b21c99b9aa6e42f67dc140862afa64dbd3a8c84cda94a6ebab86`. Its mtime/ctime is 2026-09-23T08:25:06-0400, unchanged since before either increment, which supports that it was preserved.\n\nOmission/limitation: no Git baseline comparison is available for the parser or acceptance test because both paths are ignored by the repository's `.gitignore` rule for `.superpowers/` and are not known to Git. The unchanged test-file timestamps, current acceptance-test contents, first-increment record, and independent passing run provide consistent evidence that the evaluator-owned tests were not modified."
+    }
+  ],
+  "gate_evidence": "test_empty_input_is_rejected (test_parser_example.ParserTests.test_empty_input_is_rejected) ... ok\ntest_valid_integer_is_preserved (test_parser_example.ParserTests.test_valid_integer_is_preserved) ... ok\ntest_zero_is_preserved (test_parser_example.ParserTests.test_zero_is_preserved) ... ok\n\n----------------------------------------------------------------------\nRan 3 tests in 0.000s\n\nOK",
+  "completed_at": "2026-09-24T03:02:08.102381+00:00"
+}

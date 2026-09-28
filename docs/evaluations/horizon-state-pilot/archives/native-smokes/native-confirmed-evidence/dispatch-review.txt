@@ -1,0 +1,31 @@
+You are the fresh independent reviewer for a completed two-increment Horizon state-mode parser change. Do not edit any file and do not run Horizon lifecycle commands. Review independently and return a concise verdict beginning with `PASS` or `FAIL`, followed by concrete evidence and any omissions. Do not assume the coordinator's desired verdict.
+
+Objective: Fix the parser so empty input is rejected while valid integers, including zero, remain accepted; preserve evaluator-owned acceptance tests; use exactly two state-mode increments: investigation without parser source changes, then implementation.
+
+Review criterion: Confirm empty input is rejected, valid integers including zero are preserved, evaluator-owned tests are unchanged, the source change is minimal, and the two increments respected investigation-before-editing.
+
+Project: /Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/.superpowers/sdd/2026-09-19-horizon-state-mode/native-confirmed-project
+Parser: /Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/.superpowers/sdd/2026-09-19-horizon-state-mode/native-confirmed-project/parser_example.py
+Evaluator test: /Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/.superpowers/sdd/2026-09-19-horizon-state-mode/native-confirmed-project/tests/test_parser_example.py
+Investigation evidence: /Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/.superpowers/sdd/2026-09-19-horizon-state-mode/native-confirmed-project/evidence/investigation.md
+Implementation evidence: /Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/.superpowers/sdd/2026-09-19-horizon-state-mode/native-confirmed-project/evidence/implementation.md
+Increment 1 checkpoint: /Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/.superpowers/sdd/2026-09-19-horizon-state-mode/native-confirmed-evidence/step-finish-001.json
+Increment 2 checkpoint: /Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/.superpowers/sdd/2026-09-19-horizon-state-mode/native-confirmed-evidence/step-finish-002.json
+Dispatch and spawn accounts: /Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/.superpowers/sdd/2026-09-19-horizon-state-mode/native-confirmed-evidence/dispatch-request-001.txt, dispatch-request-002.txt, spawn-request-001-account.json, spawn-request-002-account.json
+
+Raw checkpoint-2 gate output:
+test_empty_input_is_rejected (test_parser_example.ParserTests.test_empty_input_is_rejected) ... ok
+test_valid_integer_is_preserved (test_parser_example.ParserTests.test_valid_integer_is_preserved) ... ok
+test_zero_is_preserved (test_parser_example.ParserTests.test_zero_is_preserved) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.000s
+
+OK
+
+Checkpoint tree hash: c9453ecc61e7947cd15227303ed318cb669df5fc3123c6b5f1fede65e73ba6d9
+Initial parser SHA-256: d170165014bb83537c7b470400c733c756b8971b3c743fbcabf3a6dff9865217
+Final parser SHA-256: b1bf7a081d3bdcc25979f4bc1a57be5d53a4709fc111593f332ccf432ccedfad
+Initial/final evaluator test SHA-256: e280cf50c2b5b21c99b9aa6e42f67dc140862afa64dbd3a8c84cda94a6ebab86
+
+Inspect the cited artifacts and verify the semantic behavior and two-increment sequencing. Report whether the review criterion passes, with evidence and any material gaps.

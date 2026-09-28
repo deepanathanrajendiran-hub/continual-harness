@@ -1,0 +1,6 @@
+import csv
+from io import StringIO
+def render_row(values):
+    output = StringIO()
+    csv.writer(output, lineterminator="").writerow(values)
+    return output.getvalue()

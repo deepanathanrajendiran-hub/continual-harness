@@ -1,0 +1,62 @@
+{
+  "slug": "fix-the-parser-so-empty-input-is-rejected-while-valid-intege",
+  "goal": "Fix the parser so empty input is rejected while valid integers, including zero, remain accepted; preserve evaluator-owned acceptance tests; use exactly two state-mode increments: investigation without parser source changes, then implementation.",
+  "status": "active",
+  "runtime": "codex",
+  "gate": {
+    "kind": "command",
+    "value": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v",
+    "review_criterion": "Confirm empty input is rejected, valid integers including zero are preserved, evaluator-owned tests are unchanged, the source change is minimal, and the two increments respected investigation-before-editing."
+  },
+  "budget": {
+    "max_turns": 2,
+    "max_minutes": 60
+  },
+  "used": {
+    "turns": 1,
+    "started": "2026-09-24T23:25:37.772911+00:00"
+  },
+  "budget_exhausted": false,
+  "last_checkpoint": {
+    "turn": 1,
+    "at": "2026-09-24T23:29:52.778663+00:00",
+    "did": "Inspected the parser and acceptance tests, reproduced the empty-input failure, and saved the investigation without changing parser or test source.",
+    "next": "Replace the fallback with direct integer conversion, then run the acceptance tests and verify evaluator-owned tests remain unchanged.",
+    "tree_hash": "731bd10c5f77ef791aec7e8ecdc5416978e38dcd9afc837269c167d7bd62af71",
+    "gate": "fail",
+    "gate_output": "test_empty_input_is_rejected (test_parser_example.ParserTests.test_empty_input_is_rejected) ... FAIL\ntest_valid_integer_is_preserved (test_parser_example.ParserTests.test_valid_integer_is_preserved) ... ok\ntest_zero_is_preserved (test_parser_example.ParserTests.test_zero_is_preserved) ... ok\n\n======================================================================\nFAIL: test_empty_input_is_rejected (test_parser_example.ParserTests.test_empty_input_is_rejected)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/.superpowers/sdd/2026-09-19-horizon-state-mode/native-confirmed-project/tests/test_parser_example.py\", line 6, in test_empty_input_is_rejected\n    with self.assertRaises(ValueError):\n         ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^\nAssertionError: ValueError not raised\n\n----------------------------------------------------------------------\nRan 3 tests in 0.000s\n\nFAILED (failures=1)\n",
+    "gate_spec": {
+      "kind": "command",
+      "value": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v",
+      "review_criterion": "Confirm empty input is rejected, valid integers including zero are preserved, evaluator-owned tests are unchanged, the source change is minimal, and the two increments respected investigation-before-editing."
+    }
+  },
+  "reviews": [],
+  "gate_evidence": null,
+  "execution_mode": "state",
+  "turn_unit": "worker_attempt",
+  "execution_revision": 5,
+  "active_attempt": null,
+  "next_action": "Replace the fallback with direct integer conversion, then run the acceptance tests and verify evaluator-owned tests remain unchanged.",
+  "attempt_id": "request-001",
+  "attempt_status": "accepted",
+  "replayed": false,
+  "update_accepted": true,
+  "attempt_closed": true,
+  "exit_code": 1,
+  "checkpoint": {
+    "turn": 1,
+    "at": "2026-09-24T23:29:52.778663+00:00",
+    "did": "Inspected the parser and acceptance tests, reproduced the empty-input failure, and saved the investigation without changing parser or test source.",
+    "next": "Replace the fallback with direct integer conversion, then run the acceptance tests and verify evaluator-owned tests remain unchanged.",
+    "tree_hash": "731bd10c5f77ef791aec7e8ecdc5416978e38dcd9afc837269c167d7bd62af71",
+    "gate": "fail",
+    "gate_output": "test_empty_input_is_rejected (test_parser_example.ParserTests.test_empty_input_is_rejected) ... FAIL\ntest_valid_integer_is_preserved (test_parser_example.ParserTests.test_valid_integer_is_preserved) ... ok\ntest_zero_is_preserved (test_parser_example.ParserTests.test_zero_is_preserved) ... ok\n\n======================================================================\nFAIL: test_empty_input_is_rejected (test_parser_example.ParserTests.test_empty_input_is_rejected)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/.superpowers/sdd/2026-09-19-horizon-state-mode/native-confirmed-project/tests/test_parser_example.py\", line 6, in test_empty_input_is_rejected\n    with self.assertRaises(ValueError):\n         ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^\nAssertionError: ValueError not raised\n\n----------------------------------------------------------------------\nRan 3 tests in 0.000s\n\nFAILED (failures=1)\n",
+    "gate_spec": {
+      "kind": "command",
+      "value": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v",
+      "review_criterion": "Confirm empty input is rejected, valid integers including zero are preserved, evaluator-owned tests are unchanged, the source change is minimal, and the two increments respected investigation-before-editing."
+    }
+  },
+  "review_required": true
+}

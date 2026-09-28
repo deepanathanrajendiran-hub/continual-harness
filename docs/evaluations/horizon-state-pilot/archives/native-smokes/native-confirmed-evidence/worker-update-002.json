@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "attempt_id": "request-002",
+  "base_revision": 6,
+  "did": "Replaced parse_number's empty-input fallback with direct integer conversion, preserved the evaluator-owned test file, and recorded a passing three-test verification run.",
+  "ops": [
+    {
+      "op": "set",
+      "field": "summary",
+      "value": "parse_number now passes its input directly to int; empty input raises ValueError, valid integers including zero remain accepted, and all three acceptance tests pass."
+    },
+    {
+      "op": "set",
+      "field": "next_action",
+      "value": "Inspect the one-line parser change and implementation evidence, then perform coordinator-owned acceptance and independent review."
+    },
+    {
+      "op": "upsert",
+      "entry": {
+        "id": "empty-input-fix-verified",
+        "kind": "observation",
+        "statement": "Direct integer conversion rejects empty input with ValueError while preserving valid integers and zero; the prescribed acceptance suite passed all three tests, and the evaluator-owned test file retained SHA-256 e280cf50c2b5b21c99b9aa6e42f67dc140862afa64dbd3a8c84cda94a6ebab86.",
+        "evidence": [
+          {
+            "path": "evidence/implementation.md",
+            "sha256": "2a3de562d6d3690a6c5e0480aab918665a9ddd684beddf29dc93fadfc683e1e0"
+          }
+        ]
+      }
+    }
+  ]
+}
