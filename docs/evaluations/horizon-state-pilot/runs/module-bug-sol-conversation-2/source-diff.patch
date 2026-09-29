@@ -1,0 +1,6 @@
+--- seed-snapshot/pricing.py.txt
++++ project/pricing.py
+@@ -1,2 +1,2 @@
+ def discounted(amount, percent):
+-    return amount * (100 - percent * 2) // 100
++    return amount * (100 - percent) // 100

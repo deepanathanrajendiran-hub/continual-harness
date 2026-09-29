@@ -1,0 +1,18 @@
+{
+  "slug": "fix-the-checkout-integration-and-the-underlying-discount-def",
+  "goal": "Fix the checkout integration and the underlying discount defect: total([100, 200], 10) must be 270, the empty cart 0, and zero discount must preserve the total.",
+  "status": "active",
+  "runtime": "codex",
+  "budget": {"max_turns": 4, "max_minutes": 15},
+  "used": {"turns": 0, "started": "2026-09-29T11:50:44.872803+00:00"},
+  "budget_exhausted": false,
+  "last_checkpoint": null,
+  "reviews": [],
+  "gate_evidence": null,
+  "execution_mode": "conversation",
+  "turn_unit": "checkpoint",
+  "execution_revision": null,
+  "active_attempt": null,
+  "next_action": "",
+  "exit_status": 0
+}

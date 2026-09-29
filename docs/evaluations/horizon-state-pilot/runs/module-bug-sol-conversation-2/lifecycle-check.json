@@ -1,0 +1,19 @@
+{
+  "slug": "fix-the-checkout-integration-and-the-underlying-discount-def",
+  "status": "active",
+  "runtime": "codex",
+  "budget": {"max_turns": 4, "max_minutes": 15},
+  "used": {"turns": 1, "started": "2026-09-29T11:50:44.872803+00:00"},
+  "budget_exhausted": false,
+  "last_checkpoint": {
+    "turn": 1,
+    "at": "2026-09-29T11:53:41.966016+00:00",
+    "did": "Changed pricing.discounted to subtract the requested percentage once; preserved checkout.total delegation and the protected acceptance test.",
+    "next": "Dispatch fresh independent review against raw lifecycle, source, gate, and evaluator evidence.",
+    "tree_hash": "c442ef1b2b68ff5c862f85f16689ba6ac13230f1527fddb9b736a4eda0b91396",
+    "gate": "pass",
+    "gate_output": "test_total_and_boundaries (test_acceptance.AcceptanceTests.test_total_and_boundaries) ... ok\n\n----------------------------------------------------------------------\nRan 1 test in 0.000s\n\nOK\n"
+  },
+  "review_required": true,
+  "exit_status": 0
+}

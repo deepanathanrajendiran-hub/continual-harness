@@ -1,0 +1,11 @@
+{
+  "slug": "fix-the-checkout-integration-and-the-underlying-discount-def",
+  "status": "active",
+  "budget": {"max_turns": 4, "max_minutes": 15},
+  "used": {"turns": 0, "started": "2026-09-29T11:50:44.872803+00:00"},
+  "budget_exhausted": false,
+  "execution_mode": "conversation",
+  "next_action": "",
+  "exit_status": 0,
+  "note": "Raw full status was observed in coordinator tool output; this durable projection records lifecycle-identifying fields."
+}

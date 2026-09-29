@@ -1,0 +1,24 @@
+{
+  "checked_at": "2026-09-29T11:59:51.503140+00:00",
+  "goal_status": "complete",
+  "checks": {
+    "checkout.py": {
+      "sha256": "82de323e0cddff692abb6cea7fc7ff3ed6794a769bb5b48ec39edbf36fd103bb",
+      "mtime_ns": 1790650615699417737,
+      "seed_matches": true
+    },
+    "tests/test_acceptance.py": {
+      "sha256": "cb50420a69e7abef79d5b50043ef39e82bfbffb16edb1b58b0f4202d5693442d",
+      "mtime_ns": 1790650615699779861,
+      "seed_matches": true
+    }
+  },
+  "immutable_controls_match": true,
+  "used_turns": 1,
+  "checkpoints": 1,
+  "passing_reviews": 1,
+  "snapshot_files": 4,
+  "goal_started": "2026-09-29T11:50:44.872803+00:00",
+  "goal_completed": "2026-09-29T11:56:21.134206+00:00",
+  "goal_wall_seconds": 336.261403
+}

@@ -1,6 +1,8 @@
 # Horizon state-mode pilot report — incomplete
 
-Two of 72 canonical manifest rows have been scored. The first paired
+Three of 72 canonical manifest rows have been scored, all passing acceptance
+and independent review, with no false completion or fixture-observed regression.
+The first paired
 module-bug / Sol comparison passed acceptance and independent review in both
 modes, with one editing increment each, no false completion, and no
 fixture-observed regression. The state /
@@ -26,9 +28,18 @@ compute measurements. Its protected acceptance and checkout hashes/mtimes
 were unchanged, and it used one checkpoint and no state packet. Evidence is
 in `runs/module-bug-sol-conversation-1/`.
 
-The third row, conversation repeat 2, was interrupted by a host usage limit
-before goal creation and has resumed in the same coordinator. The remaining
-69 rows have prepared briefs but have not run.
+The third row, conversation repeat 2, also passed in one checkpoint. Goal-only
+wall time was 336.261403 seconds; its pre-goal usage interruption makes original
+dispatch elapsed unavailable. This worker returned state-style JSON and the
+coordinator requested one formatting repair, although conversation lifecycle
+does not require update JSON. That extra role behavior is retained as a
+deviation, not silently treated as necessary conversation overhead. A reviewer
+reported missing terminal-result evidence; the coordinator subsequently saved
+the actual host-delivered final and disclosed the visibility discrepancy.
+Evidence is in `runs/module-bug-sol-conversation-2/`.
+
+The fourth row, state repeat 2, is active. The remaining 68 rows have prepared
+briefs but have not run.
 
 The original module-bug / Sol /
 state / repeat 1 run is retained as supplemental raw evidence but excluded from
