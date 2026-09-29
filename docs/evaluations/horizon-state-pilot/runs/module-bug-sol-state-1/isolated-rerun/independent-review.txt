@@ -1,0 +1,5 @@
+VERDICT: pass
+
+Evidence: packet and audit match the required SHA-256/byte sizes. `audit-pre-review.json` records accepted checkpoint tree `310e2c…64ee`, gate `pass`, and 1/1 test `OK`; an independent rerun of the exact gate also passed. `tests/test_acceptance.py` matches the seed byte-for-byte, SHA-256 `cb5042…3442d`, mtime_ns `1790599028272458609`, and retains one test method with all three assertions. `checkout.py` retains its seed hash/mtime and calls `discounted` once per amount. `pricing.py` alone changed from `(100 - percent * 2)` to `(100 - percent)`, applying the discount once.
+
+Lifecycle deviation: the accepted finish occurred after the 15-minute wall budget expired during the attached-worker wait; evidence says no new attempt, extension, reset, or reopen occurred. A pre-goal usage interruption also makes uninterrupted dispatch timing unknown. Full exported worker tool transcript and consistent usage/cost observations are unavailable, so those remain unknown; neither conflicts with the required evidence.

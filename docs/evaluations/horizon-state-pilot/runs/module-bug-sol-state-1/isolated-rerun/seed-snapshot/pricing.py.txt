@@ -1,0 +1,2 @@
+def discounted(amount, percent):
+    return amount * (100 - percent * 2) // 100

@@ -1,0 +1,19 @@
+command: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v
+exit_code: 0
+output:
+test_total_and_boundaries (test_acceptance.AcceptanceTests.test_total_and_boundaries) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 0.000s
+
+OK
+
+final sha256:
+82de323e0cddff692abb6cea7fc7ff3ed6794a769bb5b48ec39edbf36fd103bb  checkout.py
+d90b510771d75fa0fbc4b7b42115c97812bbb6e3d494d56e9b495925f38a2a12  pricing.py
+cb50420a69e7abef79d5b50043ef39e82bfbffb16edb1b58b0f4202d5693442d  tests/test_acceptance.py
+
+final mtime and size:
+checkout.py|1790650615|1790650615.691299174|127
+pricing.py|1790653104|1790653104.878617265|76
+tests/test_acceptance.py|1790650615|1790650615.692122880|275

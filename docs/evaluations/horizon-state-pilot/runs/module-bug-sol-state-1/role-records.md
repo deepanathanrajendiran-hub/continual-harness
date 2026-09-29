@@ -1,0 +1,9 @@
+# Native role records
+
+- Coordinator: `/root/pilot_module_bug_sol_state_1`; lifecycle owner only. It created and advanced the saved Horizon goal, inspected artifacts, recorded evidence, and did not directly edit Python source.
+- Editing worker request-001: `/root/pilot_module_bug_sol_state_1/state_worker_request_001`; fresh context, model `gpt-5.6-sol`, high reasoning. It inspected and edited the trial project using the AST editor, ran the gate, and returned the update. Host terminal state was observed through `collaboration.wait_agent`.
+- Verification worker request-002: `/root/pilot_module_bug_sol_state_1/state_worker_request_002`; fresh context, model `gpt-5.6-sol`, high reasoning. It made no edits, independently inspected the fixed source/protected test, ran the gate, and returned the fresh-checkpoint update. Host terminal state was observed through `collaboration.wait_agent`.
+- Reviewer for checkpoint 1: `/root/pilot_module_bug_sol_state_1/independent_reviewer`; fresh context, model `gpt-5.6-sol`, high reasoning. It passed the criterion, but the harness rejected recording its verdict after the snapshot became stale.
+- Reviewer for checkpoint 2: `/root/pilot_module_bug_sol_state_1/independent_reviewer_2`; fresh context, model `gpt-5.6-sol`, high reasoning. It independently passed the exact frozen criterion for tree hash `f300209453b11170de50dab9afd7ccfa49d084a2d859c7fb6dacd44e822261be`.
+
+Coordinator-written tool accounts are `coordinator-source-inspection.txt`, lifecycle files, this role record, and `protocol-events.md`. No complete exported native tool transcript was available; worker/reviewer terminal outputs and host wait observations are recorded separately. Usage and cost are null because the host did not consistently report them for coordinator, workers, and reviewers.

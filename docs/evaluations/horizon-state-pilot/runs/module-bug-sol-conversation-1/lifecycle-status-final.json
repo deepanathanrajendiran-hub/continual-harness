@@ -1,0 +1,11 @@
+{
+  "slug": "fix-the-checkout-integration-and-the-underlying-discount-def",
+  "status": "complete",
+  "runtime": "codex",
+  "used": {"turns": 1, "started": "2026-09-29T03:36:23.253110+00:00"},
+  "budget": {"max_turns": 4, "max_minutes": 15},
+  "budget_exhausted": false,
+  "last_checkpoint": {"turn": 1, "tree_hash": "9c194161eec7b1885b9892bdb0848a314b6bf737e1a07b76c7e76f624c6de87e", "gate": "pass"},
+  "reviews": [{"turn": 1, "tree_hash": "9c194161eec7b1885b9892bdb0848a314b6bf737e1a07b76c7e76f624c6de87e", "judge": "/root/pilot_module_bug_sol_conversation_1/pilot_reviewer", "result": "pass"}],
+  "execution_mode": "conversation"
+}

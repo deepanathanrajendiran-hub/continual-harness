@@ -1,0 +1,7 @@
+import unittest
+from render import render_row
+
+class AcceptanceTests(unittest.TestCase):
+    def test_csv_and_empty(self):
+        self.assertEqual(render_row(["a,b", "c"]), '"a,b",c')
+        self.assertEqual(render_row([]), "")

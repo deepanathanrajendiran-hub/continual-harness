@@ -1,0 +1,7 @@
+# Independent evaluator assessment
+
+Canonical row 1 passes the fixed acceptance and required independent review. The evaluator reran the exact gate successfully, inspected the one-line discount correction, and verified protected acceptance and unchanged checkout SHA-256 plus nanosecond mtime against the seed. Saved objective, review, watch paths, and budgets match the frozen controls. One accepted attempt, one passing checkpoint, one passing review, and terminal completion are present. Nine source/lifecycle files were copied byte-for-byte with hashes in final-project-path-map.csv.
+
+The worker explicitly lacked the external baseline in its packet; this is recorded as a state omission, recovered by coordinator/evaluator checks. No false completion or fixture-observed regression occurred. Complete event histories are unavailable, so repeated-work and stale-fact event metrics are null. Format repair zero is the coordinator report, not an independently exported tool-history count.
+
+This is a correctness result with a timing deviation: the 15-minute budget elapsed during the external wait; the existing terminal attempt was late-finished without extension or another attempt. Goal start-to-completion was 2063.934759 seconds. Pre-start usage interruption and external waiting prevent a clean active elapsed measure; elapsed_seconds remains null. This row alone does not establish comparative efficiency.

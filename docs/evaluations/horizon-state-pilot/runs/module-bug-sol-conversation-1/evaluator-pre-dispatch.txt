@@ -1,0 +1,4 @@
+2026-09-29T03:35:12.516138+00:00
+3 seeds and mtimes match; 10 frozen source hashes match; paired objective/review byte-equal; no goal exists.
+Git exit 128
+fatal: not a git repository (or any of the parent directories): .git

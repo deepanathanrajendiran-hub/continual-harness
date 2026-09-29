@@ -1,0 +1,14 @@
+import unittest
+import parser
+import consumer
+
+class AcceptanceTests(unittest.TestCase):
+    def test_current_parser_contract(self):
+        self.assertEqual(consumer.parse("7"), parser.parse_number("7"))
+        try:
+            expected = parser.parse_number("")
+        except ValueError:
+            with self.assertRaises(ValueError):
+                consumer.parse("")
+        else:
+            self.assertEqual(consumer.parse(""), expected)

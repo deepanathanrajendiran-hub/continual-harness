@@ -1,0 +1,4 @@
+from parser import parse_number
+
+def parse(value):
+    return 0 if value == "" else parse_number(value)

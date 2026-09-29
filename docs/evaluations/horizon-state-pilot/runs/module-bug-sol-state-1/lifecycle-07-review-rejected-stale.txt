@@ -1,0 +1,5 @@
+command: review SLUG --result pass --judge /root/pilot_module_bug_sol_state_1/independent_reviewer --hash c80d74e... --evidence-file independent-review.txt
+exit_code: 2
+combined_stdout_stderr:
+{"error": "GateNotPassed", "message": "Artifacts changed after verification; run the gate again."}
+

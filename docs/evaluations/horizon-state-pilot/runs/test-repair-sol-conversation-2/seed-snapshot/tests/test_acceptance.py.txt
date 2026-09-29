@@ -1,0 +1,13 @@
+import unittest
+from counts import parse_count
+
+class AcceptanceTests(unittest.TestCase):
+    def test_valid_counts(self):
+        self.assertEqual(parse_count("12"), 12)
+        self.assertEqual(parse_count("0"), 0)
+
+    def test_invalid_counts(self):
+        for value in (True, False, -1, "-1", "bad"):
+            with self.subTest(value=value):
+                with self.assertRaises(ValueError):
+                    parse_count(value)

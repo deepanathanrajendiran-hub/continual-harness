@@ -1,0 +1,4 @@
+from pricing import discounted
+
+def total(amounts, percent):
+    return sum(discounted(amount, percent) for amount in amounts)

@@ -1,0 +1,7 @@
+import unittest
+from delivery import slugs
+
+class AcceptanceTests(unittest.TestCase):
+    def test_delivery(self):
+        self.assertEqual(slugs([" Hello World ", "Two"]), ["hello-world", "two"])
+        self.assertEqual(slugs([]), [])

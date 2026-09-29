@@ -1,0 +1,19 @@
+command: python3 "/Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/.agents/skills/horizon/scripts/harness.py" --runtime codex --project "/Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/.superpowers/sdd/2026-09-19-horizon-state-mode/pilot-live/module-bug-sol-state-1/project" doctor
+exit_code: 0
+combined_stdout_stderr:
+{
+  "runtime": "codex",
+  "project": "/Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/.superpowers/sdd/2026-09-19-horizon-state-mode/pilot-live/module-bug-sol-state-1/project",
+  "implementation": "/Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/harness",
+  "state": "/Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/.superpowers/sdd/2026-09-19-horizon-state-mode/pilot-live/module-bug-sol-state-1/project/.codex/harness",
+  "targets": {
+    "rho": "/Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/.superpowers/sdd/2026-09-19-horizon-state-mode/pilot-live/module-bug-sol-state-1/project/AGENTS.md",
+    "G": "/Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/.superpowers/sdd/2026-09-19-horizon-state-mode/pilot-live/module-bug-sol-state-1/project/.agents/skills",
+    "K": "/Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/.superpowers/sdd/2026-09-19-horizon-state-mode/pilot-live/module-bug-sol-state-1/project/.codex/agents",
+    "M": "/Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/.superpowers/sdd/2026-09-19-horizon-state-mode/pilot-live/module-bug-sol-state-1/project/.codex/memory"
+  },
+  "memory_mode": "explicit recall",
+  "state_supported": true,
+  "worker_availability": "Determined by the host; the Python CLI does not dispatch or inspect workers."
+}
+

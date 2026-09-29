@@ -2,8 +2,9 @@
 
 This directory freezes the Task 10 protocol before any measured run.  It is a
 72-run comparative pilot: six fixtures × two models × two execution modes ×
-three repetitions.  It is not a model API runner and it contains no measured
-outcome yet.
+three repetitions. It is not a model API runner. Two canonical rows have
+been independently scored; the pilot remains incomplete. See [report.md](report.md)
+for results and limitations.
 
 Each row in [manifest.csv](manifest.csv) has four allowed increments and a
 15-minute allowance.  Both arms use the same frozen checkout, Horizon skill,
@@ -46,8 +47,8 @@ Use [trial-briefs.md](trial-briefs.md) to instantiate a coordinator/worker
 brief.  Only the listed model, mode, repeat, and environment path placeholders
 may change.  All 72 manifest-matched
 `runs/<fixture>-<sol|terra>-<state|conversation>-<repeat>/` directories are
-already reserved placeholders.  A row begins only when root replaces its
-placeholder state by adding raw command output, goal/audit bytes and hashes,
+prepared with instantiated briefs and seed snapshots. Preparation does not
+mean a trial has run. A run adds raw command output, goal/audit bytes and hashes,
 worker/reviewer records, evaluator observations, source hashes, and any
 protocol deviation.  A reserved directory or a completed-looking JSON record
 is not evidence.
@@ -57,11 +58,11 @@ at `runs/module-bug-sol-state-1/` as a supplemental setup-contaminated record:
 it completed with two accepted attempts, one reported format-only repair, a
 passing gate, and an independent passing review, but evaluator-log fingerprint
 contamination forced a second no-edit attempt/review.  It is excluded from the
-canonical comparison.  Its canonical repeat is pending under
+canonical comparison. Its canonical repeat passed under
 `runs/module-bug-sol-state-1/isolated-rerun/` and is the only record eligible
 for that manifest row.  The 72-row manifest itself is unchanged.
 
-[results.jsonl](results.jsonl) is intentionally empty.  Append exactly one
+[results.jsonl](results.jsonl) currently contains two scored records. Append exactly one
 schema-valid record only after independent evaluator scoring of a run's raw
 evidence.  Preserve unknown values as JSON `null`, not zero.  The current
 [report.md](report.md) is intentionally incomplete and must remain so until

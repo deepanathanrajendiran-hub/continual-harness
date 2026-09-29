@@ -1,0 +1,2 @@
+def slug(value):
+    return "-".join(value.strip().lower().split())

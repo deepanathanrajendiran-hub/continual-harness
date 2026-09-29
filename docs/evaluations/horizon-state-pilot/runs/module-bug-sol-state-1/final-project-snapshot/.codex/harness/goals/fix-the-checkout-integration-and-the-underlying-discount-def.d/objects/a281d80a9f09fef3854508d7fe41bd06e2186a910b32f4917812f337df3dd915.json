@@ -1,0 +1,1 @@
+{"entries":[],"next_action":"Review pricing.py and checkout.py, then independently rerun the acceptance gate and verify protected artifact hashes and mtimes.","summary":"Changed pricing.discounted from subtracting twice the percentage to subtracting it once. checkout.total still delegates each amount to pricing.discounted. The exact gate passes: 1 test run, 0 failures."}

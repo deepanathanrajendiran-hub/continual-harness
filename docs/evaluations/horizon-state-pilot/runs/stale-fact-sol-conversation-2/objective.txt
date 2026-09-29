@@ -1,0 +1,1 @@
+Make consumer.parse follow the parser's current behavior while preserving the evaluator-owned parser change and fixed acceptance bytes.

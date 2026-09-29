@@ -1,0 +1,1 @@
+Repair parse_count validation and add regression tests without removing tests. Positive decimal strings and zero pass; booleans, negative values, and malformed strings raise ValueError.

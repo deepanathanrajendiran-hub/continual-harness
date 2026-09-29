@@ -1,0 +1,10 @@
+Checkpoint tree_hash: f300209453b11170de50dab9afd7ccfa49d084a2d859c7fb6dacd44e822261be
+Command: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v
+Exit code: 0
+Output:
+test_total_and_boundaries (test_acceptance.AcceptanceTests.test_total_and_boundaries) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 0.000s
+
+OK
