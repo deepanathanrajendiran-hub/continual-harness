@@ -1,0 +1,5 @@
+# Independent evaluator assessment
+
+Canonical row4 passes acceptance and required review in one accepted state attempt. Root acceptance rerun passed; the pricing correction, protected acceptance/checkout hash and nanosecond mtime, frozen objective/review/watch/budget, matching checkpoint/review hash, and terminal completion are verified. All final source/lifecycle objects are copied byte-for-byte with hashes in final-project-path-map.csv. No false completion or fixture-observed regression. Native host observations establish worker and reviewer terminal results. Coordinator reports no format repairs or recovery.
+
+Elapsed 465.534524 seconds measures root post-dispatch observation to persisted goal completion; goal-only wall time is 338.98915 seconds. Packet size 1820 bytes is not a token or cost measure. Reviewer disclosed no separate tree-hash-algorithm recomputation but directly verified source and protected-file hashes. Full tool-history event completeness remains unknown. The paired conversation repeat2 had a pre-goal interruption and extra state-style JSON repair, so no clean comparative efficiency claim follows.

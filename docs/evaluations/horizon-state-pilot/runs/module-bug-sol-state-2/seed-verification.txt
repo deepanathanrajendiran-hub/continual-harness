@@ -1,0 +1,4 @@
+Compared against seed-hashes.csv before marker creation and dispatch.
+checkout.py sha256=82de323e0cddff692abb6cea7fc7ff3ed6794a769bb5b48ec39edbf36fd103bb mtime_ns=1790650615706461302 match=yes
+pricing.py sha256=a9d31ee865900e44f33eb6aab70ea7d9880bf2bc8c1e5cd796354b0587969500 mtime_ns=1790650615706601093 match=yes
+tests/test_acceptance.py sha256=cb50420a69e7abef79d5b50043ef39e82bfbffb16edb1b58b0f4202d5693442d mtime_ns=1790650615706767718 match=yes

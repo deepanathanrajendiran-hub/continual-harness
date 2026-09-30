@@ -1,0 +1,4 @@
+coordinator: /root/pilot_module_bug_sol_state_2; owns lifecycle commands, evidence capture, and completion decision
+editing_worker: /root/pilot_module_bug_sol_state_2/native_worker_001; fresh context; model gpt-5.6-sol high; owns exactly one implementation increment and update JSON; may not review or run lifecycle
+reviewer: /root/pilot_module_bug_sol_state_2/independent_reviewer; fresh context; model gpt-5.6-sol high; owns read-only independent evaluation against the exact frozen criterion and may not edit or run lifecycle
+coordinator-written tool accounts are recorded separately from exported native role transcripts.

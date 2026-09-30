@@ -1,0 +1,20 @@
+Fresh coordinator verification immediately before harness completion.
+command: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v
+exit_code: 0
+output:
+test_total_and_boundaries (test_acceptance.AcceptanceTests.test_total_and_boundaries) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 0.000s
+
+OK
+
+Current hashes:
+checkout.py 82de323e0cddff692abb6cea7fc7ff3ed6794a769bb5b48ec39edbf36fd103bb
+pricing.py d90b510771d75fa0fbc4b7b42115c97812bbb6e3d494d56e9b495925f38a2a12
+tests/test_acceptance.py cb50420a69e7abef79d5b50043ef39e82bfbffb16edb1b58b0f4202d5693442d
+
+Current mtimes_ns:
+checkout.py 1790650615706461302
+pricing.py 1790683494358576756
+tests/test_acceptance.py 1790650615706767718

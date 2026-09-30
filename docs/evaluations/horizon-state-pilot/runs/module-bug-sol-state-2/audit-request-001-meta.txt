@@ -1,0 +1,2 @@
+5fe4aebc30523c153d76227537eab17194c3bc57e53e65625035b20bb19588c1  /private/tmp/horizon-state-pilot-20260928-2f65f2a/module-bug-sol-state-2/project/.codex/harness/goals/fix-the-checkout-integration-and-the-underlying-discount-def.d/objects/5fe4aebc30523c153d76227537eab17194c3bc57e53e65625035b20bb19588c1.json
+    1394 /private/tmp/horizon-state-pilot-20260928-2f65f2a/module-bug-sol-state-2/project/.codex/harness/goals/fix-the-checkout-integration-and-the-underlying-discount-def.d/objects/5fe4aebc30523c153d76227537eab17194c3bc57e53e65625035b20bb19588c1.json

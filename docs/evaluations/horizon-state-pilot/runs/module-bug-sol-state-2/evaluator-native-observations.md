@@ -1,0 +1,4 @@
+
+At 2026-09-29T12:06:36.731396+00:00, native list_agents reported /root/pilot_module_bug_sol_state_2/native_worker_001 completed, with JSON update for request-001/base_revision1 claiming the pricing correction, preserved checkout delegation, and full gate1test pass; coordinator running. The update included a top-level did key plus summary/next_action/upsert ops and three source evidence hashes. This is an observed native terminal result summary, not a complete internal tool transcript.
+
+At 2026-09-29T12:09:23.896370+00:00, root observed independent_reviewer terminal PASS through native list_agents. Reviewer confirmed raw step-finish gate/source/protected bytes/mtime and reran fixed gate; it disclosed no separate tree-hash-algorithm rerun. Root acceptance check passes and protected acceptance/checkout hash plus nanosecond mtime match seed.

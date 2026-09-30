@@ -1,0 +1,7 @@
+pre-dispatch: evaluator-pre-dispatch.txt recorded matching seed/source hashes and mtimes, no existing goal, and Git discovery exit 128.
+coordinator isolation barrier: git-isolation-precheck.txt independently recorded exit 128 before marker creation or role dispatch.
+goal barrier: doctor/start/status were saved before attempt reservation; goal used state mode, --watch ., four attempts, and 15 minutes.
+worker barrier: request-001 was reserved, native handle attached, and host terminal completion observed before step-finish.
+gate barrier: step-finish accepted the update only after the frozen gate passed at checkpoint c5dec7772338bdc483e707136114e37f6949ee1df6c3a978dc3b079e05221d8f.
+review barrier: fresh independent reviewer reached terminal status and returned PASS before the review command recorded its verdict.
+completion barrier: a fresh coordinator gate run passed immediately before complete; complete returned exit 0 and final status complete.

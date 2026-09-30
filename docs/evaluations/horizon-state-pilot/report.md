@@ -1,6 +1,6 @@
 # Horizon state-mode pilot report — incomplete
 
-Three of 72 canonical manifest rows have been scored, all passing acceptance
+Four of 72 (4/72) canonical manifest rows have been scored, all passing acceptance
 and independent review, with no false completion or fixture-observed regression.
 The first paired
 module-bug / Sol comparison passed acceptance and independent review in both
@@ -38,8 +38,14 @@ reported missing terminal-result evidence; the coordinator subsequently saved
 the actual host-delivered final and disclosed the visibility discrepancy.
 Evidence is in `runs/module-bug-sol-conversation-2/`.
 
-The fourth row, state repeat 2, is active. The remaining 68 rows have prepared
-briefs but have not run.
+The fourth row, state repeat 2, passed in one accepted attempt with no reported
+formatting repair. Its packet was 1820 bytes, goal wall time was 338.98915
+seconds, and root post-dispatch to goal completion was 465.534524 seconds.
+Protected hash/mtime and immutable controls passed evaluator checks. Evidence
+is in `runs/module-bug-sol-state-2/`.
+
+The fifth row, state repeat 3, is active. The remaining 67 rows have prepared
+briefs but have not run. All scored runs so far use Sol on the module-bug fixture.
 
 The original module-bug / Sol /
 state / repeat 1 run is retained as supplemental raw evidence but excluded from
@@ -50,9 +56,9 @@ changed its fingerprint.  The setup probe retained at
 `evidence/environment-isolation-probe.txt` distinguishes this from a product
 defect. Its outcome remains supplemental and is not a second canonical row.
 
-This single correctness comparison supplies no basis for a mode superiority
-or recovery claim. The state arm's external interruption prevents a useful
-paired efficiency comparison.
+These two correctness comparisons supply no basis for a mode superiority or
+recovery claim. External interruptions and the extra JSON repair in conversation
+repeat 2 prevent clean paired efficiency comparisons.
 
 When raw trial evidence exists, independently score one JSON object per
 manifest row in `results.jsonl` and replace this section with raw counts by
