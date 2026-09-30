@@ -1,6 +1,6 @@
 # Horizon state-mode pilot report — incomplete
 
-Six of 72 (6/72) canonical manifest rows have been scored: five passed acceptance
+Seven of 72 (7/72) canonical manifest rows have been scored: six passed acceptance
 and independent review; the fifth is incomplete after an external usage limit.
 There has been no false completion or fixture-observed regression.
 The first paired
@@ -62,8 +62,16 @@ the module integration. Goal wall time was 654.49199 seconds, with 800.040653
 seconds from root dispatch to persisted completion. Evidence is in
 `runs/module-bug-sol-conversation-3/`.
 
-The first Terra run, state repeat 1, is active. The remaining 65 rows have
-prepared briefs but have not run. All scored runs so far use Sol on the
+The first Terra run, state repeat 1, passed in one accepted attempt with a
+1844-byte packet and no reported format repair. Goal wall time was 251.581996
+seconds, with 266.990596 seconds from root dispatch to completion. Its
+protected acceptance and unchanged checkout bytes/mtimes match the seed.
+The saved state has a summary and next action but no evidence-backed entry
+for the pricing edit. This is a possible handoff weakness, not an observed
+handoff failure. Evidence is in `runs/module-bug-terra-state-1/`.
+
+The paired Terra conversation run is active. The remaining 64 rows have
+prepared briefs but have not run. The scored rows so far all use the
 module-bug fixture.
 
 The original module-bug / Sol /

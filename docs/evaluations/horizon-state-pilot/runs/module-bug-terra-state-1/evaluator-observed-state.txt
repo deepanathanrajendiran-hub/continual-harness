@@ -1,0 +1,17 @@
+{
+  "checked_at": "2026-09-30T12:50:25.742781+00:00",
+  "goal_status": "complete",
+  "immutable_controls_match": true,
+  "protected_acceptance_sha256": "cb50420a69e7abef79d5b50043ef39e82bfbffb16edb1b58b0f4202d5693442d",
+  "protected_acceptance_mtime_ns": 1790650615727881831,
+  "checkout_seed_matches": true,
+  "pricing_changed": true,
+  "accepted_attempts": 1,
+  "checkpoints": 1,
+  "passing_reviews": 1,
+  "task_entries": 0,
+  "snapshot_files": 9,
+  "packet_bytes": 1844,
+  "goal_wall_seconds": 251.581996,
+  "elapsed_seconds": 266.990596
+}

@@ -1,0 +1,1 @@
+Host wait observed worker /root/pilot_module_bug_terra_state_1/state_worker_1 reach its terminal final state. Coordinator independently inspected checkout.py and pricing.py, confirmed the protected acceptance hash, and saved the worker's schema-valid update.

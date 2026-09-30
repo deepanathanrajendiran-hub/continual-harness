@@ -1,0 +1,3 @@
+PASS. Fixed gate independently reran: 1 test, OK. Protected `tests/test_acceptance.py` hash and mtime_ns exactly match seed; it remains present. No test removal observed. `checkout.total` calls `pricing.discounted`; pricing applies discount once.
+
+Unknown: no supplied algorithm to recompute checkpoint tree hash. Lifecycle remains active with review required, so completion must await recording this review.

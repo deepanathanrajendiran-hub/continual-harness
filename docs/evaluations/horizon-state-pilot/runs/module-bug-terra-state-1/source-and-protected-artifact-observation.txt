@@ -1,0 +1,5 @@
+Coordinator source inspection after worker termination:
+checkout.py SHA-256 82de323e0cddff692abb6cea7fc7ff3ed6794a769bb5b48ec39edbf36fd103bb; mtime_ns 1790650615727554998.
+pricing.py SHA-256 d90b510771d75fa0fbc4b7b42115c97812bbb6e3d494d56e9b495925f38a2a12; mtime_ns 1790772260375869493.
+tests/test_acceptance.py SHA-256 cb50420a69e7abef79d5b50043ef39e82bfbffb16edb1b58b0f4202d5693442d; mtime_ns 1790650615727881831.
+The protected acceptance artifact exactly matches its supplied seed hash and mtime. The test tree contains the single seed acceptance test. checkout.total imports pricing.discounted and returns sum(discounted(amount, percent) for amount in amounts); pricing.discounted returns amount * (100 - percent) // 100, applying the discount once.

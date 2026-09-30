@@ -1,0 +1,6 @@
+test_total_and_boundaries (test_acceptance.AcceptanceTests.test_total_and_boundaries) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 0.000s
+
+OK
