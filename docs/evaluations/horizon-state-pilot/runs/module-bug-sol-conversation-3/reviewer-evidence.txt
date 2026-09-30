@@ -1,0 +1,15 @@
+PASS
+
+Evidence:
+- Raw gate check-001 passed the sole acceptance test; an independent rerun also passed 1/1 tests.
+- Runtime results were 270, 0, and 300 for the three required cases.
+- checkout.total calls pricing.discounted; monkeypatch verification returned 14 for two items, confirming dynamic module use.
+- pricing.discounted applies (100 - percent) once.
+- Protected tests/test_acceptance.py exists with required SHA-256 cb50420a69e7abef79d5b50043ef39e82bfbffb16edb1b58b0f4202d5693442d and required mtime_ns 1790650615721067557.
+- Seed and current test inventories both contain only tests/test_acceptance.py; no test was removed.
+- Current tree hash independently reproduces checkpoint hash 6180bcb26b1292e45a337d9b790fe9b4f1dda9d3272d9ecb9bea0209a482b823.
+- Doctor, start, initial-status, and check sidecars all record exit status 0, and their recorded hashes match the raw outputs.
+- Git-isolation evidence records the expected non-repository exit 128.
+- Worker claims do not conflict with source, gate, or required-review evidence.
+
+Omissions/unknowns: none for the frozen review criterion.

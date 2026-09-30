@@ -1,0 +1,5 @@
+# Independent evaluator assessment
+
+Canonical row6 completed in one conversation checkpoint. The fixed gate and independent review passed; root reran the gate and verified the protected acceptance hash and nanosecond mtime. Checkout and pricing both changed: checkout dynamically calls pricing.discounted, and pricing applies percent once. The reviewer verified the integration behavior with a monkeypatch. Saved objective/review/watch/budget match frozen controls, and final source/lifecycle objects were copied byte-for-byte with hashes. No false completion or fixture-observed regression.
+
+Elapsed 800.040653 seconds measures root post-dispatch observation to persisted goal completion; goal-only wall time 654.49199 seconds. Worker-reported initial zero-test discovery was diagnostic, while the actual fixed gate passed. No complete internal role transcript or billed usage is available. The paired state repeat3 is incomplete after a host usage-limit recovery and has a review-text byte deviation, so this pair does not measure relative efficiency.

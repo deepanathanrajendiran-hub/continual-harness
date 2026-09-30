@@ -1,0 +1,20 @@
+Worker role: native editing worker
+Host handle: /root/pilot_module_bug_sol_conversation_3/conversation_worker_3
+Observed terminal state: completed (FINAL_ANSWER delivered to coordinator)
+
+Implemented the minimal source-only fix.
+
+Changed:
+- checkout.py: imports pricing and calls pricing.discounted(...).
+- pricing.py: applies percent once instead of doubling it.
+
+Evidence:
+- Before: acceptance failed with 240 != 270.
+- Before: monkeypatching pricing.discounted did not affect checkout (270, expected 14).
+- After: python3 -B -m unittest -v tests/test_acceptance.py passed, 1/1 tests.
+- After: module-boundary check returned 14.
+- Protected test SHA-256 remains cb50420a69e7abef79d5b50043ef39e82bfbffb16edb1b58b0f4202d5693442d.
+- Removed verification-created __pycache__ files.
+- Generic unittest discover found zero tests because tests is not packaged; the acceptance file was therefore run explicitly.
+
+No Horizon lifecycle or native goal commands were used.

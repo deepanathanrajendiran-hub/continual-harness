@@ -1,6 +1,6 @@
 # Horizon state-mode pilot report — incomplete
 
-Five of 72 (5/72) canonical manifest rows have been scored: four passed acceptance
+Six of 72 (6/72) canonical manifest rows have been scored: five passed acceptance
 and independent review; the fifth is incomplete after an external usage limit.
 There has been no false completion or fixture-observed regression.
 The first paired
@@ -54,7 +54,15 @@ goal is incomplete. Its saved review criterion also collapsed the frozen line
 breaks; normalized words match, bytes do not. Both deviations remain in its
 canonical record and [raw evidence](runs/module-bug-sol-state-3/).
 
-The sixth row, conversation repeat 3, is active. The remaining 66 rows have
+The sixth row, conversation repeat 3, passed in one checkpoint within budget.
+Its worker edited both checkout and pricing so checkout calls
+`pricing.discounted` dynamically. Root verified the frozen gate, protected
+acceptance hash/mtime, and exact controls; the reviewer independently checked
+the module integration. Goal wall time was 654.49199 seconds, with 800.040653
+seconds from root dispatch to persisted completion. Evidence is in
+`runs/module-bug-sol-conversation-3/`.
+
+The first Terra run, state repeat 1, is active. The remaining 65 rows have
 prepared briefs but have not run. All scored runs so far use Sol on the
 module-bug fixture.
 
@@ -67,9 +75,10 @@ changed its fingerprint.  The setup probe retained at
 `evidence/environment-isolation-probe.txt` distinguishes this from a product
 defect. Its outcome remains supplemental and is not a second canonical row.
 
-These two correctness comparisons supply no basis for a mode superiority or
-recovery claim. External interruptions and the extra JSON repair in conversation
-repeat 2 prevent clean paired efficiency comparisons.
+These three small-fixture pairs supply no basis for a mode superiority or
+recovery claim. External interruptions, one incomplete state arm, and the
+extra JSON repair in conversation repeat 2 prevent clean paired efficiency
+comparisons.
 
 When raw trial evidence exists, independently score one JSON object per
 manifest row in `results.jsonl` and replace this section with raw counts by

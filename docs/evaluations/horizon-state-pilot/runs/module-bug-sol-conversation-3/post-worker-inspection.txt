@@ -1,0 +1,27 @@
+[checkout.py]
+import pricing
+
+def total(amounts, percent):
+    return sum(pricing.discounted(amount, percent) for amount in amounts)
+[pricing.py]
+def discounted(amount, percent):
+    return amount * (100 - percent) // 100
+[tests/test_acceptance.py]
+import unittest
+from checkout import total
+
+class AcceptanceTests(unittest.TestCase):
+    def test_total_and_boundaries(self):
+        self.assertEqual(total([100, 200], 10), 270)
+        self.assertEqual(total([], 10), 0)
+        self.assertEqual(total([100, 200], 0), 300)
+[hashes]
+c73df4fa22466573be70bb9b9d2bba43b0e82b5991b24c5e1476ada5d1275912  checkout.py
+d90b510771d75fa0fbc4b7b42115c97812bbb6e3d494d56e9b495925f38a2a12  pricing.py
+cb50420a69e7abef79d5b50043ef39e82bfbffb16edb1b58b0f4202d5693442d  tests/test_acceptance.py
+[mtime_ns,size]
+checkout.py,1790771317772925017,119
+pricing.py,1790771288647097689,76
+tests/test_acceptance.py,1790650615721067557,275
+[test-files]
+tests/test_acceptance.py

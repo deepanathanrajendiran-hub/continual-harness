@@ -1,0 +1,3 @@
+exit_status=0
+bytes=994
+sha256=7ff9eff5ac747185d14b479f7e8722846d413bef21afa52fd7b4770e81c9090d

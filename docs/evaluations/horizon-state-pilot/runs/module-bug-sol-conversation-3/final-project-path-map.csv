@@ -1,0 +1,5 @@
+original_path,archive_path,sha256,mtime_ns
+/private/tmp/horizon-state-pilot-20260928-2f65f2a/module-bug-sol-conversation-3/project/.codex/harness/goals/fix-the-checkout-integration-and-the-underlying-discount-def.json,final-project-snapshot/.codex/harness/goals/fix-the-checkout-integration-and-the-underlying-discount-def.json,ea62a02d2726b83e2257f921e425262416f0bc0089b6556c5c7c618f9f86b0a5,1790771825511503750
+/private/tmp/horizon-state-pilot-20260928-2f65f2a/module-bug-sol-conversation-3/project/checkout.py,final-project-snapshot/checkout.py.txt,c73df4fa22466573be70bb9b9d2bba43b0e82b5991b24c5e1476ada5d1275912,1790771317772925017
+/private/tmp/horizon-state-pilot-20260928-2f65f2a/module-bug-sol-conversation-3/project/pricing.py,final-project-snapshot/pricing.py.txt,d90b510771d75fa0fbc4b7b42115c97812bbb6e3d494d56e9b495925f38a2a12,1790771288647097689
+/private/tmp/horizon-state-pilot-20260928-2f65f2a/module-bug-sol-conversation-3/project/tests/test_acceptance.py,final-project-snapshot/tests/test_acceptance.py.txt,cb50420a69e7abef79d5b50043ef39e82bfbffb16edb1b58b0f4202d5693442d,1790650615721067557

@@ -1,0 +1,14 @@
+{
+  "checked_at": "2026-09-30T12:41:34.724350+00:00",
+  "goal_status": "complete",
+  "immutable_controls_match": true,
+  "protected_acceptance_sha256": "cb50420a69e7abef79d5b50043ef39e82bfbffb16edb1b58b0f4202d5693442d",
+  "protected_acceptance_mtime_ns": 1790650615721067557,
+  "checkout_changed": true,
+  "pricing_changed": true,
+  "checkpoints": 1,
+  "passing_reviews": 1,
+  "snapshot_files": 4,
+  "goal_wall_seconds": 654.49199,
+  "elapsed_seconds": 800.040653
+}
