@@ -1,0 +1,15 @@
+Coordinator-written tool account after `complete` returned exit code 0 and a final `status SLUG` read returned `status: complete`.
+
+Final source hashes and mtimes:
+82de323e0cddff692abb6cea7fc7ff3ed6794a769bb5b48ec39edbf36fd103bb  checkout.py  mtime_ns=1790650615762753534
+d90b510771d75fa0fbc4b7b42115c97812bbb6e3d494d56e9b495925f38a2a12  pricing.py   mtime_ns=1790775448544864096
+cb50420a69e7abef79d5b50043ef39e82bfbffb16edb1b58b0f4202d5693442d  tests/test_acceptance.py  mtime_ns=1790650615763063283
+
+Current tests inventory: tests/test_acceptance.py only. The protected test hash and mtime_ns exactly match seed-hashes.csv; checkout.py also retains its seed hash/mtime. pricing.py alone changed as required.
+
+Goal ledger artifact:
+.codex/harness/goals/fix-the-checkout-integration-and-the-underlying-discount-def.json
+bytes=4827
+sha256=3056fd08ac57a367ad9725c592c235d19ca6c008b511df5bd03eb5b77bc8c219
+
+Conversation mode generated no state-mode packet or packet audit artifact. Lifecycle start, check, review, complete, and final status outputs are retained in the evidence directory. The fixed gate output is pass with one test OK. No acceptance artifact was edited, moved, removed, or regenerated.

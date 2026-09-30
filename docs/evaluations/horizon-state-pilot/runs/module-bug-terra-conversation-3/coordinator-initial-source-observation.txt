@@ -1,0 +1,11 @@
+Observed before lifecycle dispatch and before any source edit.
+
+SHA-256:
+82de323e0cddff692abb6cea7fc7ff3ed6794a769bb5b48ec39edbf36fd103bb  checkout.py
+a9d31ee865900e44f33eb6aab70ea7d9880bf2bc8c1e5cd796354b0587969500  pricing.py
+cb50420a69e7abef79d5b50043ef39e82bfbffb16edb1b58b0f4202d5693442d  tests/test_acceptance.py
+
+Observed source:
+checkout.total imports and calls pricing.discounted for each amount.
+pricing.discounted computes amount * (100 - percent * 2) // 100, which applies twice the requested percentage.
+tests/test_acceptance.py is evaluator-owned and must remain untouched.

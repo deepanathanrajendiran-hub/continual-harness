@@ -1,6 +1,6 @@
 # Horizon state-mode pilot report — incomplete
 
-Eleven of 72 (11/72) canonical manifest rows have been scored: ten passed acceptance
+Twelve of 72 (12/72) canonical manifest rows have been scored: eleven passed acceptance
 and independent review; the fifth is incomplete after an external usage limit.
 There has been no false completion or fixture-observed regression.
 The first paired
@@ -100,8 +100,18 @@ had no evidence-backed entry for the pricing edit. This is a state omission,
 not an observed handoff failure. Evidence is in
 `runs/module-bug-terra-state-3/`.
 
-Terra conversation repeat 3 is active. The 59 later rows have prepared briefs
-but have not run. All scored rows so far use the module-bug fixture.
+Terra conversation repeat 3 passed in one checkpoint, with the exact frozen
+criterion, passing fixed gate and independent review, and preserved protected
+acceptance hash/mtime. Elapsed time from root dispatch to completion was
+393.153669 seconds; goal wall time was 337.951126 seconds. Its worker returned
+optional state-style JSON with null attempt fields, but no format repair or
+extra worker launch followed. A post-completion hash command from the wrong
+directory was corrected without source mutation. Evidence is in
+`runs/module-bug-terra-conversation-3/`.
+
+The first api-refactor / Sol conversation row is active. The 59 later rows
+have prepared briefs but have not run. All scored rows so far use the
+module-bug fixture.
 
 The original module-bug / Sol /
 state / repeat 1 run is retained as supplemental raw evidence but excluded from
@@ -112,7 +122,7 @@ changed its fingerprint.  The setup probe retained at
 `evidence/environment-isolation-probe.txt` distinguishes this from a product
 defect. Its outcome remains supplemental and is not a second canonical row.
 
-These four small-fixture paired observations supply no basis for a mode
+These small-fixture paired observations supply no basis for a mode
 superiority or recovery claim. External interruptions, one incomplete state
 arm, a review-criterion byte deviation, and the extra JSON repair in
 conversation repeat 2 prevent clean paired efficiency comparisons.

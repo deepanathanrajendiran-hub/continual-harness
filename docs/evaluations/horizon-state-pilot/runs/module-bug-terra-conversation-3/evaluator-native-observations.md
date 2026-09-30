@@ -1,0 +1,5 @@
+# Root native observations
+
+The host returned a terminal editing-worker response for `/root/pilot_module_bug_terra_conversation_3/editing_worker`, then a terminal passing independent-reviewer response for `/root/pilot_module_bug_terra_conversation_3/independent_reviewer`. The coordinator recorded one checkpoint, the passing review, and completion. The saved native-role transcripts contain terminal responses; a complete internal tool history was not exposed.
+
+The editing worker emitted informational state-style JSON with null attempt fields in conversation mode. The coordinator did not submit it to a state lifecycle, request a format repair, or launch another worker. The reviewer inspected the active pre-review goal and correctly marked formal review/gate-evidence persistence unknown at that moment; the final goal now contains both passing fields. Root re-read the canonical goal to confirm the review criterion's exact newlines after the raw lifecycle JSON display appeared doubly escaped.

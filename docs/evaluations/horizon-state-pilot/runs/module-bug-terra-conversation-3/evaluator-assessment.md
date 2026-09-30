@@ -1,0 +1,5 @@
+# Independent evaluator assessment
+
+Canonical row 12 completed one conversation checkpoint. The saved objective, review criterion bytes, gate, project watch input, and 4-checkpoint/15-minute budget match the frozen controls. The Horizon checkpoint gate and independent review passed against the same tree hash before completion. Root reran the exact acceptance command: one test passed. The evaluator-owned acceptance file and checkout file retain seed bytes and nanosecond mtimes; pricing changed to apply the percentage once, and checkout still calls `pricing.discounted`. Four final source/lifecycle files are preserved byte-for-byte with hashes. There was no false completion or fixture-observed regression.
+
+Elapsed 393.153669 seconds measures root post-dispatch to persisted completion; goal-only wall time is 337.951126 seconds. The conversation arm has no state packet. The worker returned an optional state-style JSON response that caused no repair. A coordinator hash check initially ran from the wrong directory and was corrected without mutation. Full internal role tool histories and consistent three-role usage/cost are unavailable.
