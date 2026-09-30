@@ -1,0 +1,3 @@
+2026-09-30T13:09:55.553608+00:00
+Seed3 hashes/mtimes and source10 hashes match; paired Terra objective/review exact equal; no existing goal; failed Git discovery exit 128
+fatal: not a git repository (or any of the parent directories): .git

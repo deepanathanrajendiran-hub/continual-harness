@@ -1,0 +1,4 @@
+    1821 /private/tmp/horizon-state-pilot-20260928-2f65f2a/module-bug-terra-state-2/project/.codex/harness/goals/fix-the-checkout-integration-and-the-underlying-discount-def.d/objects/16574ca71832b15ba871435003337ebd04b039412cd39064c4ffd5c050f199dc.json
+    1198 /Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/docs/evaluations/horizon-state-pilot/runs/module-bug-terra-state-2/worker-update-request-001.json
+     919 /Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/docs/evaluations/horizon-state-pilot/runs/module-bug-terra-state-2/reviewer-result-request-001.txt
+    3938 total

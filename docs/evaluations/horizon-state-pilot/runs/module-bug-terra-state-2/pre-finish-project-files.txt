@@ -1,0 +1,3 @@
+./checkout.py
+./pricing.py
+./tests/test_acceptance.py

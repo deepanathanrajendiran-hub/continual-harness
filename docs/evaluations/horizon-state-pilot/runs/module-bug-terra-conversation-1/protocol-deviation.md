@@ -1,0 +1,1 @@
+Evaluator control check reported that the saved `gate.review_criterion` differs byte-for-byte from the frozen `review-criterion.txt`: the same words have collapsed line breaks. The coordinator did not alter or recreate the goal or its review text. Per the coordinator instruction, this existing attempt continued under its saved criterion and preserved the raw lifecycle files.

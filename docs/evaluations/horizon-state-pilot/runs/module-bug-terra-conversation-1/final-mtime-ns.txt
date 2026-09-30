@@ -1,0 +1,3 @@
+/private/tmp/horizon-state-pilot-20260928-2f65f2a/module-bug-terra-conversation-1/project/checkout.py,1790650615734571022
+/private/tmp/horizon-state-pilot-20260928-2f65f2a/module-bug-terra-conversation-1/project/pricing.py,1790772827604413286
+/private/tmp/horizon-state-pilot-20260928-2f65f2a/module-bug-terra-conversation-1/project/tests/test_acceptance.py,1790650615734883688

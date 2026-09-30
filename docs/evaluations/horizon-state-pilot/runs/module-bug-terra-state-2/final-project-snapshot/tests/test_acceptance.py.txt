@@ -1,0 +1,8 @@
+import unittest
+from checkout import total
+
+class AcceptanceTests(unittest.TestCase):
+    def test_total_and_boundaries(self):
+        self.assertEqual(total([100, 200], 10), 270)
+        self.assertEqual(total([], 10), 0)
+        self.assertEqual(total([100, 200], 0), 300)

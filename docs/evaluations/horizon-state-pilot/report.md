@@ -1,6 +1,6 @@
 # Horizon state-mode pilot report — incomplete
 
-Seven of 72 (7/72) canonical manifest rows have been scored: six passed acceptance
+Ten of 72 (10/72) canonical manifest rows have been scored: nine passed acceptance
 and independent review; the fifth is incomplete after an external usage limit.
 There has been no false completion or fixture-observed regression.
 The first paired
@@ -70,9 +70,29 @@ The saved state has a summary and next action but no evidence-backed entry
 for the pricing edit. This is a possible handoff weakness, not an observed
 handoff failure. Evidence is in `runs/module-bug-terra-state-1/`.
 
-The paired Terra conversation run is active. The remaining 64 rows have
-prepared briefs but have not run. The scored rows so far all use the
-module-bug fixture.
+The paired Terra conversation repeat 1 also passed in one checkpoint, with
+goal wall time 270.809415 seconds and 299.427658 seconds from root dispatch to
+completion. Its worker returned state-style JSON without a formatting repair.
+The saved review criterion collapsed frozen line breaks; the words match but
+the bytes differ. That deviation limits a strict paired comparison. Evidence
+is in `runs/module-bug-terra-conversation-1/`.
+
+Terra conversation repeat 2 passed in one checkpoint with exact frozen
+controls and no reported format repair. Goal wall time was 278.082121 seconds;
+root dispatch to completion was 286.072359 seconds. The protected acceptance
+and checkout bytes/mtimes matched seed. Evidence is in
+`runs/module-bug-terra-conversation-2/`.
+
+Terra state repeat 2 passed in one accepted attempt with one evidence-backed
+state observation and no reported format repair. Checkout dynamically calls
+`pricing.discounted`, which applies the percentage once. Goal wall time was
+312.097267 seconds, with 324.591123 seconds from root dispatch to persisted
+completion; its packet was 1821 bytes. Protected acceptance hash/mtime and
+frozen controls passed evaluator checks. Evidence is in
+`runs/module-bug-terra-state-2/`.
+
+Terra state repeat 3 is active. The remaining 61 rows have prepared briefs
+but have not run. All scored rows so far use the module-bug fixture.
 
 The original module-bug / Sol /
 state / repeat 1 run is retained as supplemental raw evidence but excluded from
@@ -83,10 +103,10 @@ changed its fingerprint.  The setup probe retained at
 `evidence/environment-isolation-probe.txt` distinguishes this from a product
 defect. Its outcome remains supplemental and is not a second canonical row.
 
-These three small-fixture pairs supply no basis for a mode superiority or
-recovery claim. External interruptions, one incomplete state arm, and the
-extra JSON repair in conversation repeat 2 prevent clean paired efficiency
-comparisons.
+These four small-fixture paired observations supply no basis for a mode
+superiority or recovery claim. External interruptions, one incomplete state
+arm, a review-criterion byte deviation, and the extra JSON repair in
+conversation repeat 2 prevent clean paired efficiency comparisons.
 
 When raw trial evidence exists, independently score one JSON object per
 manifest row in `results.jsonl` and replace this section with raw counts by

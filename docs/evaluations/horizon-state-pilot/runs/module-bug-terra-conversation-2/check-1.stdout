@@ -1,0 +1,42 @@
+{
+  "slug": "fix-the-checkout-integration-and-the-underlying-discount-def",
+  "goal": "Fix the checkout integration and the underlying discount defect: total([100, 200], 10) must be 270, the empty cart 0, and zero discount must preserve the total.",
+  "status": "active",
+  "runtime": "codex",
+  "gate": {
+    "kind": "command",
+    "value": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v",
+    "review_criterion": "Independently inspect raw lifecycle, source, gate, and evaluator evidence.\nConfirm the fixed gate result; confirm every listed protected artifact has its\nrequired hash/mtime; confirm no evaluator-owned acceptance file was removed or\nedited; confirm no test was removed; confirm the fixture-specific source\nobligation; and reject any reported completion that conflicts with gate or\nrequired-review evidence. Record missing observations as unknown. Confirm checkout.total still uses pricing.discounted and the price calculation applies the discount once."
+  },
+  "budget": {
+    "max_turns": 4,
+    "max_minutes": 15
+  },
+  "used": {
+    "turns": 1,
+    "started": "2026-09-30T13:01:57.547177+00:00"
+  },
+  "budget_exhausted": false,
+  "last_checkpoint": {
+    "turn": 1,
+    "at": "2026-09-30T13:04:21.657698+00:00",
+    "did": "Independent coordinator inspection confirmed pricing.discounted applies the discount once; checkout.total delegates to discounted; protected acceptance test hash matches its seed; then ran the fixed unittest gate.",
+    "next": "Dispatch a fresh independent reviewer for the frozen criterion against the saved checkpoint and raw evidence.",
+    "tree_hash": "f473f1da608b0935f7ef5d2168c518473e32c4f407f99c6933fd2d491eaa6ed1",
+    "gate": "pass",
+    "gate_output": "test_total_and_boundaries (test_acceptance.AcceptanceTests.test_total_and_boundaries) ... ok\n\n----------------------------------------------------------------------\nRan 1 test in 0.000s\n\nOK\n",
+    "gate_spec": {
+      "kind": "command",
+      "value": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v",
+      "review_criterion": "Independently inspect raw lifecycle, source, gate, and evaluator evidence.\nConfirm the fixed gate result; confirm every listed protected artifact has its\nrequired hash/mtime; confirm no evaluator-owned acceptance file was removed or\nedited; confirm no test was removed; confirm the fixture-specific source\nobligation; and reject any reported completion that conflicts with gate or\nrequired-review evidence. Record missing observations as unknown. Confirm checkout.total still uses pricing.discounted and the price calculation applies the discount once."
+    }
+  },
+  "reviews": [],
+  "gate_evidence": null,
+  "execution_mode": "conversation",
+  "turn_unit": "checkpoint",
+  "execution_revision": null,
+  "active_attempt": null,
+  "next_action": "Dispatch a fresh independent reviewer for the frozen criterion against the saved checkpoint and raw evidence.",
+  "review_required": true
+}

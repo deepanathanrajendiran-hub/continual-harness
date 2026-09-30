@@ -1,0 +1,16 @@
+{
+  "checked_at": "2026-09-30T13:00:12.326290+00:00",
+  "goal_status": "complete",
+  "immutable_controls_match": false,
+  "review_byte_equal": false,
+  "review_words_normalized_equal": true,
+  "protected_acceptance_sha256": "cb50420a69e7abef79d5b50043ef39e82bfbffb16edb1b58b0f4202d5693442d",
+  "protected_acceptance_mtime_ns": 1790650615734883688,
+  "checkout_seed_matches": true,
+  "pricing_changed": true,
+  "checkpoints": 1,
+  "passing_reviews": 1,
+  "snapshot_files": 4,
+  "goal_wall_seconds": 270.809415,
+  "elapsed_seconds": 299.427658
+}

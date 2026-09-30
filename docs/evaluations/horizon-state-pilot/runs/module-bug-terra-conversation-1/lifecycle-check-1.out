@@ -1,0 +1,42 @@
+{
+  "slug": "fix-the-checkout-integration-and-the-underlying-discount-def",
+  "goal": "Fix the checkout integration and the underlying discount defect: total([100, 200], 10) must be 270, the empty cart 0, and zero discount must preserve the total.",
+  "status": "active",
+  "runtime": "codex",
+  "gate": {
+    "kind": "command",
+    "value": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v",
+    "review_criterion": "Independently inspect raw lifecycle, source, gate, and evaluator evidence. Confirm the fixed gate result; confirm every listed protected artifact has its required hash/mtime; confirm no evaluator-owned acceptance file was removed or edited; confirm no test was removed; confirm the fixture-specific source obligation; and reject any reported completion that conflicts with gate or required-review evidence. Record missing observations as unknown. Confirm checkout.total still uses pricing.discounted and the price calculation applies the discount once."
+  },
+  "budget": {
+    "max_turns": 4,
+    "max_minutes": 15
+  },
+  "used": {
+    "turns": 1,
+    "started": "2026-09-30T12:52:31.338698+00:00"
+  },
+  "budget_exhausted": false,
+  "last_checkpoint": {
+    "turn": 1,
+    "at": "2026-09-30T12:54:34.788416+00:00",
+    "did": "Native editing worker corrected pricing.discounted so it applies the percentage once; coordinator recorded the worker terminal update.",
+    "next": "Dispatch an independent reviewer to inspect the raw lifecycle, source, gate, and evaluator evidence.",
+    "tree_hash": "c6101f39d03c48bff364ef3b517676ea606e5dd473c61c3018e268e518f48754",
+    "gate": "pass",
+    "gate_output": "test_total_and_boundaries (test_acceptance.AcceptanceTests.test_total_and_boundaries) ... ok\n\n----------------------------------------------------------------------\nRan 1 test in 0.000s\n\nOK\n",
+    "gate_spec": {
+      "kind": "command",
+      "value": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v",
+      "review_criterion": "Independently inspect raw lifecycle, source, gate, and evaluator evidence. Confirm the fixed gate result; confirm every listed protected artifact has its required hash/mtime; confirm no evaluator-owned acceptance file was removed or edited; confirm no test was removed; confirm the fixture-specific source obligation; and reject any reported completion that conflicts with gate or required-review evidence. Record missing observations as unknown. Confirm checkout.total still uses pricing.discounted and the price calculation applies the discount once."
+    }
+  },
+  "reviews": [],
+  "gate_evidence": null,
+  "execution_mode": "conversation",
+  "turn_unit": "checkpoint",
+  "execution_revision": null,
+  "active_attempt": null,
+  "next_action": "Dispatch an independent reviewer to inspect the raw lifecycle, source, gate, and evaluator evidence.",
+  "review_required": true
+}

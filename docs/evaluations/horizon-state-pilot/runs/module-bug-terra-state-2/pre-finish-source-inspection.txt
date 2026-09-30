@@ -1,0 +1,8 @@
+--- checkout.py ---
+     1	import pricing
+     2	
+     3	def total(amounts, percent):
+     4	    return sum(pricing.discounted(amount, percent) for amount in amounts)
+--- pricing.py ---
+     1	def discounted(amount, percent):
+     2	    return amount * (100 - percent) // 100

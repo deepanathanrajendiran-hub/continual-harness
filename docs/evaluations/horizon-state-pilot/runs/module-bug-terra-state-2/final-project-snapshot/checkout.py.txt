@@ -1,0 +1,4 @@
+import pricing
+
+def total(amounts, percent):
+    return sum(pricing.discounted(amount, percent) for amount in amounts)
