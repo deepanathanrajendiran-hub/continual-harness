@@ -1,6 +1,6 @@
 # Horizon state-mode pilot report — incomplete
 
-Ten of 72 (10/72) canonical manifest rows have been scored: nine passed acceptance
+Eleven of 72 (11/72) canonical manifest rows have been scored: ten passed acceptance
 and independent review; the fifth is incomplete after an external usage limit.
 There has been no false completion or fixture-observed regression.
 The first paired
@@ -91,7 +91,16 @@ completion; its packet was 1821 bytes. Protected acceptance hash/mtime and
 frozen controls passed evaluator checks. Evidence is in
 `runs/module-bug-terra-state-2/`.
 
-Terra state repeat 3 is active. The remaining 61 rows have prepared briefs
+Terra state repeat 3 passed in one accepted attempt, with a passing fixed gate
+and independent review, exact frozen controls, protected acceptance hash/mtime,
+and no reported format repair. Its 1821-byte packet accompanied an elapsed
+289.089398 seconds from root dispatch to completion and 261.423992 seconds of
+goal wall time. Like Terra state repeat 1, its saved summary and next action
+had no evidence-backed entry for the pricing edit. This is a state omission,
+not an observed handoff failure. Evidence is in
+`runs/module-bug-terra-state-3/`.
+
+Terra conversation repeat 3 is active. The 59 later rows have prepared briefs
 but have not run. All scored rows so far use the module-bug fixture.
 
 The original module-bug / Sol /

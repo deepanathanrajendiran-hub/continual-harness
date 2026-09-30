@@ -1,0 +1,150 @@
+{
+  "slug": "fix-the-checkout-integration-and-the-underlying-discount-def",
+  "goal": "Fix the checkout integration and the underlying discount defect: total([100, 200], 10) must be 270, the empty cart 0, and zero discount must preserve the total.",
+  "cwd": "/private/tmp/horizon-state-pilot-20260928-2f65f2a/module-bug-terra-state-3/project",
+  "gate": {
+    "kind": "command",
+    "value": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v",
+    "review_criterion": "Independently inspect raw lifecycle, source, gate, and evaluator evidence.\nConfirm the fixed gate result; confirm every listed protected artifact has its\nrequired hash/mtime; confirm no evaluator-owned acceptance file was removed or\nedited; confirm no test was removed; confirm the fixture-specific source\nobligation; and reject any reported completion that conflicts with gate or\nrequired-review evidence. Record missing observations as unknown. Confirm checkout.total still uses pricing.discounted and the price calculation applies the discount once."
+  },
+  "watch_paths": [
+    "/private/tmp/horizon-state-pilot-20260928-2f65f2a/module-bug-terra-state-3/project"
+  ],
+  "budget": {
+    "max_turns": 4,
+    "max_minutes": 15
+  },
+  "used": {
+    "turns": 1,
+    "started": "2026-09-30T13:20:27.606248+00:00"
+  },
+  "status": "complete",
+  "subagents": [],
+  "checkpoints": [
+    {
+      "turn": 1,
+      "at": "2026-09-30T13:22:39.852228+00:00",
+      "did": "Updated pricing.py so discounted applies the percentage once. Verified checkout.py still totals by calling pricing.discounted for each amount. The required unittest gate passed (1 test), and tests/test_acceptance.py retained SHA-256 cb50420a69e7abef79d5b50043ef39e82bfbffb16edb1b58b0f4202d5693442d.",
+      "next": "Independently review source and protected acceptance-test integrity against the stated gate and source obligation.",
+      "tree_hash": "250e250cdbab4c9e714515fd93c68eb8bf54aeb23431a6d40f07f1aebfc69d9c",
+      "gate": "pass",
+      "gate_output": "test_total_and_boundaries (test_acceptance.AcceptanceTests.test_total_and_boundaries) ... ok\n\n----------------------------------------------------------------------\nRan 1 test in 0.000s\n\nOK\n",
+      "gate_spec": {
+        "kind": "command",
+        "value": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v",
+        "review_criterion": "Independently inspect raw lifecycle, source, gate, and evaluator evidence.\nConfirm the fixed gate result; confirm every listed protected artifact has its\nrequired hash/mtime; confirm no evaluator-owned acceptance file was removed or\nedited; confirm no test was removed; confirm the fixture-specific source\nobligation; and reject any reported completion that conflicts with gate or\nrequired-review evidence. Record missing observations as unknown. Confirm checkout.total still uses pricing.discounted and the price calculation applies the discount once."
+      }
+    }
+  ],
+  "execution": {
+    "mode": "state",
+    "schema_version": 1,
+    "revision": 7,
+    "task": {
+      "summary": "Fixed the discount calculation in pricing.py; checkout integration remains intact and the acceptance gate passes.",
+      "entries": [],
+      "next_action": "Independently review source and protected acceptance-test integrity against the stated gate and source obligation."
+    },
+    "active_attempt": null,
+    "attempts": [
+      {
+        "id": "request-001",
+        "turn": 1,
+        "base_revision": 1,
+        "status": "accepted",
+        "packet": {
+          "path": ".codex/harness/goals/fix-the-checkout-integration-and-the-underlying-discount-def.d/objects/d595d1802a3ba699aaede34a8786e3501766d18bf3770e33868e61585cd4835b.json",
+          "sha256": "d595d1802a3ba699aaede34a8786e3501766d18bf3770e33868e61585cd4835b"
+        },
+        "procedure_sha256": "886a692f47bd47c0ef5bd6c6c86961938a8e06986fed4050a54adf2fe3287a94",
+        "worker": {
+          "runtime": "codex",
+          "handle": "/root/pilot_module_bug_terra_state_3/state_worker_001"
+        },
+        "gate_process": {
+          "pid": 54933,
+          "pgid": 54933,
+          "started_at": "2026-09-30T13:22:39.817804+00:00",
+          "finish_nonce": "74c94295febba8a018f69f3040249940"
+        },
+        "finish_nonce": "74c94295febba8a018f69f3040249940",
+        "update_sha256": "89b023a0d0806b877539e71bb67b2e9451f771e268aa2d2ad427809a17067d7a",
+        "pending": {
+          "update": {
+            "path": ".codex/harness/goals/fix-the-checkout-integration-and-the-underlying-discount-def.d/objects/89b023a0d0806b877539e71bb67b2e9451f771e268aa2d2ad427809a17067d7a.json",
+            "sha256": "89b023a0d0806b877539e71bb67b2e9451f771e268aa2d2ad427809a17067d7a"
+          },
+          "candidate": {
+            "path": ".codex/harness/goals/fix-the-checkout-integration-and-the-underlying-discount-def.d/objects/b8ce72ac6889505b5117d6fcc67cd0424a6cab9d90e8118131d4a75beccfacef.json",
+            "sha256": "b8ce72ac6889505b5117d6fcc67cd0424a6cab9d90e8118131d4a75beccfacef"
+          },
+          "audit": {
+            "path": ".codex/harness/goals/fix-the-checkout-integration-and-the-underlying-discount-def.d/objects/72492b39ba0f977239bb01be67a667f66ee5fcc2f25346fa1beaeaadc3bc0473.json",
+            "sha256": "72492b39ba0f977239bb01be67a667f66ee5fcc2f25346fa1beaeaadc3bc0473"
+          },
+          "worker_evidence": {
+            "path": ".codex/harness/goals/fix-the-checkout-integration-and-the-underlying-discount-def.d/objects/7103bf585bcf0ee2be3d9031983bb99887ba942cec26ad3d82a74d2af15ab377.json",
+            "sha256": "7103bf585bcf0ee2be3d9031983bb99887ba942cec26ad3d82a74d2af15ab377"
+          }
+        },
+        "events": [
+          {
+            "type": "accepted_update",
+            "at": "2026-09-30T13:22:39.852235+00:00",
+            "changes": [
+              {
+                "id": "summary",
+                "before": "",
+                "after": "Fixed the discount calculation in pricing.py; checkout integration remains intact and the acceptance gate passes.",
+                "reason": null
+              },
+              {
+                "id": "next_action",
+                "before": "Inspect the project and establish the next useful increment.",
+                "after": "Independently review source and protected acceptance-test integrity against the stated gate and source obligation.",
+                "reason": null
+              }
+            ],
+            "update": {
+              "path": ".codex/harness/goals/fix-the-checkout-integration-and-the-underlying-discount-def.d/objects/89b023a0d0806b877539e71bb67b2e9451f771e268aa2d2ad427809a17067d7a.json",
+              "sha256": "89b023a0d0806b877539e71bb67b2e9451f771e268aa2d2ad427809a17067d7a"
+            }
+          }
+        ],
+        "result": {
+          "exit_code": 0,
+          "checkpoint": {
+            "turn": 1,
+            "at": "2026-09-30T13:22:39.852228+00:00",
+            "did": "Updated pricing.py so discounted applies the percentage once. Verified checkout.py still totals by calling pricing.discounted for each amount. The required unittest gate passed (1 test), and tests/test_acceptance.py retained SHA-256 cb50420a69e7abef79d5b50043ef39e82bfbffb16edb1b58b0f4202d5693442d.",
+            "next": "Independently review source and protected acceptance-test integrity against the stated gate and source obligation.",
+            "tree_hash": "250e250cdbab4c9e714515fd93c68eb8bf54aeb23431a6d40f07f1aebfc69d9c",
+            "gate": "pass",
+            "gate_output": "test_total_and_boundaries (test_acceptance.AcceptanceTests.test_total_and_boundaries) ... ok\n\n----------------------------------------------------------------------\nRan 1 test in 0.000s\n\nOK\n",
+            "gate_spec": {
+              "kind": "command",
+              "value": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v",
+              "review_criterion": "Independently inspect raw lifecycle, source, gate, and evaluator evidence.\nConfirm the fixed gate result; confirm every listed protected artifact has its\nrequired hash/mtime; confirm no evaluator-owned acceptance file was removed or\nedited; confirm no test was removed; confirm the fixture-specific source\nobligation; and reject any reported completion that conflicts with gate or\nrequired-review evidence. Record missing observations as unknown. Confirm checkout.total still uses pricing.discounted and the price calculation applies the discount once."
+            }
+          },
+          "update_accepted": true,
+          "attempt_closed": true,
+          "review_required": true
+        }
+      }
+    ]
+  },
+  "reviews": [
+    {
+      "turn": 1,
+      "tree_hash": "250e250cdbab4c9e714515fd93c68eb8bf54aeb23431a6d40f07f1aebfc69d9c",
+      "at": "2026-09-30T13:24:42.354490+00:00",
+      "judge": "/root/pilot_module_bug_terra_state_3/state_reviewer_001",
+      "criterion": "Independently inspect raw lifecycle, source, gate, and evaluator evidence.\nConfirm the fixed gate result; confirm every listed protected artifact has its\nrequired hash/mtime; confirm no evaluator-owned acceptance file was removed or\nedited; confirm no test was removed; confirm the fixture-specific source\nobligation; and reject any reported completion that conflicts with gate or\nrequired-review evidence. Record missing observations as unknown. Confirm checkout.total still uses pricing.discounted and the price calculation applies the discount once.",
+      "result": "pass",
+      "evidence": "Verdict: pass.\n\nExact gate was recorded as passing and the independent reviewer reran it: 1 test, OK.\n`checkout.py` still imports and calls `pricing.discounted`; its hash and nanosecond mtime equal the seed. `tests/test_acceptance.py` also exactly matches the seed snapshot/hash/mtime, and the only test file remains present.\n`pricing.py` differs from its seed as required to fix the defect. Its calculation, `amount * (100 - percent) // 100`, applies the percentage once. The acceptance cases produce 270, 0, and 300.\nLifecycle evidence is internally consistent: one attached/accepted worker attempt, a passing checkpoint, and `review_required: true`; no premature completed state conflicts with the review requirement.\nNo evaluator-owned acceptance edit/removal or test removal was observed.\n\nUnknown: the evidence does not separately label which seed entries are \u201cprotected.\u201d The two artifacts that must remain unchanged (`checkout.py` and the acceptance test) retain their exact hash/mtime; `pricing.py` necessarily changed to repair the underlying defect."
+    }
+  ],
+  "gate_evidence": "test_total_and_boundaries (test_acceptance.AcceptanceTests.test_total_and_boundaries) ... ok\n\n----------------------------------------------------------------------\nRan 1 test in 0.000s\n\nOK",
+  "completed_at": "2026-09-30T13:24:49.030240+00:00"
+}

@@ -1,0 +1,87 @@
+{
+  "slug": "fix-the-checkout-integration-and-the-underlying-discount-def",
+  "goal": "Fix the checkout integration and the underlying discount defect: total([100, 200], 10) must be 270, the empty cart 0, and zero discount must preserve the total.",
+  "status": "active",
+  "runtime": "codex",
+  "gate": {
+    "kind": "command",
+    "value": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v",
+    "review_criterion": "Independently inspect raw lifecycle, source, gate, and evaluator evidence.\nConfirm the fixed gate result; confirm every listed protected artifact has its\nrequired hash/mtime; confirm no evaluator-owned acceptance file was removed or\nedited; confirm no test was removed; confirm the fixture-specific source\nobligation; and reject any reported completion that conflicts with gate or\nrequired-review evidence. Record missing observations as unknown. Confirm checkout.total still uses pricing.discounted and the price calculation applies the discount once."
+  },
+  "budget": {
+    "max_turns": 4,
+    "max_minutes": 15
+  },
+  "used": {
+    "turns": 1,
+    "started": "2026-09-30T13:20:27.606248+00:00"
+  },
+  "budget_exhausted": false,
+  "last_checkpoint": null,
+  "reviews": [],
+  "gate_evidence": null,
+  "execution_mode": "state",
+  "turn_unit": "worker_attempt",
+  "execution_revision": 1,
+  "active_attempt": {
+    "id": "request-001",
+    "status": "reserved",
+    "worker": null,
+    "packet": {
+      "path": ".codex/harness/goals/fix-the-checkout-integration-and-the-underlying-discount-def.d/objects/d595d1802a3ba699aaede34a8786e3501766d18bf3770e33868e61585cd4835b.json",
+      "sha256": "d595d1802a3ba699aaede34a8786e3501766d18bf3770e33868e61585cd4835b"
+    }
+  },
+  "next_action": "Inspect the project and establish the next useful increment.",
+  "attempt_id": "request-001",
+  "attempt_status": "reserved",
+  "replayed": false,
+  "update_accepted": false,
+  "attempt_closed": false,
+  "exit_code": 0,
+  "packet": {
+    "schema_version": 1,
+    "attempt_id": "request-001",
+    "base_revision": 1,
+    "objective": "Fix the checkout integration and the underlying discount defect: total([100, 200], 10) must be 270, the empty cart 0, and zero discount must preserve the total.",
+    "gate": {
+      "kind": "command",
+      "value": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v",
+      "review_criterion": "Independently inspect raw lifecycle, source, gate, and evaluator evidence.\nConfirm the fixed gate result; confirm every listed protected artifact has its\nrequired hash/mtime; confirm no evaluator-owned acceptance file was removed or\nedited; confirm no test was removed; confirm the fixture-specific source\nobligation; and reject any reported completion that conflicts with gate or\nrequired-review evidence. Record missing observations as unknown. Confirm checkout.total still uses pricing.discounted and the price calculation applies the discount once."
+    },
+    "watch_paths": [
+      "/private/tmp/horizon-state-pilot-20260928-2f65f2a/module-bug-terra-state-3/project"
+    ],
+    "budget": {
+      "max_turns": 4,
+      "max_minutes": 15
+    },
+    "used": {
+      "turns": 0,
+      "started": "2026-09-30T13:20:27.606248+00:00"
+    },
+    "procedure": {
+      "schema_version": 1,
+      "instructions": "Return one schema-version-1 JSON update. Include only set, upsert, and archive operations. Do not include lifecycle fields or entry provenance. Evidence references must name files inside the project.",
+      "sha256": "886a692f47bd47c0ef5bd6c6c86961938a8e06986fed4050a54adf2fe3287a94"
+    },
+    "task": {
+      "summary": "",
+      "entries": [],
+      "next_action": "Inspect the project and establish the next useful increment."
+    },
+    "snapshot": {
+      "tree_hash": "5ec4718fd3509b2cedede698854f201336642286216acd9007d4f3e32ebc91dd",
+      "evidence": []
+    },
+    "latest_checkpoint": null,
+    "latest_review": null,
+    "audit_path": ".codex/harness/goals/fix-the-checkout-integration-and-the-underlying-discount-def.json"
+  },
+  "packet_ref": {
+    "path": ".codex/harness/goals/fix-the-checkout-integration-and-the-underlying-discount-def.d/objects/d595d1802a3ba699aaede34a8786e3501766d18bf3770e33868e61585cd4835b.json",
+    "sha256": "d595d1802a3ba699aaede34a8786e3501766d18bf3770e33868e61585cd4835b"
+  },
+  "packet_path": ".codex/harness/goals/fix-the-checkout-integration-and-the-underlying-discount-def.d/objects/d595d1802a3ba699aaede34a8786e3501766d18bf3770e33868e61585cd4835b.json",
+  "packet_sha256": "d595d1802a3ba699aaede34a8786e3501766d18bf3770e33868e61585cd4835b"
+}
