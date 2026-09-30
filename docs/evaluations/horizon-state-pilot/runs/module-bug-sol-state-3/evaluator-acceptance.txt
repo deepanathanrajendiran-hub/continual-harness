@@ -1,0 +1,11 @@
+At 2026-09-30T12:12:14.707285+00:00
+Independent evaluator command: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v
+test_total_and_boundaries (test_acceptance.AcceptanceTests.test_total_and_boundaries) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 0.000s
+
+OK
+
+exit_code: 0
+This is external evaluator acceptance; it is not a Horizon checkpoint or required independent review.

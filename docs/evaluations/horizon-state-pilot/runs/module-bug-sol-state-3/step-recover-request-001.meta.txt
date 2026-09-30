@@ -1,0 +1,8 @@
+process_exit_code: 1
+harness_exit_code: 1
+meaning: expected failed checkpoint for interrupted work; attempt closed as recovered
+attempt_id: request-001
+execution_revision: 3
+attempt_status: recovered
+attempt_closed: true
+update_accepted: false

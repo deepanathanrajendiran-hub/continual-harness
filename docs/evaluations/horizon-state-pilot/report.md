@@ -1,7 +1,8 @@
 # Horizon state-mode pilot report — incomplete
 
-Four of 72 (4/72) canonical manifest rows have been scored, all passing acceptance
-and independent review, with no false completion or fixture-observed regression.
+Five of 72 (5/72) canonical manifest rows have been scored: four passed acceptance
+and independent review; the fifth is incomplete after an external usage limit.
+There has been no false completion or fixture-observed regression.
 The first paired
 module-bug / Sol comparison passed acceptance and independent review in both
 modes, with one editing increment each, no false completion, and no
@@ -44,8 +45,18 @@ seconds, and root post-dispatch to goal completion was 465.534524 seconds.
 Protected hash/mtime and immutable controls passed evaluator checks. Evidence
 is in `runs/module-bug-sol-state-2/`.
 
-The fifth row, state repeat 3, is active. The remaining 67 rows have prepared
-briefs but have not run. All scored runs so far use Sol on the module-bug fixture.
+The fifth row, state repeat 3, stopped after its worker edited pricing but hit a
+host usage limit before returning a usable update. One recovery closed the
+attempt, preserved the edit, and recorded a failed checkpoint. Its 15-minute
+budget expired during an overnight interruption. Root's separate acceptance
+check passed, but the Horizon gate and independent review did not run, so the
+goal is incomplete. Its saved review criterion also collapsed the frozen line
+breaks; normalized words match, bytes do not. Both deviations remain in its
+canonical record and [raw evidence](runs/module-bug-sol-state-3/).
+
+The sixth row, conversation repeat 3, is active. The remaining 66 rows have
+prepared briefs but have not run. All scored runs so far use Sol on the
+module-bug fixture.
 
 The original module-bug / Sol /
 state / repeat 1 run is retained as supplemental raw evidence but excluded from

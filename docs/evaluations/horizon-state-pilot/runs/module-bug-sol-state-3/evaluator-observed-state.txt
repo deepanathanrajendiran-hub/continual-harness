@@ -1,0 +1,29 @@
+{
+  "checked_at": "2026-09-30T12:22:10.121531+00:00",
+  "goal_status": "active",
+  "execution_revision": 3,
+  "budget_exhausted": true,
+  "attempt_status": "recovered",
+  "checks": {
+    "checkout.py": {
+      "sha256": "82de323e0cddff692abb6cea7fc7ff3ed6794a769bb5b48ec39edbf36fd103bb",
+      "mtime_ns": 1790650615713745284,
+      "seed_matches": true
+    },
+    "tests/test_acceptance.py": {
+      "sha256": "cb50420a69e7abef79d5b50043ef39e82bfbffb16edb1b58b0f4202d5693442d",
+      "mtime_ns": 1790650615714089366,
+      "seed_matches": true
+    }
+  },
+  "immutable_controls_match": false,
+  "review_text_normalizes_equal": true,
+  "review_byte_equal": false,
+  "used_turns": 1,
+  "checkpoints": 1,
+  "passing_reviews": 0,
+  "snapshot_files": 6,
+  "packet_bytes": 1814,
+  "goal_started": "2026-09-29T12:13:33.184467+00:00",
+  "recovery_checkpoint_at": "2026-09-30T12:16:27.019092+00:00"
+}

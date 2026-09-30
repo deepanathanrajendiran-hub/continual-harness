@@ -1,0 +1,58 @@
+{
+  "slug": "fix-the-checkout-integration-and-the-underlying-discount-def",
+  "goal": "Fix the checkout integration and the underlying discount defect: total([100, 200], 10) must be 270, the empty cart 0, and zero discount must preserve the total.",
+  "cwd": "/private/tmp/horizon-state-pilot-20260928-2f65f2a/module-bug-sol-state-3/project",
+  "gate": {
+    "kind": "command",
+    "value": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v",
+    "review_criterion": "Independently inspect raw lifecycle, source, gate, and evaluator evidence. Confirm the fixed gate result; confirm every listed protected artifact has its required hash/mtime; confirm no evaluator-owned acceptance file was removed or edited; confirm no test was removed; confirm the fixture-specific source obligation; and reject any reported completion that conflicts with gate or required-review evidence. Record missing observations as unknown. Confirm checkout.total still uses pricing.discounted and the price calculation applies the discount once."
+  },
+  "watch_paths": [
+    "/private/tmp/horizon-state-pilot-20260928-2f65f2a/module-bug-sol-state-3/project"
+  ],
+  "budget": {
+    "max_turns": 4,
+    "max_minutes": 15
+  },
+  "used": {
+    "turns": 1,
+    "started": "2026-09-29T12:13:33.184467+00:00"
+  },
+  "status": "active",
+  "subagents": [],
+  "checkpoints": [],
+  "execution": {
+    "mode": "state",
+    "schema_version": 1,
+    "revision": 2,
+    "task": {
+      "summary": "",
+      "entries": [],
+      "next_action": "Inspect the project and establish the next useful increment."
+    },
+    "active_attempt": "request-001",
+    "attempts": [
+      {
+        "id": "request-001",
+        "turn": 1,
+        "base_revision": 1,
+        "status": "attached",
+        "packet": {
+          "path": ".codex/harness/goals/fix-the-checkout-integration-and-the-underlying-discount-def.d/objects/c6d90165a63b73d303a10bd54628ebc381cf3b723a278eff7784dae113605e1a.json",
+          "sha256": "c6d90165a63b73d303a10bd54628ebc381cf3b723a278eff7784dae113605e1a"
+        },
+        "procedure_sha256": "886a692f47bd47c0ef5bd6c6c86961938a8e06986fed4050a54adf2fe3287a94",
+        "worker": {
+          "runtime": "codex",
+          "handle": "/root/pilot_module_bug_sol_state_3/module_bug_worker_001"
+        },
+        "gate_process": null,
+        "finish_nonce": null,
+        "update_sha256": null,
+        "pending": null,
+        "events": [],
+        "result": null
+      }
+    ]
+  }
+}

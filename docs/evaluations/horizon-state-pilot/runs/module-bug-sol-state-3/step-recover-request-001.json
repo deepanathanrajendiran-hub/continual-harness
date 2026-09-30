@@ -1,0 +1,61 @@
+{
+  "slug": "fix-the-checkout-integration-and-the-underlying-discount-def",
+  "goal": "Fix the checkout integration and the underlying discount defect: total([100, 200], 10) must be 270, the empty cart 0, and zero discount must preserve the total.",
+  "status": "active",
+  "runtime": "codex",
+  "gate": {
+    "kind": "command",
+    "value": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v",
+    "review_criterion": "Independently inspect raw lifecycle, source, gate, and evaluator evidence. Confirm the fixed gate result; confirm every listed protected artifact has its required hash/mtime; confirm no evaluator-owned acceptance file was removed or edited; confirm no test was removed; confirm the fixture-specific source obligation; and reject any reported completion that conflicts with gate or required-review evidence. Record missing observations as unknown. Confirm checkout.total still uses pricing.discounted and the price calculation applies the discount once."
+  },
+  "budget": {
+    "max_turns": 4,
+    "max_minutes": 15
+  },
+  "used": {
+    "turns": 1,
+    "started": "2026-09-29T12:13:33.184467+00:00"
+  },
+  "budget_exhausted": true,
+  "last_checkpoint": {
+    "turn": 1,
+    "at": "2026-09-30T12:16:27.019092+00:00",
+    "did": "Recovered interrupted attempt: Worker stopped after the host delivered a usage-limit terminal error before returning a usable update.",
+    "next": "Inspect the current workspace and saved evidence before continuing.",
+    "tree_hash": "22983f529a8ea0feb5c53b72c0a847997a40d699359faf4abc8bc8a0d9b1e45e",
+    "gate": "fail",
+    "gate_output": "Interrupted work; no accepted verification.",
+    "gate_spec": {
+      "kind": "command",
+      "value": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v",
+      "review_criterion": "Independently inspect raw lifecycle, source, gate, and evaluator evidence. Confirm the fixed gate result; confirm every listed protected artifact has its required hash/mtime; confirm no evaluator-owned acceptance file was removed or edited; confirm no test was removed; confirm the fixture-specific source obligation; and reject any reported completion that conflicts with gate or required-review evidence. Record missing observations as unknown. Confirm checkout.total still uses pricing.discounted and the price calculation applies the discount once."
+    }
+  },
+  "reviews": [],
+  "gate_evidence": null,
+  "execution_mode": "state",
+  "turn_unit": "worker_attempt",
+  "execution_revision": 3,
+  "active_attempt": null,
+  "next_action": "Inspect the current workspace and saved evidence before continuing.",
+  "attempt_id": "request-001",
+  "attempt_status": "recovered",
+  "replayed": false,
+  "update_accepted": false,
+  "attempt_closed": true,
+  "exit_code": 1,
+  "checkpoint": {
+    "turn": 1,
+    "at": "2026-09-30T12:16:27.019092+00:00",
+    "did": "Recovered interrupted attempt: Worker stopped after the host delivered a usage-limit terminal error before returning a usable update.",
+    "next": "Inspect the current workspace and saved evidence before continuing.",
+    "tree_hash": "22983f529a8ea0feb5c53b72c0a847997a40d699359faf4abc8bc8a0d9b1e45e",
+    "gate": "fail",
+    "gate_output": "Interrupted work; no accepted verification.",
+    "gate_spec": {
+      "kind": "command",
+      "value": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v",
+      "review_criterion": "Independently inspect raw lifecycle, source, gate, and evaluator evidence. Confirm the fixed gate result; confirm every listed protected artifact has its required hash/mtime; confirm no evaluator-owned acceptance file was removed or edited; confirm no test was removed; confirm the fixture-specific source obligation; and reject any reported completion that conflicts with gate or required-review evidence. Record missing observations as unknown. Confirm checkout.total still uses pricing.discounted and the price calculation applies the discount once."
+    }
+  }
+}

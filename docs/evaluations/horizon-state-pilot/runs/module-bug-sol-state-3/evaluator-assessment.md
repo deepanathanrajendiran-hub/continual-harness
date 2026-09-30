@@ -1,0 +1,7 @@
+# Independent evaluator assessment
+
+Canonical row5 is incomplete, not a passing completion. The native host delivered a terminal usage-limit error for the bound worker after pricing.py had been corrected, before a usable update. One documented step-recover closed request-001 without accepting state, recorded a failed checkpoint, and preserved the source. Budget remained15minutes and was exhausted; no further attempt or review occurred.
+
+Root reran acceptance externally on the preserved source: one test and all three assertions passed. Protected acceptance/checkout hashes and nanosecond mtimes match seed. This external check does not replace the frozen Horizon gate, which did not run after recovery. Saved objective, watch and budget match, but the review criterion collapsed frozen line breaks. Its words match after whitespace normalization; its bytes do not. This is a protocol deviation. Goal remains active revision3 with one recovered attempt, one failed checkpoint, no review or completion. Final source/lifecycle objects were copied byte-for-byte with a path/hash map.
+
+Original dispatch-to-final elapsed cannot measure uninterrupted work because the host interrupted the session overnight. No billed usage or complete worker tool transcript is available. The terminal event is a coordinator-written host observation rather than an exported internal transcript. Keep this failure and review-text deviation in the canonical sample; do not retry it as a replacement result.

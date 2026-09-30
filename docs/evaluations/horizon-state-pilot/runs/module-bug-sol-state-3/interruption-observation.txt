@@ -1,0 +1,10 @@
+Coordinator-written host observation after external session interruption
+
+Saved worker handle: /root/pilot_module_bug_sol_state_3/module_bug_worker_001
+Saved lifecycle state: request-001 attached at execution revision 2.
+
+Before the external interruption, collaboration.wait_agent delivered a terminal FINAL_ANSWER event for this handle whose payload stated: "Agent errored: You've hit your usage limit. Upgrade to Pro (https://chatgpt.com/explore/pro), visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at 12:49 PM."
+
+On resumed inspection, collaboration.list_agents returned only /root and /root/pilot_module_bug_sol_state_3; it did not expose the saved worker handle. Initial resumption therefore left the attempt untouched. On reassessment, the earlier durable FINAL_ANSWER event was accepted as sufficient terminal evidence because it was emitted by the exact handle already bound in lifecycle revision 2 and explicitly reported the worker error. The coordinator truthfully asserted worker-state stopped and ran documented step-recover once. No step-finish, gate, review, completion, reopen, budget extension, replacement attempt, or new worker was run.
+
+The project was preserved. pricing.py differs from the seed and currently contains a single-discount calculation; checkout.py and protected tests/test_acceptance.py retain their seed hashes. Recovery closed request-001 at execution revision 3 and recorded a failed checkpoint with gate output "Interrupted work; no accepted verification." The goal remains active with its wall-clock budget exhausted.

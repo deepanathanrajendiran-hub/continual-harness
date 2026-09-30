@@ -1,0 +1,15 @@
+{
+  "runtime": "codex",
+  "project": "/private/tmp/horizon-state-pilot-20260928-2f65f2a/module-bug-sol-state-3/project",
+  "implementation": "/Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/harness",
+  "state": "/private/tmp/horizon-state-pilot-20260928-2f65f2a/module-bug-sol-state-3/project/.codex/harness",
+  "targets": {
+    "rho": "/private/tmp/horizon-state-pilot-20260928-2f65f2a/module-bug-sol-state-3/project/AGENTS.md",
+    "G": "/private/tmp/horizon-state-pilot-20260928-2f65f2a/module-bug-sol-state-3/project/.agents/skills",
+    "K": "/private/tmp/horizon-state-pilot-20260928-2f65f2a/module-bug-sol-state-3/project/.codex/agents",
+    "M": "/private/tmp/horizon-state-pilot-20260928-2f65f2a/module-bug-sol-state-3/project/.codex/memory"
+  },
+  "memory_mode": "explicit recall",
+  "state_supported": true,
+  "worker_availability": "Determined by the host; the Python CLI does not dispatch or inspect workers."
+}
