@@ -1,0 +1,42 @@
+Coordinator inspection after worker terminal state
+
+FILE:names.py
+def normalize_name(value):
+    return value.strip().casefold()
+
+normalize = normalize_name
+FILE:greet.py
+from names import normalize_name
+
+def greet(value):
+    return "Hello " + normalize_name(value)
+FILE:tags.py
+from names import normalize_name
+
+def tag(value):
+    return "#" + normalize_name(value)
+FILE:tests/test_acceptance.py
+import unittest
+from names import normalize, normalize_name
+from greet import greet
+from tags import tag
+
+class AcceptanceTests(unittest.TestCase):
+    def test_names_and_callers(self):
+        self.assertEqual(normalize_name(" ALICE "), "alice")
+        self.assertEqual(normalize(" ALICE "), normalize_name(" ALICE "))
+        self.assertEqual(greet(" ALICE "), "Hello alice")
+        self.assertEqual(tag(" ALICE "), "#alice")
+
+HASHES, MTIMES, BYTES
+greet.py,b0eb603b4f53661a32f0477eebb52d25e81becb6b0ac55f438f6fb8fe8604878,1790776627120832439,96
+names.py,09b84dc3cf84531060aa4439ff6af23d304aab67e6406e9b2e1de0040f9a2b5e,1790776616172740550,91
+tags.py,b2e22fd1cdcde0196180b088548ef65728b661f5f9c77ed31e06fa415afea8b7,1790776638701332874,89
+tests/test_acceptance.py,cabb3c9379120181bc94744b6915cd9add3bb489c5009cf8553d532928ce9297,1790650615771934885,430
+
+WATCHED FILES EXCLUDING HARNESS BOOKKEEPING
+./tags.py
+./tests/test_acceptance.py
+./names.py
+./greet.py
+

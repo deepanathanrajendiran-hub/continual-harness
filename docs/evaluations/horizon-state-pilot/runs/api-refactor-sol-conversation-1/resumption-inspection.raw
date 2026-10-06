@@ -1,0 +1,39 @@
+inspection_time_utc: 2026-10-06T20:22:02Z
+inspection_kind: read-only resumption after external interruption
+
+Host/root-provided interruption fact:
+- The Sep 30 native FINAL_ANSWER was interrupted by an account usage-limit error.
+- On Oct 6 ordinary account usage was available again and no credits were consumed.
+- This is a resumption-control observation supplied by the parent coordinator; no Sep 30 raw host usage transcript exists in this evidence directory.
+
+Current live trial state:
+- /private/tmp/horizon-state-pilot-20260928-2f65f2a/api-refactor-sol-conversation-1/project exists.
+- Present directories: tests, __pycache__, .codex, .codex/harness, .codex/harness/goals.
+- Current regular-file count under project: 0.
+- Current entries under .codex/harness/goals: 0.
+- The trial home path is absent.
+- Therefore names.py, greet.py, tags.py, tests/test_acceptance.py, and the saved goal JSON are absent.
+- No lifecycle command, gate, review, worker dispatch, code edit, seed restoration, goal recreation, or reset was performed during resumption.
+
+Surviving lifecycle evidence:
+- coordinator-start.raw exists; SHA-256 8df24c30f8fe0c7966b031fc1089e2d002637154b4d8d45c131b1d2e1ab864c9.
+- coordinator-check.raw exists; SHA-256 f549b186b3076a9ba08be443736f7ee336b522f1ebe0c07d90029d77291db97d.
+- coordinator-review.raw exists; SHA-256 2fe6388f45c83ef9579be3100032ba9084a4cea6f785b4c55ed0d63209815a88.
+- reviewer-terminal.txt exists; SHA-256 3ed78054248ca7bcafc417361734471bf2db55995a81c9af3fd00e91c925f315.
+- coordinator-post-worker-inspection.raw exists; SHA-256 2e499cb19f5e01e95652aec68beed090b0eead4c8858d807fd760f465bcc4cff.
+- native-role-record.md exists; SHA-256 0908a58875ffa4401277482bfeed5ad2a6ff47638735c3454932619aa6122f8f.
+- evaluator-pre-dispatch.txt exists; SHA-256 9ca215669445189225e65aa2db492da2aa427552aad9f951478a15fdd8089ec1.
+- seed-hashes.csv exists; SHA-256 43d8e5feb98a5e1153cf3aa06641599fa2974fda20d6c0f55b1403962e5d0305.
+
+Missing final evidence:
+- coordinator-complete.raw is absent.
+- report.md was absent before this resumption.
+- Live goal state is unavailable because the goal JSON is absent.
+- Live source/test fingerprint and current protected-artifact hash/mtime are unavailable because all regular project files are absent.
+
+Required conclusion:
+- Historical checkpoint gate result: recorded pass.
+- Historical independent review result: recorded pass.
+- Final live status: unknown.
+- Durable lifecycle completion: not evidenced.
+- Canonical row outcome: incomplete due external interruption and loss of temporary live state; do not reconstruct.

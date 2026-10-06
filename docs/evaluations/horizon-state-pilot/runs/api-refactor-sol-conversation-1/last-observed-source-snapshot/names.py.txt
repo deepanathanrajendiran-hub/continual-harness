@@ -1,0 +1,4 @@
+def normalize_name(value):
+    return value.strip().casefold()
+
+normalize = normalize_name

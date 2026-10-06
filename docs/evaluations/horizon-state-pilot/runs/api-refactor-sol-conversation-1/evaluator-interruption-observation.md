@@ -1,0 +1,7 @@
+# External interruption and missing live state
+
+On September 30, the native host delivered a terminal `FINAL_ANSWER` usage-limit error for coordinator `/root/pilot_api_refactor_sol_conversation_1` after `coordinator-review.raw` had recorded a passing independent review. The host instructed use of the collaboration follow-up tool if the agent was still needed. No coordinator completion or final report was observed before that interruption.
+
+On the user's October 6 continuation, root's read-only account check reported ordinary usage allowed. Root inspected the original disposable project before any resumed lifecycle command. Its directories still existed, but its source files and goal JSON were absent; attempts to read the goal yielded no matching file. The saved directory metadata showed changes on October 3 and October 5. This is consistent with temporary-directory cleanup during the six-day gap, but no deletion process or authoritative cleanup log was observed, so the cause is an inference.
+
+Root resumed the same coordinator solely to inspect and report this limitation. It explicitly prohibited seed restoration, replacement goal/worker, repeated gate/review, code edits, and other trial dispatches. The preserved passing gate/review evidence establishes that the earlier work reached a reviewed checkpoint; it does not establish a completed or currently verifiable goal. The live row must not be reconstructed into a replacement measured outcome.

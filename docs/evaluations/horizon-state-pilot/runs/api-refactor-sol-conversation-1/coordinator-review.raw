@@ -1,0 +1,54 @@
+exit_code: 0
+stdout/stderr combined:
+{
+  "slug": "rename-normalize-to-normalize_name-in-names-py-update-both-p",
+  "goal": "Rename normalize to normalize_name in names.py, update both project callers, and retain normalize as a compatibility alias. Both names must trim/case-fold identically and existing imports must stay valid.",
+  "status": "active",
+  "runtime": "codex",
+  "gate": {
+    "kind": "command",
+    "value": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v",
+    "review_criterion": "Independently inspect raw lifecycle, source, gate, and evaluator evidence.\nConfirm the fixed gate result; confirm every listed protected artifact has its\nrequired hash/mtime; confirm no evaluator-owned acceptance file was removed or\nedited; confirm no test was removed; confirm the fixture-specific source\nobligation; and reject any reported completion that conflicts with gate or\nrequired-review evidence. Record missing observations as unknown. Confirm greet.py and tags.py import and use normalize_name, while the old normalize symbol remains a working compatibility alias."
+  },
+  "budget": {
+    "max_turns": 4,
+    "max_minutes": 15
+  },
+  "used": {
+    "turns": 1,
+    "started": "2026-09-30T13:53:11.659382+00:00"
+  },
+  "budget_exhausted": false,
+  "last_checkpoint": {
+    "turn": 1,
+    "at": "2026-09-30T13:59:53.269912+00:00",
+    "did": "Renamed normalize to normalize_name via AST-editor, retained normalize alias, updated greet.py and tags.py callers, and preserved the protected acceptance test hash and mtime.",
+    "next": "Dispatch fresh independent reviewer against the exact frozen criterion and raw checkpoint evidence.",
+    "tree_hash": "82b86c170aee3f7f5059db2dbff1cb7d213bb84f0246e1e6d3d50834dfd03cfb",
+    "gate": "pass",
+    "gate_output": "test_names_and_callers (test_acceptance.AcceptanceTests.test_names_and_callers) ... ok\n\n----------------------------------------------------------------------\nRan 1 test in 0.000s\n\nOK\n",
+    "gate_spec": {
+      "kind": "command",
+      "value": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v",
+      "review_criterion": "Independently inspect raw lifecycle, source, gate, and evaluator evidence.\nConfirm the fixed gate result; confirm every listed protected artifact has its\nrequired hash/mtime; confirm no evaluator-owned acceptance file was removed or\nedited; confirm no test was removed; confirm the fixture-specific source\nobligation; and reject any reported completion that conflicts with gate or\nrequired-review evidence. Record missing observations as unknown. Confirm greet.py and tags.py import and use normalize_name, while the old normalize symbol remains a working compatibility alias."
+    }
+  },
+  "reviews": [
+    {
+      "turn": 1,
+      "tree_hash": "82b86c170aee3f7f5059db2dbff1cb7d213bb84f0246e1e6d3d50834dfd03cfb",
+      "at": "2026-09-30T14:05:56.341087+00:00",
+      "judge": "/root/pilot_api_refactor_sol_conversation_1/independent_reviewer",
+      "criterion": "Independently inspect raw lifecycle, source, gate, and evaluator evidence.\nConfirm the fixed gate result; confirm every listed protected artifact has its\nrequired hash/mtime; confirm no evaluator-owned acceptance file was removed or\nedited; confirm no test was removed; confirm the fixture-specific source\nobligation; and reject any reported completion that conflicts with gate or\nrequired-review evidence. Record missing observations as unknown. Confirm greet.py and tags.py import and use normalize_name, while the old normalize symbol remains a working compatibility alias.",
+      "result": "pass",
+      "evidence": "handle: /root/pilot_api_refactor_sol_conversation_1/independent_reviewer\nhost_observation: collaboration.wait_agent returned completed terminal notification; collaboration final payload follows.\n\nVERDICT: PASS\n\n- Fixed gate: coordinator-check.raw records exit code 0; test_names_and_callers passed, with 1 test run and OK.\n- Protected artifact: tests/test_acceptance.py has required SHA-256 cabb3c9379120181bc94744b6915cd9add3bb489c5009cf8553d532928ce9297 and required mtime_ns 1790650615771934885.\n- Test preservation: acceptance test is byte-identical to the seed snapshot; it remains the sole test file and retains AcceptanceTests.test_names_and_callers. No test removal or evaluator-owned acceptance edit observed.\n- Source obligations: names.py defines normalize_name(value) using strip().casefold() and retains normalize = normalize_name; greet.py and tags.py import and call normalize_name; runtime checks confirmed both names behave identically and the alias is the same callable.\n- Checkpoint integrity: independently recomputed tree hash exactly matches 82b86c170aee3f7f5059db2dbff1cb7d213bb84f0246e1e6d3d50834dfd03cfb.\n- Lifecycle/evaluator evidence: seed validation, Git-isolation failure as expected, role separation, worker terminal evidence, one saved checkpoint, and coordinator gate evidence are present. The goal remained active, with independent review still unrecorded at inspection time. An initial malformed start invocation failed with a preserved SyntaxError; the subsequent saved goal/checkpoint evidence is internally consistent.\n- Unknowns/omissions: Git history/diff is unavailable because the fixture is intentionally outside a Git repository. Host usage/cost is unknown. No completed lifecycle/report record existed yet because this review was pending.\n- Reviewer deviation: runtime import check created an excluded __pycache__ directory. It is excluded by the documented tree-hash algorithm and did not alter the checkpoint hash or protected/source files.\n- Completion supported: Yes, once this PASS is recorded in the required review lifecycle."
+    }
+  ],
+  "gate_evidence": null,
+  "execution_mode": "conversation",
+  "turn_unit": "checkpoint",
+  "execution_revision": null,
+  "active_attempt": null,
+  "next_action": "Dispatch fresh independent reviewer against the exact frozen criterion and raw checkpoint evidence."
+}
+

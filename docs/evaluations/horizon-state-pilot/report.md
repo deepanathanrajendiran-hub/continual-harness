@@ -1,7 +1,8 @@
 # Horizon state-mode pilot report — incomplete
 
-Twelve of 72 (12/72) canonical manifest rows have been scored: eleven passed acceptance
-and independent review; the fifth is incomplete after an external usage limit.
+Thirteen of 72 (13/72) canonical manifest rows have been scored: eleven completed
+with passing acceptance and independent review; rows five and thirteen are
+incomplete after external interruptions.
 There has been no false completion or fixture-observed regression.
 The first paired
 module-bug / Sol comparison passed acceptance and independent review in both
@@ -109,9 +110,19 @@ extra worker launch followed. A post-completion hash command from the wrong
 directory was corrected without source mutation. Evidence is in
 `runs/module-bug-terra-conversation-3/`.
 
-The first api-refactor / Sol conversation row is active. The 59 later rows
-have prepared briefs but have not run. All scored rows so far use the
-module-bug fixture.
+The first api-refactor / Sol conversation row reached a passing checkpoint
+and recorded independent review, then its coordinator hit a host usage limit
+before completion. On the October 6 resumption, the temporary project and
+goal had no remaining files. Its durable source account supplied four
+hash-verified historical snapshots, but its final live acceptance/regression
+check is unavailable. The same coordinator reported incomplete without
+recreating the goal or source. The initial command-wrapper SyntaxError and
+reviewer's excluded cache creation are retained. Evidence is in
+`runs/api-refactor-sol-conversation-1/`.
+
+The 59 later rows have prepared briefs but have not run. Their live projects
+are being checked after the temporary-file loss; all frozen source and seed
+artifacts remain in the tracked pilot directory.
 
 The original module-bug / Sol /
 state / repeat 1 run is retained as supplemental raw evidence but excluded from

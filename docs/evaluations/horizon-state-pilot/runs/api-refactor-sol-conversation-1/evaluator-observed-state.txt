@@ -1,0 +1,18 @@
+{
+  "checked_at": "2026-10-06T20:24:46.708097+00:00",
+  "current_project_exists": true,
+  "current_regular_files": 0,
+  "last_recorded_goal_status": "active",
+  "last_recorded_gate": "pass",
+  "last_recorded_required_review": "pass",
+  "immutable_controls_match_in_saved_records": true,
+  "historical_protected_hash_mtime_match": true,
+  "current_protected_hash_mtime": null,
+  "completion_record": null,
+  "source_snapshots_recovered_from_hashed_account": 4,
+  "final_project_snapshot_files": null,
+  "checkpoints": 1,
+  "passing_reviews": 1,
+  "worker_launches": 1,
+  "elapsed_seconds": null
+}
