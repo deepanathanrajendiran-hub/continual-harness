@@ -1,0 +1,4 @@
+from names import normalize_name
+
+def greet(value):
+    return "Hello " + normalize_name(value)

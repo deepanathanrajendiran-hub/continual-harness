@@ -1,0 +1,56 @@
+{
+  "slug": "rename-normalize-to-normalize_name-in-names-py-update-both-p",
+  "goal": "Rename normalize to normalize_name in names.py, update both project callers, and retain normalize as a compatibility alias. Both names must trim/case-fold identically and existing imports must stay valid.",
+  "status": "active",
+  "runtime": "codex",
+  "gate": {
+    "kind": "command",
+    "value": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v",
+    "review_criterion": "Independently inspect raw lifecycle, source, gate, and evaluator evidence.\nConfirm the fixed gate result; confirm every listed protected artifact has its\nrequired hash/mtime; confirm no evaluator-owned acceptance file was removed or\nedited; confirm no test was removed; confirm the fixture-specific source\nobligation; and reject any reported completion that conflicts with gate or\nrequired-review evidence. Record missing observations as unknown. Confirm greet.py and tags.py import and use normalize_name, while the old normalize symbol remains a working compatibility alias."
+  },
+  "budget": {"max_turns": 4, "max_minutes": 15},
+  "used": {"turns": 1, "started": "2026-10-06T20:52:41.679121+00:00"},
+  "budget_exhausted": false,
+  "last_checkpoint": {
+    "turn": 1,
+    "at": "2026-10-06T20:55:36.891473+00:00",
+    "did": "Renamed normalize to normalize_name in names.py, retained normalize as a direct compatibility alias, and updated greet.py and tags.py to import and call normalize_name. Inspected tests/test_acceptance.py without modifying it. Focused import and behavior assertions passed.",
+    "next": "Run the frozen gate and independently verify the protected acceptance-test hash and required review evidence.",
+    "tree_hash": "b894546796ff5213dae08f6ff7e45092ce39ffe493d0646a0e3422b2a2c4ea9f",
+    "gate": "pass",
+    "gate_output": "test_names_and_callers (test_acceptance.AcceptanceTests.test_names_and_callers) ... ok\n\n----------------------------------------------------------------------\nRan 1 test in 0.000s\n\nOK\n",
+    "gate_spec": {
+      "kind": "command",
+      "value": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v",
+      "review_criterion": "Independently inspect raw lifecycle, source, gate, and evaluator evidence.\nConfirm the fixed gate result; confirm every listed protected artifact has its\nrequired hash/mtime; confirm no evaluator-owned acceptance file was removed or\nedited; confirm no test was removed; confirm the fixture-specific source\nobligation; and reject any reported completion that conflicts with gate or\nrequired-review evidence. Record missing observations as unknown. Confirm greet.py and tags.py import and use normalize_name, while the old normalize symbol remains a working compatibility alias."
+    }
+  },
+  "reviews": [],
+  "gate_evidence": null,
+  "execution_mode": "state",
+  "turn_unit": "worker_attempt",
+  "execution_revision": 5,
+  "active_attempt": null,
+  "next_action": "Run the frozen gate and independently verify the protected acceptance-test hash and required review evidence.",
+  "attempt_id": "request-001",
+  "attempt_status": "accepted",
+  "replayed": false,
+  "update_accepted": true,
+  "attempt_closed": true,
+  "exit_code": 0,
+  "checkpoint": {
+    "turn": 1,
+    "at": "2026-10-06T20:55:36.891473+00:00",
+    "did": "Renamed normalize to normalize_name in names.py, retained normalize as a direct compatibility alias, and updated greet.py and tags.py to import and call normalize_name. Inspected tests/test_acceptance.py without modifying it. Focused import and behavior assertions passed.",
+    "next": "Run the frozen gate and independently verify the protected acceptance-test hash and required review evidence.",
+    "tree_hash": "b894546796ff5213dae08f6ff7e45092ce39ffe493d0646a0e3422b2a2c4ea9f",
+    "gate": "pass",
+    "gate_output": "test_names_and_callers (test_acceptance.AcceptanceTests.test_names_and_callers) ... ok\n\n----------------------------------------------------------------------\nRan 1 test in 0.000s\n\nOK\n",
+    "gate_spec": {
+      "kind": "command",
+      "value": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v",
+      "review_criterion": "Independently inspect raw lifecycle, source, gate, and evaluator evidence.\nConfirm the fixed gate result; confirm every listed protected artifact has its\nrequired hash/mtime; confirm no evaluator-owned acceptance file was removed or\nedited; confirm no test was removed; confirm the fixture-specific source\nobligation; and reject any reported completion that conflicts with gate or\nrequired-review evidence. Record missing observations as unknown. Confirm greet.py and tags.py import and use normalize_name, while the old normalize symbol remains a working compatibility alias."
+    }
+  },
+  "review_required": true
+}

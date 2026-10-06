@@ -1,9 +1,11 @@
 # Horizon state-mode pilot report — incomplete
 
-Fourteen of 72 (14/72) canonical manifest rows have been scored: twelve completed
+Fifteen of 72 (15/72) canonical manifest rows have been scored: thirteen completed
 with passing acceptance and independent review; rows five and thirteen are
 incomplete after external interruptions.
-There has been no false completion or fixture-observed regression.
+No false completion was observed, and no fixture-observed regression was found
+among rows with final verification. Row thirteen's final regression state is
+unknown.
 The first paired
 module-bug / Sol comparison passed acceptance and independent review in both
 modes, with one editing increment each, no false completion, and no
@@ -129,7 +131,19 @@ evidence-backed entry for the rename or caller changes. This is a possible
 handoff weakness, not an observed handoff failure. Ten final files are archived
 in `runs/api-refactor-sol-state-1/`.
 
-The 58 later rows have prepared briefs but have not run. Their empty temporary projects were
+The api-refactor / Sol state repeat 2 row passed in one accepted attempt with
+exact controls and protected test hash/mtime. One permitted formatting-only
+follow-up repaired the worker's initial JSON envelope without changing its
+reported work or saved summary/next action. Its state entries remain empty.
+Root independently recomputed the passing checkpoint/review hash, resolving a
+reviewer unknown. Packet size was 1890 bytes; elapsed time was 347.658905
+seconds from root dispatch and 307.346654 seconds from goal start. The
+coordinator reports 28.9 seconds across seven scoped-write round trips,
+including permission review and transport; that account does not isolate
+approval overhead. Ten final files are archived in
+`runs/api-refactor-sol-state-2/`.
+
+The 57 later rows have prepared briefs but have not run. Their empty temporary projects were
 restored into a persistent directory outside Git with exact
 seed bytes and original per-row nanosecond mtimes. Only allowed project/home
 path substitutions changed. Original briefs and Git observations are retained
@@ -147,8 +161,9 @@ changed its fingerprint.  The setup probe retained at
 defect. Its outcome remains supplemental and is not a second canonical row.
 
 These small-fixture paired observations supply no basis for a mode
-superiority or recovery claim. External interruptions, one incomplete state
-arm, a review-criterion byte deviation, and the extra JSON repair in
+superiority or recovery claim. External interruptions, incomplete state and
+conversation arms, unavailable final verification after temporary-file loss,
+review-criterion byte deviations, and the extra JSON repair in
 conversation repeat 2 prevent clean paired efficiency comparisons.
 
 When raw trial evidence exists, independently score one JSON object per

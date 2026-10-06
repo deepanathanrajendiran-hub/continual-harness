@@ -1,0 +1,15 @@
+{
+  "runtime": "codex",
+  "project": "/Users/deeps/Documents/horizon-state-pilot-2f65f2a/api-refactor-sol-state-2/project",
+  "implementation": "/Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/harness",
+  "state": "/Users/deeps/Documents/horizon-state-pilot-2f65f2a/api-refactor-sol-state-2/project/.codex/harness",
+  "targets": {
+    "rho": "/Users/deeps/Documents/horizon-state-pilot-2f65f2a/api-refactor-sol-state-2/project/AGENTS.md",
+    "G": "/Users/deeps/Documents/horizon-state-pilot-2f65f2a/api-refactor-sol-state-2/project/.agents/skills",
+    "K": "/Users/deeps/Documents/horizon-state-pilot-2f65f2a/api-refactor-sol-state-2/project/.codex/agents",
+    "M": "/Users/deeps/Documents/horizon-state-pilot-2f65f2a/api-refactor-sol-state-2/project/.codex/memory"
+  },
+  "memory_mode": "explicit recall",
+  "state_supported": true,
+  "worker_availability": "Determined by the host; the Python CLI does not dispatch or inspect workers."
+}

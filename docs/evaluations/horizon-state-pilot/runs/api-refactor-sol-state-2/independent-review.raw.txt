@@ -1,0 +1,15 @@
+PASS — review bound to checkpoint tree hash `b894546796ff5213dae08f6ff7e45092ce39ffe493d0646a0e3422b2a2c4ea9f`.
+
+- Fixed gate: `PASS`; one acceptance test ran successfully (`Ran 1 test … OK`). The goal audit and finish export agree.
+- Protected artifact: `tests/test_acceptance.py` remains present with required SHA-256 `cabb3c...ce9297` and exact mtime `1790650615789732506`. These match the seed, evaluator pre-dispatch record, post-worker observation, and current filesystem.
+- Tests: no listed test was removed or changed. The unchanged acceptance test still contains `test_names_and_callers`.
+- Source obligation:
+  - `names.py` defines `normalize_name` using `strip().casefold()`.
+  - `normalize = normalize_name` preserves the old import and identical behavior.
+  - `greet.py` and `tags.py` both import and call `normalize_name`.
+  - Current source hashes and mtimes exactly match `source-post-worker.txt`.
+- Completion consistency: both worker payloads describe the observed implementation. The first envelope was invalid, but the repaired payload made only the recorded formatting correction; the accepted audit, source evidence, and gate result do not conflict.
+- Audit integrity: every referenced `.d/objects` file hashes to its content-addressed filename.
+- Git isolation: both recorded checks returned exit 128 because the fixture is outside a Git repository.
+
+Unknowns: the checkpoint tree hash was confirmed in both raw lifecycle records but was not independently recomputed because its hashing procedure is absent from the permitted materials. No required criterion otherwise remains unknown.

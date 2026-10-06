@@ -1,0 +1,7 @@
+# Root native observations
+
+At 2026-10-06T20:53:57.136968+00:00, native list_agents returned coordinator /root/pilot_api_refactor_sol_state_2 and fresh worker /root/pilot_api_refactor_sol_state_2/state_worker_001 running. A separate read of the durable goal showed request-001 reserved, revision1, one used turn and no checkpoint/review yet. This is a root-authored observation account, not a full native-role tool transcript.
+
+At 2026-10-06T20:56:38.153023+00:00, root native list_agents returned /root/pilot_api_refactor_sol_state_2/state_worker_001 terminal completed with schema1/request-001/base_revision1. It reported the API rename/alias/caller changes and focused import/behavior assertions. The update contains only summary and next_action operations, without evidence-backed entries. Coordinator and /root/pilot_api_refactor_sol_state_2/independent_reviewer were running. This is an observed host status/payload account, not a full internal tool transcript; root did not observe the instant before coordinator finish.
+
+Root received the actual coordinator FINAL_ANSWER on completion with goal/role handles, gate and required review pass, one formatting-only repair, and the reported seven scoped-write round trips. The terminal message reports a reviewer hash-recomputation unknown. Root independently resolved it during final scoring against actual live source. This account does not substitute for full internal role transcripts.
