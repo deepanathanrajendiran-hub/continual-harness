@@ -1,0 +1,7 @@
+command: git rev-parse --show-toplevel
+cwd: /Users/deeps/Documents/horizon-state-pilot-2f65f2a/api-refactor-sol-state-1/project
+observed-before-marker-or-role-dispatch: true
+exit_code: 128
+stdout:
+stderr:
+fatal: not a git repository (or any of the parent directories): .git

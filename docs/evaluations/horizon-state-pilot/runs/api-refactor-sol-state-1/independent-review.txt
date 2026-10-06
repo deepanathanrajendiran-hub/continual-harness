@@ -1,0 +1,11 @@
+VERDICT: pass
+
+All required raw artifacts are present. `audit-after-step-finish.json` records the fixed gate passing one acceptance test with tree hash `23e70bb27d4231c6ed91c95500f326f00bbd37447703058bf713d360fb9c2fee`; an independent rerun of the exact gate also passed 1 test.
+
+The protected `tests/test_acceptance.py` remains byte-identical to the seed: SHA-256 `cabb3c9379120181bc94744b6915cd9add3bb489c5009cf8553d532928ce9297`, mtime_ns `1790650615780525655`, size 430. Its seed and live copies both contain `test_names_and_callers`, so no test was removed and no evaluator-owned acceptance file was edited or removed.
+
+Live source confirms `names.py` defines `normalize_name` using `value.strip().casefold()` and retains `normalize = normalize_name`; therefore both symbols behave identically and old imports remain valid. `greet.py` and `tags.py` both import and call `normalize_name`.
+
+The packet, worker update, terminal evidence, coordinator inspection, audit, evaluator setup, objective, and frozen review criterion are mutually consistent. Git isolation was recorded before dispatch with the expected exit code 128.
+
+unknown: none.

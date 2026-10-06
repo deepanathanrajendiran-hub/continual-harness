@@ -1,0 +1,5 @@
+# Root native observations
+
+At 2026-10-06T20:42:08.460174+00:00, native list_agents reported coordinator /root/pilot_api_refactor_sol_state_1 and editing worker /root/pilot_api_refactor_sol_state_1/task10_edit_attempt1 running. The saved attach audit is retained in audit-after-attach.json. This is an observed native status/handle account, not a complete internal role tool transcript.
+
+At 2026-10-06T20:43:53.973033+00:00, native list_agents reported editing worker /root/pilot_api_refactor_sol_state_1/task10_edit_attempt1 terminal completed with schema1 update for task10-attempt-001/base_revision1. It reported source rename/alias/callers and a passing fixed gate with preserved acceptance hash/mtime. Its ops contain only summary and next_action set operations, with no evidence-backed upsert entry. Coordinator was still running; final persisted state and review remain to be independently checked.

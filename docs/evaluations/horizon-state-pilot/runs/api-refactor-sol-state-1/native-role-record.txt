@@ -1,0 +1,3 @@
+Coordinator: /root/pilot_api_refactor_sol_state_1; model gpt-5.6-sol; reasoning high; owns lifecycle commands and evidence.
+Editing worker: /root/pilot_api_refactor_sol_state_1/task10_edit_attempt1; model gpt-5.6-sol; reasoning high; fresh context; source edits and one update only; terminal completed.
+Independent reviewer: /root/pilot_api_refactor_sol_state_1/task10_independent_reviewer; model gpt-5.6-sol; reasoning high; fresh context; read-only evaluation using the exact frozen criterion.

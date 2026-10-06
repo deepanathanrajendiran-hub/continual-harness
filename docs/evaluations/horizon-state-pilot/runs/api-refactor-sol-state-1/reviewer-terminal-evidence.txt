@@ -1,0 +1,1 @@
+Native host wait observed reviewer /root/pilot_api_refactor_sol_state_1/task10_independent_reviewer return a FINAL_ANSWER. A subsequent native list_agents observation reported the same handle with completed status and the exact verdict preserved in independent-review.txt. The reviewer is stopped and remained separate from the editing worker.

@@ -1,0 +1,17 @@
+{
+  "checked_at": "2026-10-06T20:50:03.346056+00:00",
+  "goal_status": "complete",
+  "immutable_controls_match": true,
+  "protected_acceptance_sha256": "cabb3c9379120181bc94744b6915cd9add3bb489c5009cf8553d532928ce9297",
+  "protected_acceptance_mtime_ns": 1790650615780525655,
+  "renamed_function_and_alias": true,
+  "both_callers_import_and_use_new_name": true,
+  "accepted_attempts": 1,
+  "checkpoints": 1,
+  "passing_reviews": 1,
+  "state_entries": 0,
+  "snapshot_files": 10,
+  "packet_bytes": 1897,
+  "goal_wall_seconds": 309.470892,
+  "elapsed_seconds": 396.012075
+}

@@ -1,0 +1,137 @@
+{
+  "slug": "rename-normalize-to-normalize_name-in-names-py-update-both-p",
+  "goal": "Rename normalize to normalize_name in names.py, update both project callers, and retain normalize as a compatibility alias. Both names must trim/case-fold identically and existing imports must stay valid.",
+  "cwd": "/Users/deeps/Documents/horizon-state-pilot-2f65f2a/api-refactor-sol-state-1/project",
+  "gate": {
+    "kind": "command",
+    "value": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v",
+    "review_criterion": "Independently inspect raw lifecycle, source, gate, and evaluator evidence.\nConfirm the fixed gate result; confirm every listed protected artifact has its\nrequired hash/mtime; confirm no evaluator-owned acceptance file was removed or\nedited; confirm no test was removed; confirm the fixture-specific source\nobligation; and reject any reported completion that conflicts with gate or\nrequired-review evidence. Record missing observations as unknown. Confirm greet.py and tags.py import and use normalize_name, while the old normalize symbol remains a working compatibility alias."
+  },
+  "watch_paths": [
+    "/Users/deeps/Documents/horizon-state-pilot-2f65f2a/api-refactor-sol-state-1/project"
+  ],
+  "budget": {
+    "max_turns": 4,
+    "max_minutes": 15
+  },
+  "used": {
+    "turns": 1,
+    "started": "2026-10-06T20:40:03.290098+00:00"
+  },
+  "status": "active",
+  "subagents": [],
+  "checkpoints": [
+    {
+      "turn": 1,
+      "at": "2026-10-06T20:43:27.541367+00:00",
+      "did": "Renamed normalize to normalize_name in names.py, retained normalize as a compatibility alias, and updated greet.py and tags.py to import and call normalize_name. The fixed gate passed 1 test with 0 failures, and tests/test_acceptance.py retained its original hash and mtime.",
+      "next": "Independently review the source, protected acceptance test integrity, and fixed gate evidence, then accept this update if the requirements are satisfied.",
+      "tree_hash": "23e70bb27d4231c6ed91c95500f326f00bbd37447703058bf713d360fb9c2fee",
+      "gate": "pass",
+      "gate_output": "test_names_and_callers (test_acceptance.AcceptanceTests.test_names_and_callers) ... ok\n\n----------------------------------------------------------------------\nRan 1 test in 0.000s\n\nOK\n",
+      "gate_spec": {
+        "kind": "command",
+        "value": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v",
+        "review_criterion": "Independently inspect raw lifecycle, source, gate, and evaluator evidence.\nConfirm the fixed gate result; confirm every listed protected artifact has its\nrequired hash/mtime; confirm no evaluator-owned acceptance file was removed or\nedited; confirm no test was removed; confirm the fixture-specific source\nobligation; and reject any reported completion that conflicts with gate or\nrequired-review evidence. Record missing observations as unknown. Confirm greet.py and tags.py import and use normalize_name, while the old normalize symbol remains a working compatibility alias."
+      }
+    }
+  ],
+  "execution": {
+    "mode": "state",
+    "schema_version": 1,
+    "revision": 5,
+    "task": {
+      "summary": "names.py defines normalize_name with the original trim-and-casefold behavior and aliases normalize to it. greet.py and tags.py now import and use normalize_name. The fixed acceptance gate passes.",
+      "entries": [],
+      "next_action": "Independently review the source, protected acceptance test integrity, and fixed gate evidence, then accept this update if the requirements are satisfied."
+    },
+    "active_attempt": null,
+    "attempts": [
+      {
+        "id": "task10-attempt-001",
+        "turn": 1,
+        "base_revision": 1,
+        "status": "accepted",
+        "packet": {
+          "path": ".codex/harness/goals/rename-normalize-to-normalize_name-in-names-py-update-both-p.d/objects/34c3d500ac9957d33a892c70da333c04ab52961822d91dbfbe955ade236ab580.json",
+          "sha256": "34c3d500ac9957d33a892c70da333c04ab52961822d91dbfbe955ade236ab580"
+        },
+        "procedure_sha256": "886a692f47bd47c0ef5bd6c6c86961938a8e06986fed4050a54adf2fe3287a94",
+        "worker": {
+          "runtime": "codex",
+          "handle": "/root/pilot_api_refactor_sol_state_1/task10_edit_attempt1"
+        },
+        "gate_process": {
+          "pid": 59902,
+          "pgid": 59902,
+          "started_at": "2026-10-06T20:43:27.503405+00:00",
+          "finish_nonce": "c8d35729a255c2d2afe150288681431a"
+        },
+        "finish_nonce": "c8d35729a255c2d2afe150288681431a",
+        "update_sha256": "7180708411114e44f48069ac71a35b38591a0108291dd606cc850f14bc2644e7",
+        "pending": {
+          "update": {
+            "path": ".codex/harness/goals/rename-normalize-to-normalize_name-in-names-py-update-both-p.d/objects/7180708411114e44f48069ac71a35b38591a0108291dd606cc850f14bc2644e7.json",
+            "sha256": "7180708411114e44f48069ac71a35b38591a0108291dd606cc850f14bc2644e7"
+          },
+          "candidate": {
+            "path": ".codex/harness/goals/rename-normalize-to-normalize_name-in-names-py-update-both-p.d/objects/35466e873b7e1fde9111fbb56855a32774e6305d70181f241adeaf09787dc9ec.json",
+            "sha256": "35466e873b7e1fde9111fbb56855a32774e6305d70181f241adeaf09787dc9ec"
+          },
+          "audit": {
+            "path": ".codex/harness/goals/rename-normalize-to-normalize_name-in-names-py-update-both-p.d/objects/32e7a4fcb39649044f3ff23ca5a5790c1e515b574c3480d305a2bbf5b0c6feee.json",
+            "sha256": "32e7a4fcb39649044f3ff23ca5a5790c1e515b574c3480d305a2bbf5b0c6feee"
+          },
+          "worker_evidence": {
+            "path": ".codex/harness/goals/rename-normalize-to-normalize_name-in-names-py-update-both-p.d/objects/6041c7116b81bc0687b80ff766c2136e20b8d5a0169a1200e6ebf8b2938f4a03.json",
+            "sha256": "6041c7116b81bc0687b80ff766c2136e20b8d5a0169a1200e6ebf8b2938f4a03"
+          }
+        },
+        "events": [
+          {
+            "type": "accepted_update",
+            "at": "2026-10-06T20:43:27.541384+00:00",
+            "changes": [
+              {
+                "id": "summary",
+                "before": "",
+                "after": "names.py defines normalize_name with the original trim-and-casefold behavior and aliases normalize to it. greet.py and tags.py now import and use normalize_name. The fixed acceptance gate passes.",
+                "reason": null
+              },
+              {
+                "id": "next_action",
+                "before": "Inspect the project and establish the next useful increment.",
+                "after": "Independently review the source, protected acceptance test integrity, and fixed gate evidence, then accept this update if the requirements are satisfied.",
+                "reason": null
+              }
+            ],
+            "update": {
+              "path": ".codex/harness/goals/rename-normalize-to-normalize_name-in-names-py-update-both-p.d/objects/7180708411114e44f48069ac71a35b38591a0108291dd606cc850f14bc2644e7.json",
+              "sha256": "7180708411114e44f48069ac71a35b38591a0108291dd606cc850f14bc2644e7"
+            }
+          }
+        ],
+        "result": {
+          "exit_code": 0,
+          "checkpoint": {
+            "turn": 1,
+            "at": "2026-10-06T20:43:27.541367+00:00",
+            "did": "Renamed normalize to normalize_name in names.py, retained normalize as a compatibility alias, and updated greet.py and tags.py to import and call normalize_name. The fixed gate passed 1 test with 0 failures, and tests/test_acceptance.py retained its original hash and mtime.",
+            "next": "Independently review the source, protected acceptance test integrity, and fixed gate evidence, then accept this update if the requirements are satisfied.",
+            "tree_hash": "23e70bb27d4231c6ed91c95500f326f00bbd37447703058bf713d360fb9c2fee",
+            "gate": "pass",
+            "gate_output": "test_names_and_callers (test_acceptance.AcceptanceTests.test_names_and_callers) ... ok\n\n----------------------------------------------------------------------\nRan 1 test in 0.000s\n\nOK\n",
+            "gate_spec": {
+              "kind": "command",
+              "value": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v",
+              "review_criterion": "Independently inspect raw lifecycle, source, gate, and evaluator evidence.\nConfirm the fixed gate result; confirm every listed protected artifact has its\nrequired hash/mtime; confirm no evaluator-owned acceptance file was removed or\nedited; confirm no test was removed; confirm the fixture-specific source\nobligation; and reject any reported completion that conflicts with gate or\nrequired-review evidence. Record missing observations as unknown. Confirm greet.py and tags.py import and use normalize_name, while the old normalize symbol remains a working compatibility alias."
+            }
+          },
+          "update_accepted": true,
+          "attempt_closed": true,
+          "review_required": true
+        }
+      }
+    ]
+  }
+}

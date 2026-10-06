@@ -1,0 +1,14 @@
+Final non-bookkeeping project files:
+./greet.py
+./names.py
+./tags.py
+./tests/test_acceptance.py
+
+Final hashes and mtimes:
+greet.py sha256=b0eb603b4f53661a32f0477eebb52d25e81becb6b0ac55f438f6fb8fe8604878 mtime_ns=1791319324088058007 size=96
+names.py sha256=09b84dc3cf84531060aa4439ff6af23d304aab67e6406e9b2e1de0040f9a2b5e mtime_ns=1791319309972206873 size=91
+tags.py sha256=b2e22fd1cdcde0196180b088548ef65728b661f5f9c77ed31e06fa415afea8b7 mtime_ns=1791319322450445490 size=89
+tests/test_acceptance.py sha256=cabb3c9379120181bc94744b6915cd9add3bb489c5009cf8553d532928ce9297 mtime_ns=1790650615780525655 size=430
+
+Final audit bytes:
+audit-final.json bytes=11381 sha256=398399524fff1d2e7a1236c7d025c18a2773f2bf46148efc554e8a640cd7760c

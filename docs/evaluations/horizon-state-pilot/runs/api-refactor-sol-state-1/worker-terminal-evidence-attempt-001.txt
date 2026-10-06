@@ -1,0 +1,1 @@
+Native host wait observed worker /root/pilot_api_refactor_sol_state_1/task10_edit_attempt1 return a FINAL_ANSWER. A subsequent native list_agents observation reported the same handle with completed status and the exact update preserved in worker-update-attempt-001.txt. The worker is stopped; no duplicate worker was launched.

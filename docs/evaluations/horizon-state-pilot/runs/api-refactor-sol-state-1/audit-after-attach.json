@@ -1,0 +1,58 @@
+{
+  "slug": "rename-normalize-to-normalize_name-in-names-py-update-both-p",
+  "goal": "Rename normalize to normalize_name in names.py, update both project callers, and retain normalize as a compatibility alias. Both names must trim/case-fold identically and existing imports must stay valid.",
+  "cwd": "/Users/deeps/Documents/horizon-state-pilot-2f65f2a/api-refactor-sol-state-1/project",
+  "gate": {
+    "kind": "command",
+    "value": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v",
+    "review_criterion": "Independently inspect raw lifecycle, source, gate, and evaluator evidence.\nConfirm the fixed gate result; confirm every listed protected artifact has its\nrequired hash/mtime; confirm no evaluator-owned acceptance file was removed or\nedited; confirm no test was removed; confirm the fixture-specific source\nobligation; and reject any reported completion that conflicts with gate or\nrequired-review evidence. Record missing observations as unknown. Confirm greet.py and tags.py import and use normalize_name, while the old normalize symbol remains a working compatibility alias."
+  },
+  "watch_paths": [
+    "/Users/deeps/Documents/horizon-state-pilot-2f65f2a/api-refactor-sol-state-1/project"
+  ],
+  "budget": {
+    "max_turns": 4,
+    "max_minutes": 15
+  },
+  "used": {
+    "turns": 1,
+    "started": "2026-10-06T20:40:03.290098+00:00"
+  },
+  "status": "active",
+  "subagents": [],
+  "checkpoints": [],
+  "execution": {
+    "mode": "state",
+    "schema_version": 1,
+    "revision": 2,
+    "task": {
+      "summary": "",
+      "entries": [],
+      "next_action": "Inspect the project and establish the next useful increment."
+    },
+    "active_attempt": "task10-attempt-001",
+    "attempts": [
+      {
+        "id": "task10-attempt-001",
+        "turn": 1,
+        "base_revision": 1,
+        "status": "attached",
+        "packet": {
+          "path": ".codex/harness/goals/rename-normalize-to-normalize_name-in-names-py-update-both-p.d/objects/34c3d500ac9957d33a892c70da333c04ab52961822d91dbfbe955ade236ab580.json",
+          "sha256": "34c3d500ac9957d33a892c70da333c04ab52961822d91dbfbe955ade236ab580"
+        },
+        "procedure_sha256": "886a692f47bd47c0ef5bd6c6c86961938a8e06986fed4050a54adf2fe3287a94",
+        "worker": {
+          "runtime": "codex",
+          "handle": "/root/pilot_api_refactor_sol_state_1/task10_edit_attempt1"
+        },
+        "gate_process": null,
+        "finish_nonce": null,
+        "update_sha256": null,
+        "pending": null,
+        "events": [],
+        "result": null
+      }
+    ]
+  }
+}

@@ -1,0 +1,13 @@
+Horizon step-finish accepted attempt task10-attempt-001 at execution_revision 5.
+checkpoint tree_hash: 23e70bb27d4231c6ed91c95500f326f00bbd37447703058bf713d360fb9c2fee
+gate command: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v
+gate result: pass
+gate output:
+test_names_and_callers (test_acceptance.AcceptanceTests.test_names_and_callers) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 0.000s
+
+OK
+
+review_required: true

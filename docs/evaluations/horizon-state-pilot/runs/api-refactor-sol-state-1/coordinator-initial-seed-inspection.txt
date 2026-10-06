@@ -1,0 +1,7 @@
+record: seed-hashes.csv
+observed-before-goal-start: true
+greet.py sha256=f4e2bc6755318e5ecbb9b52e0c8174d5342512d171229b5a666acac02d97f6fb mtime_ns=1790650615779997156 size=86
+names.py sha256=c9eb9fffca5197eb3193ac1d0ccea0136d347104e3652bfc1817abcbd54038a2 mtime_ns=1790650615780186656 size=58
+tags.py sha256=45627c624d598d3172896d7b3276b6643407f2a36a5360b49efdee530673987a mtime_ns=1790650615780344072 size=79
+tests/test_acceptance.py sha256=cabb3c9379120181bc94744b6915cd9add3bb489c5009cf8553d532928ce9297 mtime_ns=1790650615780525655 size=430
+result: all four hashes and nanosecond mtimes match seed-hashes.csv; protected acceptance is untouched at launch.

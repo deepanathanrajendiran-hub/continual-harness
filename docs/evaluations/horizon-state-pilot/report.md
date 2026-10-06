@@ -1,6 +1,6 @@
 # Horizon state-mode pilot report — incomplete
 
-Thirteen of 72 (13/72) canonical manifest rows have been scored: eleven completed
+Fourteen of 72 (14/72) canonical manifest rows have been scored: twelve completed
 with passing acceptance and independent review; rows five and thirteen are
 incomplete after external interruptions.
 There has been no false completion or fixture-observed regression.
@@ -120,8 +120,17 @@ recreating the goal or source. The initial command-wrapper SyntaxError and
 reviewer's excluded cache creation are retained. Evidence is in
 `runs/api-refactor-sol-conversation-1/`.
 
-The 59 later rows have prepared briefs but have not run. Their empty temporary
-projects were restored into a persistent directory outside Git with exact
+The api-refactor / Sol state repeat 1 row passed in one accepted attempt with
+the exact frozen controls, preserved protected test hash/mtime, a passing fixed
+gate, and matching independent review. Its 1897-byte packet accompanied
+396.012075 seconds from root dispatch to saved completion and 309.470892 seconds
+of goal wall time. The saved state contains summary and next action but no
+evidence-backed entry for the rename or caller changes. This is a possible
+handoff weakness, not an observed handoff failure. Ten final files are archived
+in `runs/api-refactor-sol-state-1/`.
+
+The 58 later rows have prepared briefs but have not run. Their empty temporary projects were
+restored into a persistent directory outside Git with exact
 seed bytes and original per-row nanosecond mtimes. Only allowed project/home
 path substitutions changed. Original briefs and Git observations are retained
 in [environment migration evidence](evidence/environment-migration.md). The
