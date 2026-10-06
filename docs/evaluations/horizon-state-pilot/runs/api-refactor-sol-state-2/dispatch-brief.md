@@ -5,8 +5,8 @@ Environment values for the symbolic names in the exact common template:
 - MODEL: `gpt-5.6-sol`
 - MODE: `state`
 - REPEAT: `2`
-- TRIAL_PROJECT: `/private/tmp/horizon-state-pilot-20260928-2f65f2a/api-refactor-sol-state-2/project`
-- TRIAL_HOME: `/private/tmp/horizon-state-pilot-20260928-2f65f2a/api-refactor-sol-state-2/home`
+- TRIAL_PROJECT: `/Users/deeps/Documents/horizon-state-pilot-2f65f2a/api-refactor-sol-state-2/project`
+- TRIAL_HOME: `/Users/deeps/Documents/horizon-state-pilot-2f65f2a/api-refactor-sol-state-2/home`
 - EVIDENCE_DIR: `/Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/docs/evaluations/horizon-state-pilot/runs/api-refactor-sol-state-2`
 - SKILL_FILE: `/Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/.agents/skills/horizon/SKILL.md`
 - HARNESS: `/Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/horizon-state/.agents/skills/horizon/scripts/harness.py`

@@ -120,9 +120,13 @@ recreating the goal or source. The initial command-wrapper SyntaxError and
 reviewer's excluded cache creation are retained. Evidence is in
 `runs/api-refactor-sol-conversation-1/`.
 
-The 59 later rows have prepared briefs but have not run. Their live projects
-are being checked after the temporary-file loss; all frozen source and seed
-artifacts remain in the tracked pilot directory.
+The 59 later rows have prepared briefs but have not run. Their empty temporary
+projects were restored into a persistent directory outside Git with exact
+seed bytes and original per-row nanosecond mtimes. Only allowed project/home
+path substitutions changed. Original briefs and Git observations are retained
+in [environment migration evidence](evidence/environment-migration.md). The
+path transition and any sandbox approval overhead limit timing comparisons
+with earlier rows; all frozen source and control values remain unchanged.
 
 The original module-bug / Sol /
 state / repeat 1 run is retained as supplemental raw evidence but excluded from

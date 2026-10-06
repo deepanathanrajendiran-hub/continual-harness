@@ -1,0 +1,4 @@
+command: git rev-parse --show-toplevel
+cwd: /private/tmp/horizon-state-pilot-20260928-2f65f2a/test-repair-terra-state-2/project
+fatal: not a git repository (or any of the parent directories): .git
+exit_status=128

@@ -1,0 +1,8 @@
+Prepared at: 2026-10-06T20:28:49.980578+00:00
+Unrun rows restored: 59
+Exact seed files restored: 152
+Frozen source hashes verified: 10
+All seed SHA-256 and individual original mtime_ns match; every seed-hashes.csv byte retained.
+Only declared project/home paths changed in dispatch briefs; original briefs and Git observations retained.
+All persistent projects fail Git discovery with exit128; no native goal, role, or measured result created.
+Row13 and all prior run artifacts unchanged.

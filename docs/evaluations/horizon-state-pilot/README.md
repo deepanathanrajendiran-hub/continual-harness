@@ -44,6 +44,15 @@ distinction: an external log changes a nested project's fingerprint, while the
 same log outside a repository does not.  Keep the trial-local marker after this
 check.
 
+On October 6, all 59 unrun temporary projects had lost their files during the
+interruption. Rows 14–72 were restored into the persistent, non-Git root
+`/Users/deeps/Documents/horizon-state-pilot-2f65f2a` with exact seed bytes and
+each row's original nanosecond mtimes. Only the declared project/home paths in
+their briefs and the Git-observation working directory changed. Original
+briefs, seed records, controls, and interrupted row 13 are retained. See
+[environment-migration.md](evidence/environment-migration.md) for the correction
+and its timing-comparison limitation.
+
 Use [trial-briefs.md](trial-briefs.md) to instantiate a coordinator/worker
 brief.  Only the listed model, mode, repeat, and environment path placeholders
 may change.  All 72 manifest-matched
