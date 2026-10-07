@@ -1,7 +1,7 @@
 # Horizon state-mode pilot report — incomplete
 
-Fifteen of 72 (15/72) canonical manifest rows have been scored: thirteen completed
-with passing acceptance and independent review; rows five and thirteen are
+Sixteen of 72 (16/72) canonical manifest rows have been scored: thirteen completed
+with passing acceptance and independent review; rows five, thirteen and sixteen are
 incomplete after external interruptions.
 No false completion was observed, and no fixture-observed regression was found
 among rows with final verification. Row thirteen's final regression state is
@@ -143,7 +143,18 @@ including permission review and transport; that account does not isolate
 approval overhead. Ten final files are archived in
 `runs/api-refactor-sol-state-2/`.
 
-The 57 later rows have prepared briefs but have not run. Their empty temporary projects were
+The api-refactor / Sol conversation repeat 2 row stopped on an external host
+usage limit after worker launch, before any durable source edit or checkpoint.
+The original fifteen-minute budget expired overnight. Its persistent project
+survived with exact seed hashes/mtimes, controls and goal; the same coordinator
+resumed only to inspect and export the incomplete state. The external evaluator
+check fails on the seed's missing new function name. No Horizon gate/review ran,
+no false completion occurred, and no source regression was introduced. Five
+final source/goal files are archived in `runs/api-refactor-sol-conversation-2/`.
+Elapsed and usage/cost remain unknown; the reported 7.2-second scoped-write
+call is a combined tool round trip, not isolated approval latency.
+
+The 56 later rows have prepared briefs but have not run. Their empty temporary projects were
 restored into a persistent directory outside Git with exact
 seed bytes and original per-row nanosecond mtimes. Only allowed project/home
 path substitutions changed. Original briefs and Git observations are retained

@@ -1,0 +1,6 @@
+original_path,archive_path,sha256,mtime_ns
+/Users/deeps/Documents/horizon-state-pilot-2f65f2a/api-refactor-sol-conversation-2/project/.codex/harness/goals/rename-normalize-to-normalize_name-in-names-py-update-both-p.json,final-project-snapshot/.codex/harness/goals/rename-normalize-to-normalize_name-in-names-py-update-both-p.json,0751ae1dea2a3960abcc2bc277bd3a90600580b015ff817a66db93ce67ece4c5,1791320591979830995
+/Users/deeps/Documents/horizon-state-pilot-2f65f2a/api-refactor-sol-conversation-2/project/greet.py,final-project-snapshot/greet.py.txt,f4e2bc6755318e5ecbb9b52e0c8174d5342512d171229b5a666acac02d97f6fb,1790650615796867780
+/Users/deeps/Documents/horizon-state-pilot-2f65f2a/api-refactor-sol-conversation-2/project/names.py,final-project-snapshot/names.py.txt,c9eb9fffca5197eb3193ac1d0ccea0136d347104e3652bfc1817abcbd54038a2,1790650615797010363
+/Users/deeps/Documents/horizon-state-pilot-2f65f2a/api-refactor-sol-conversation-2/project/tags.py,final-project-snapshot/tags.py.txt,45627c624d598d3172896d7b3276b6643407f2a36a5360b49efdee530673987a,1790650615797141571
+/Users/deeps/Documents/horizon-state-pilot-2f65f2a/api-refactor-sol-conversation-2/project/tests/test_acceptance.py,final-project-snapshot/tests/test_acceptance.py.txt,cabb3c9379120181bc94744b6915cd9add3bb489c5009cf8553d532928ce9297,1790650615797311445

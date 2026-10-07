@@ -1,0 +1,22 @@
+{
+  "checked_at": "2026-10-07T14:52:29.252110+00:00",
+  "goal_status": "active",
+  "outcome": "incomplete",
+  "budget_expired": true,
+  "immutable_controls_match": true,
+  "all_source_seed_bytes_and_original_mtimes_match": true,
+  "protected_acceptance_sha256": "cabb3c9379120181bc94744b6915cd9add3bb489c5009cf8553d532928ce9297",
+  "protected_acceptance_mtime_ns": 1790650615797311445,
+  "worker_launches": 1,
+  "editing_worker_terminal": "host usage-limit error",
+  "used_turns": 0,
+  "checkpoints": 0,
+  "reviews": 0,
+  "horizon_gate_executed": false,
+  "external_evaluator_gate_exit": 1,
+  "regressions": 0,
+  "regression_reason": "No introduced source regression: all source/test files are exact unchanged seed. Objective remains unmet.",
+  "snapshot_files": 5,
+  "format_repairs": 0,
+  "elapsed_seconds": null
+}

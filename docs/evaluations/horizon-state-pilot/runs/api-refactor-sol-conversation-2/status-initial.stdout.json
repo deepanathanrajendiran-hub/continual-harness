@@ -1,0 +1,32 @@
+{
+  "goals": [
+    {
+      "slug": "rename-normalize-to-normalize_name-in-names-py-update-both-p",
+      "goal": "Rename normalize to normalize_name in names.py, update both project callers, and retain normalize as a compatibility alias. Both names must trim/case-fold identically and existing imports must stay valid.",
+      "status": "active",
+      "runtime": "codex",
+      "gate": {
+        "kind": "command",
+        "value": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v",
+        "review_criterion": "Independently inspect raw lifecycle, source, gate, and evaluator evidence.\nConfirm the fixed gate result; confirm every listed protected artifact has its\nrequired hash/mtime; confirm no evaluator-owned acceptance file was removed or\nedited; confirm no test was removed; confirm the fixture-specific source\nobligation; and reject any reported completion that conflicts with gate or\nrequired-review evidence. Record missing observations as unknown. Confirm greet.py and tags.py import and use normalize_name, while the old normalize symbol remains a working compatibility alias."
+      },
+      "budget": {
+        "max_turns": 4,
+        "max_minutes": 15
+      },
+      "used": {
+        "turns": 0,
+        "started": "2026-10-06T21:03:11.979389+00:00"
+      },
+      "budget_exhausted": false,
+      "last_checkpoint": null,
+      "reviews": [],
+      "gate_evidence": null,
+      "execution_mode": "conversation",
+      "turn_unit": "checkpoint",
+      "execution_revision": null,
+      "active_attempt": null,
+      "next_action": ""
+    }
+  ]
+}

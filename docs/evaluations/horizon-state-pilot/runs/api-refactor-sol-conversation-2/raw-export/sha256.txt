@@ -1,0 +1,5 @@
+0751ae1dea2a3960abcc2bc277bd3a90600580b015ff817a66db93ce67ece4c5  raw-export/goal.json.bytes
+f4e2bc6755318e5ecbb9b52e0c8174d5342512d171229b5a666acac02d97f6fb  raw-export/current-source/greet.py.bytes
+c9eb9fffca5197eb3193ac1d0ccea0136d347104e3652bfc1817abcbd54038a2  raw-export/current-source/names.py.bytes
+45627c624d598d3172896d7b3276b6643407f2a36a5360b49efdee530673987a  raw-export/current-source/tags.py.bytes
+cabb3c9379120181bc94744b6915cd9add3bb489c5009cf8553d532928ce9297  raw-export/current-source/test_acceptance.py.bytes

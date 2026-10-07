@@ -1,0 +1,23 @@
+test_acceptance (unittest.loader._FailedTest.test_acceptance) ... ERROR
+
+======================================================================
+ERROR: test_acceptance (unittest.loader._FailedTest.test_acceptance)
+----------------------------------------------------------------------
+ImportError: Failed to import test module: test_acceptance
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.4/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/loader.py", line 426, in _find_test_path
+    module = self._get_module_from_name(name)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.4/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/loader.py", line 367, in _get_module_from_name
+    __import__(name)
+    ~~~~~~~~~~^^^^^^
+  File "/Users/deeps/Documents/horizon-state-pilot-2f65f2a/api-refactor-sol-conversation-2/project/tests/test_acceptance.py", line 2, in <module>
+    from names import normalize, normalize_name
+ImportError: cannot import name 'normalize_name' from 'names' (/Users/deeps/Documents/horizon-state-pilot-2f65f2a/api-refactor-sol-conversation-2/project/names.py)
+
+
+----------------------------------------------------------------------
+Ran 1 test in 0.000s
+
+FAILED (errors=1)
+
+exit_code: 1
