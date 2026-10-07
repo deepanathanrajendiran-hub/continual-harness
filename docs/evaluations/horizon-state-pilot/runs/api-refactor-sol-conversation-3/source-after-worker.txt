@@ -1,0 +1,27 @@
+--- names.py
+def normalize_name(value):
+    return value.strip().casefold()
+
+normalize = normalize_name
+--- greet.py
+from names import normalize_name
+
+def greet(value):
+    return "Hello " + normalize_name(value)
+--- tags.py
+from names import normalize_name
+
+def tag(value):
+    return "#" + normalize_name(value)
+--- tests/test_acceptance.py
+import unittest
+from names import normalize, normalize_name
+from greet import greet
+from tags import tag
+
+class AcceptanceTests(unittest.TestCase):
+    def test_names_and_callers(self):
+        self.assertEqual(normalize_name(" ALICE "), "alice")
+        self.assertEqual(normalize(" ALICE "), normalize_name(" ALICE "))
+        self.assertEqual(greet(" ALICE "), "Hello alice")
+        self.assertEqual(tag(" ALICE "), "#alice")

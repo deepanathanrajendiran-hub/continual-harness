@@ -1,0 +1,17 @@
+Implementation increment complete.
+
+- Changed `names.py`, `greet.py`, and `tags.py`.
+- `normalize_name` now contains the original trim/case-fold behavior.
+- `normalize = normalize_name` preserves existing imports and identical behavior.
+- Both project callers now import and call `normalize_name`.
+
+AST tools used:
+
+- `list_symbols` on all three files
+- `replace_signature`
+- `insert_after`
+- `remove_import`
+- `add_import`
+- `replace_function_body`
+
+Omissions/unknowns: acceptance tests and Horizon gate were not accessed or run, as required. No lifecycle state was modified.

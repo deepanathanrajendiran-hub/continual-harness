@@ -1,0 +1,4 @@
+from names import normalize_name
+
+def tag(value):
+    return "#" + normalize_name(value)

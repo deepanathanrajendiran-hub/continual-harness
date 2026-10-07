@@ -1,0 +1,23 @@
+VERDICT: pass
+
+Fixed gate: Independently reran `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v`; exit 0, one test ran, and `test_names_and_callers` passed. This matches `check-1.stdout.json`; its exit file is 0 and stderr is empty.
+
+Lifecycle integrity: `start.stdout.json`, `status-before-increment-1.stdout.json`, `check-1.stdout.json`, and `goal-after-check.raw.json` preserve the exact slug, objective, gate, and review criterion. The checkpoint records tree hash `045c8efffbf0566a8121983fb6de6bc7c151eb5185eb2626dc46c881999c920e` and gate `pass`. The raw goal is exactly 2992 bytes and independently hashes to `654f3a1e42d8d9a8cfae56c0888bb785b7dbde205955480bacc3a36ab10f249e`, matching both sidecars.
+
+Git isolation: The precheck produced empty stdout, exit 128, and `fatal: not a git repository`, consistent with the evaluator evidence.
+
+Protected artifact and test preservation: The sole listed protected evaluator-owned artifact, `tests/test_acceptance.py`, currently has SHA-256 `cabb3c9379120181bc94744b6915cd9add3bb489c5009cf8553d532928ce9297` and mtime_ns `1790650615804139636`, exactly matching `seed-hashes.csv`. Its unchanged 430-byte content still contains `test_names_and_callers`; therefore no protected content or test was removed.
+
+Live worker artifacts match `artifacts-after-worker.txt`:
+
+names.py: SHA-256 `09b84dc3cf84531060aa4439ff6af23d304aab67e6406e9b2e1de0040f9a2b5e`, mtime_ns `1791385039619120875`.
+
+greet.py: SHA-256 `b0eb603b4f53661a32f0477eebb52d25e81becb6b0ac55f438f6fb8fe8604878`, mtime_ns `1791385065719862237`.
+
+tags.py: SHA-256 `b2e22fd1cdcde0196180b088548ef65728b661f5f9c77ed31e06fa415afea8b7`, mtime_ns `1791385063153803747`.
+
+Source obligation: `names.py` defines `normalize_name` with `value.strip().casefold()` and assigns `normalize = normalize_name`. Both `greet.py` and `tags.py` import and call `normalize_name`. A direct runtime check confirmed `normalize is normalize_name` and both produce `strasse` from whitespace-padded `Straẞe`; callers produced `Hello strasse` and `#strasse`. Existing `from names import normalize` remains valid.
+
+No gate or required-review evidence conflicts with the implementation result.
+
+UNKNOWN: The allowed row evidence does not contain a complete native coordinator/worker tool transcript, as `evaluator-native-observations.md` explicitly states. The checkpoint tree hash is consistently recorded in both lifecycle captures but was not independently recomputed because its encoding algorithm is not documented in the allowed row evidence.

@@ -1,0 +1,3 @@
+/Users/deeps/Documents/horizon-state-pilot-2f65f2a/api-refactor-sol-conversation-3/project/.codex/harness/goals/.CREATE.flock
+/Users/deeps/Documents/horizon-state-pilot-2f65f2a/api-refactor-sol-conversation-3/project/.codex/harness/goals/.rename-normalize-to-normalize_name-in-names-py-update-both-p.json.flock
+/Users/deeps/Documents/horizon-state-pilot-2f65f2a/api-refactor-sol-conversation-3/project/.codex/harness/goals/rename-normalize-to-normalize_name-in-names-py-update-both-p.json

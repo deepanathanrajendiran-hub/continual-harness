@@ -1,0 +1,51 @@
+{
+  "slug": "rename-normalize-to-normalize_name-in-names-py-update-both-p",
+  "goal": "Rename normalize to normalize_name in names.py, update both project callers, and retain normalize as a compatibility alias. Both names must trim/case-fold identically and existing imports must stay valid.",
+  "status": "active",
+  "runtime": "codex",
+  "gate": {
+    "kind": "command",
+    "value": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v",
+    "review_criterion": "Independently inspect raw lifecycle, source, gate, and evaluator evidence.\nConfirm the fixed gate result; confirm every listed protected artifact has its\nrequired hash/mtime; confirm no evaluator-owned acceptance file was removed or\nedited; confirm no test was removed; confirm the fixture-specific source\nobligation; and reject any reported completion that conflicts with gate or\nrequired-review evidence. Record missing observations as unknown. Confirm greet.py and tags.py import and use normalize_name, while the old normalize symbol remains a working compatibility alias."
+  },
+  "budget": {
+    "max_turns": 4,
+    "max_minutes": 15
+  },
+  "used": {
+    "turns": 1,
+    "started": "2026-10-07T14:55:24.653149+00:00"
+  },
+  "budget_exhausted": false,
+  "last_checkpoint": {
+    "turn": 1,
+    "at": "2026-10-07T14:59:12.113765+00:00",
+    "did": "Renamed the implementation to normalize_name, retained normalize as a direct compatibility alias, and updated greet.py and tags.py to import and call normalize_name; independently inspected source and protected acceptance hash/mtime.",
+    "next": "Dispatch the required fresh independent reviewer against raw lifecycle, source, gate, and evaluator evidence.",
+    "tree_hash": "045c8efffbf0566a8121983fb6de6bc7c151eb5185eb2626dc46c881999c920e",
+    "gate": "pass",
+    "gate_output": "test_names_and_callers (test_acceptance.AcceptanceTests.test_names_and_callers) ... ok\n\n----------------------------------------------------------------------\nRan 1 test in 0.000s\n\nOK\n",
+    "gate_spec": {
+      "kind": "command",
+      "value": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v",
+      "review_criterion": "Independently inspect raw lifecycle, source, gate, and evaluator evidence.\nConfirm the fixed gate result; confirm every listed protected artifact has its\nrequired hash/mtime; confirm no evaluator-owned acceptance file was removed or\nedited; confirm no test was removed; confirm the fixture-specific source\nobligation; and reject any reported completion that conflicts with gate or\nrequired-review evidence. Record missing observations as unknown. Confirm greet.py and tags.py import and use normalize_name, while the old normalize symbol remains a working compatibility alias."
+    }
+  },
+  "reviews": [
+    {
+      "turn": 1,
+      "tree_hash": "045c8efffbf0566a8121983fb6de6bc7c151eb5185eb2626dc46c881999c920e",
+      "at": "2026-10-07T15:02:13.990329+00:00",
+      "judge": "/root/pilot_api_refactor_sol_conversation_3/independent_reviewer",
+      "criterion": "Independently inspect raw lifecycle, source, gate, and evaluator evidence.\nConfirm the fixed gate result; confirm every listed protected artifact has its\nrequired hash/mtime; confirm no evaluator-owned acceptance file was removed or\nedited; confirm no test was removed; confirm the fixture-specific source\nobligation; and reject any reported completion that conflicts with gate or\nrequired-review evidence. Record missing observations as unknown. Confirm greet.py and tags.py import and use normalize_name, while the old normalize symbol remains a working compatibility alias.",
+      "result": "pass",
+      "evidence": "VERDICT: pass\n\nFixed gate: Independently reran `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v`; exit 0, one test ran, and `test_names_and_callers` passed. This matches `check-1.stdout.json`; its exit file is 0 and stderr is empty.\n\nLifecycle integrity: `start.stdout.json`, `status-before-increment-1.stdout.json`, `check-1.stdout.json`, and `goal-after-check.raw.json` preserve the exact slug, objective, gate, and review criterion. The checkpoint records tree hash `045c8efffbf0566a8121983fb6de6bc7c151eb5185eb2626dc46c881999c920e` and gate `pass`. The raw goal is exactly 2992 bytes and independently hashes to `654f3a1e42d8d9a8cfae56c0888bb785b7dbde205955480bacc3a36ab10f249e`, matching both sidecars.\n\nGit isolation: The precheck produced empty stdout, exit 128, and `fatal: not a git repository`, consistent with the evaluator evidence.\n\nProtected artifact and test preservation: The sole listed protected evaluator-owned artifact, `tests/test_acceptance.py`, currently has SHA-256 `cabb3c9379120181bc94744b6915cd9add3bb489c5009cf8553d532928ce9297` and mtime_ns `1790650615804139636`, exactly matching `seed-hashes.csv`. Its unchanged 430-byte content still contains `test_names_and_callers`; therefore no protected content or test was removed.\n\nLive worker artifacts match `artifacts-after-worker.txt`:\n\nnames.py: SHA-256 `09b84dc3cf84531060aa4439ff6af23d304aab67e6406e9b2e1de0040f9a2b5e`, mtime_ns `1791385039619120875`.\n\ngreet.py: SHA-256 `b0eb603b4f53661a32f0477eebb52d25e81becb6b0ac55f438f6fb8fe8604878`, mtime_ns `1791385065719862237`.\n\ntags.py: SHA-256 `b2e22fd1cdcde0196180b088548ef65728b661f5f9c77ed31e06fa415afea8b7`, mtime_ns `1791385063153803747`.\n\nSource obligation: `names.py` defines `normalize_name` with `value.strip().casefold()` and assigns `normalize = normalize_name`. Both `greet.py` and `tags.py` import and call `normalize_name`. A direct runtime check confirmed `normalize is normalize_name` and both produce `strasse` from whitespace-padded `Straẞe`; callers produced `Hello strasse` and `#strasse`. Existing `from names import normalize` remains valid.\n\nNo gate or required-review evidence conflicts with the implementation result.\n\nUNKNOWN: The allowed row evidence does not contain a complete native coordinator/worker tool transcript, as `evaluator-native-observations.md` explicitly states. The checkpoint tree hash is consistently recorded in both lifecycle captures but was not independently recomputed because its encoding algorithm is not documented in the allowed row evidence."
+    }
+  ],
+  "gate_evidence": null,
+  "execution_mode": "conversation",
+  "turn_unit": "checkpoint",
+  "execution_revision": null,
+  "active_attempt": null,
+  "next_action": "Dispatch the required fresh independent reviewer against raw lifecycle, source, gate, and evaluator evidence."
+}

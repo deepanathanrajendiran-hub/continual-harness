@@ -1,0 +1,19 @@
+{
+  "checked_at": "2026-10-07T15:06:08.084630+00:00",
+  "goal_status": "complete",
+  "immutable_controls_match": true,
+  "protected_acceptance_sha256": "cabb3c9379120181bc94744b6915cd9add3bb489c5009cf8553d532928ce9297",
+  "protected_acceptance_mtime_ns": 1790650615804139636,
+  "renamed_function_and_alias": true,
+  "both_callers_import_and_use_new_name": true,
+  "worker_launches": 1,
+  "reserved_attempts": 0,
+  "checkpoints": 1,
+  "passing_reviews": 1,
+  "snapshot_files": 5,
+  "computed_tree_hash": "045c8efffbf0566a8121983fb6de6bc7c151eb5185eb2626dc46c881999c920e",
+  "reviewer_hash_unknown_resolved_by_evaluator": true,
+  "format_repairs": 0,
+  "goal_wall_seconds": 432.691424,
+  "elapsed_seconds": 501.561164
+}

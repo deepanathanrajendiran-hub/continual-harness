@@ -1,0 +1,76 @@
+{
+  "checked_at": "2026-10-07T14:53:34.440365+00:00",
+  "checkout_head": "d7d3b9aaee35f74da321e80f060ad531f2879c44",
+  "source_snapshot": [
+    {
+      "path": "harness/cli.py",
+      "sha256": "41f9a00f5ca409b3b165b354e54a9a4f52edfd4ecbca127a757f8e4b9652ffbb"
+    },
+    {
+      "path": "harness/goal.py",
+      "sha256": "4ef46c065f2c3ba232806452d0973de221467b1ef102b24f6d468580f34bb519"
+    },
+    {
+      "path": "harness/gate.py",
+      "sha256": "9ac4961c2ddb733dc2e192c527608084a400bcd35187fad34fc10a41476b6ffc"
+    },
+    {
+      "path": "harness/filelock.py",
+      "sha256": "7b134fd00d93c81c3d6e4093a42095f86786189f5ce29d3e9c30a377f1b208e6"
+    },
+    {
+      "path": "harness/task_state.py",
+      "sha256": "1ade30d217978a8ac1abe1677ffc7d83ca73d42000d65c3cf61f303dcadac9ad"
+    },
+    {
+      "path": "harness/steps.py",
+      "sha256": "e1bf7b5e517efe0d6aba722789c9c39b875a3243646ec0691be5bb1fdb2df761"
+    },
+    {
+      "path": ".agents/skills/horizon/SKILL.md",
+      "sha256": "7c1dc1edf666a9c4644da8f4e54a87eccb1f6b6bc7cc276e7590c44536af7dbf"
+    },
+    {
+      "path": ".claude/skills/horizon/SKILL.md",
+      "sha256": "9cbd38f352d606360610f086b60cb2f51d6d14603e22f4f73e3e9a9fb620d691"
+    },
+    {
+      "path": "docs/harness-cli.md",
+      "sha256": "04817de80b3f667d73a05c82ba3ec6c79eb1c9f24e0d8c6ae6d41bfffec7fdee"
+    },
+    {
+      "path": "README.md",
+      "sha256": "707a41361453aff1182e0dce2ae4830ec35e70bb4c993e563e19ad55ceb194b8"
+    }
+  ],
+  "manifest_sha256": "b4bab2621e85e1983f58ed4cc60f42030d18c7ed70fd459ec3902f1658d4f3b4",
+  "seed_files": [
+    {
+      "path": "greet.py",
+      "sha256": "f4e2bc6755318e5ecbb9b52e0c8174d5342512d171229b5a666acac02d97f6fb",
+      "mtime_ns": "1790650615803706471"
+    },
+    {
+      "path": "names.py",
+      "sha256": "c9eb9fffca5197eb3193ac1d0ccea0136d347104e3652bfc1817abcbd54038a2",
+      "mtime_ns": "1790650615803845596"
+    },
+    {
+      "path": "tags.py",
+      "sha256": "45627c624d598d3172896d7b3276b6643407f2a36a5360b49efdee530673987a",
+      "mtime_ns": "1790650615803981220"
+    },
+    {
+      "path": "tests/test_acceptance.py",
+      "sha256": "cabb3c9379120181bc94744b6915cd9add3bb489c5009cf8553d532928ce9297",
+      "mtime_ns": "1790650615804139636"
+    }
+  ],
+  "seed_sha256_and_original_mtime_match": true,
+  "paired_objective_review_exact": true,
+  "saved_goal_absent": true,
+  "trial_home_empty": true,
+  "git_exit": 128,
+  "git_output": "fatal: not a git repository (or any of the parent directories): .git\n",
+  "environment_correction_commit": "a0596a5"
+}
