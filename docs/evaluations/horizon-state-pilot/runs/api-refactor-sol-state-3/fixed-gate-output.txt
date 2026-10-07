@@ -1,0 +1,11 @@
+command: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v
+runner: Horizon step-finish for request-001
+exit_code: 0
+checkpoint_tree_hash: eda081e65e6dbfeaa779bbcbd79833084cffda93d4ffd4b4824704288e92988c
+stdout_stderr: |
+  test_names_and_callers (test_acceptance.AcceptanceTests.test_names_and_callers) ... ok
+
+  ----------------------------------------------------------------------
+  Ran 1 test in 0.000s
+
+  OK

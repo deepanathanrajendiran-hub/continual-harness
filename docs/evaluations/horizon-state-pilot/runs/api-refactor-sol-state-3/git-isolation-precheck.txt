@@ -1,0 +1,7 @@
+command: git rev-parse --show-toplevel
+working_directory: /Users/deeps/Documents/horizon-state-pilot-2f65f2a/api-refactor-sol-state-3/project
+exit_code: 128
+stdout: ""
+stderr: |
+  fatal: not a git repository (or any of the parent directories): .git
+observation: Mandatory pre-dispatch outside-Git check failed as expected before any project marker was created.

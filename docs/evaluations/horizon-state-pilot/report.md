@@ -1,6 +1,6 @@
 # Horizon state-mode pilot report — incomplete
 
-Seventeen of 72 (17/72) canonical manifest rows have been scored: fourteen completed
+Eighteen of 72 (18/72) canonical manifest rows have been scored: fifteen completed
 with passing acceptance and independent review; rows five, thirteen and sixteen are
 incomplete after external interruptions.
 No false completion was observed, and no fixture-observed regression was found
@@ -163,7 +163,17 @@ checkpoint hash to resolve its hashing unknown. Elapsed time was 501.561164
 seconds from root dispatch and 432.691424 seconds from goal start. Five final
 source/goal files are archived in `runs/api-refactor-sol-conversation-3/`.
 
-The 55 later rows have prepared briefs but have not run. Their empty temporary projects were
+The api-refactor / Sol state repeat 3 row passed in one accepted attempt with
+the exact controls, protected hash/mtime and matching gate/review hash. Root
+recomputed that hash independently. No worker-format repair was needed; the
+saved summary/next action again has no evidence-backed entries. An extra LF in
+the packet evidence export was corrected; the actual packet remains 1890 bytes.
+The coordinator disclosed a sibling status summary exposed by an initially
+unscoped inventory, which limits its blinding. Elapsed time was 613.780478
+seconds from root dispatch and 561.50978 seconds from goal start. Ten final
+files are archived in `runs/api-refactor-sol-state-3/`.
+
+The 54 later rows have prepared briefs but have not run. Their empty temporary projects were
 restored into a persistent directory outside Git with exact
 seed bytes and original per-row nanosecond mtimes. Only allowed project/home
 path substitutions changed. Original briefs and Git observations are retained

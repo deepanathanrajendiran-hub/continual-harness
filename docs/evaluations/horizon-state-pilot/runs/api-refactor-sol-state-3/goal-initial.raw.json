@@ -1,0 +1,36 @@
+{
+  "slug": "rename-normalize-to-normalize_name-in-names-py-update-both-p",
+  "goal": "Rename normalize to normalize_name in names.py, update both project callers, and retain normalize as a compatibility alias. Both names must trim/case-fold identically and existing imports must stay valid.",
+  "cwd": "/Users/deeps/Documents/horizon-state-pilot-2f65f2a/api-refactor-sol-state-3/project",
+  "gate": {
+    "kind": "command",
+    "value": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v",
+    "review_criterion": "Independently inspect raw lifecycle, source, gate, and evaluator evidence.\nConfirm the fixed gate result; confirm every listed protected artifact has its\nrequired hash/mtime; confirm no evaluator-owned acceptance file was removed or\nedited; confirm no test was removed; confirm the fixture-specific source\nobligation; and reject any reported completion that conflicts with gate or\nrequired-review evidence. Record missing observations as unknown. Confirm greet.py and tags.py import and use normalize_name, while the old normalize symbol remains a working compatibility alias."
+  },
+  "watch_paths": [
+    "/Users/deeps/Documents/horizon-state-pilot-2f65f2a/api-refactor-sol-state-3/project"
+  ],
+  "budget": {
+    "max_turns": 4,
+    "max_minutes": 15
+  },
+  "used": {
+    "turns": 0,
+    "started": "2026-10-07T15:10:43.519546+00:00"
+  },
+  "status": "active",
+  "subagents": [],
+  "checkpoints": [],
+  "execution": {
+    "mode": "state",
+    "schema_version": 1,
+    "revision": 0,
+    "task": {
+      "summary": "",
+      "entries": [],
+      "next_action": "Inspect the project and establish the next useful increment."
+    },
+    "active_attempt": null,
+    "attempts": []
+  }
+}

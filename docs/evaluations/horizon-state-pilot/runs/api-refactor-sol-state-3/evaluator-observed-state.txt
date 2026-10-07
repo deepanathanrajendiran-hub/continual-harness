@@ -1,0 +1,23 @@
+{
+  "checked_at": "2026-10-07T15:28:57.500180+00:00",
+  "goal_status": "complete",
+  "immutable_controls_match": true,
+  "frozen_control_files_unchanged": true,
+  "protected_acceptance_sha256": "cabb3c9379120181bc94744b6915cd9add3bb489c5009cf8553d532928ce9297",
+  "protected_acceptance_mtime_ns": 1790650615811070952,
+  "renamed_function_and_alias": true,
+  "both_callers_import_and_use_new_name": true,
+  "accepted_attempts": 1,
+  "checkpoints": 1,
+  "passing_reviews": 1,
+  "state_entries": 0,
+  "snapshot_files": 10,
+  "verified_raw_artifact_manifest_entries": 11,
+  "verified_source_manifest_hash_and_mtimes": 4,
+  "packet_bytes": 1890,
+  "computed_tree_hash": "eda081e65e6dbfeaa779bbcbd79833084cffda93d4ffd4b4824704288e92988c",
+  "reviewer_hash_unknown_resolved_by_evaluator": true,
+  "format_repairs": 0,
+  "goal_wall_seconds": 561.50978,
+  "elapsed_seconds": 613.780478
+}

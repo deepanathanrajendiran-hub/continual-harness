@@ -1,0 +1,150 @@
+{
+  "slug": "rename-normalize-to-normalize_name-in-names-py-update-both-p",
+  "goal": "Rename normalize to normalize_name in names.py, update both project callers, and retain normalize as a compatibility alias. Both names must trim/case-fold identically and existing imports must stay valid.",
+  "cwd": "/Users/deeps/Documents/horizon-state-pilot-2f65f2a/api-refactor-sol-state-3/project",
+  "gate": {
+    "kind": "command",
+    "value": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v",
+    "review_criterion": "Independently inspect raw lifecycle, source, gate, and evaluator evidence.\nConfirm the fixed gate result; confirm every listed protected artifact has its\nrequired hash/mtime; confirm no evaluator-owned acceptance file was removed or\nedited; confirm no test was removed; confirm the fixture-specific source\nobligation; and reject any reported completion that conflicts with gate or\nrequired-review evidence. Record missing observations as unknown. Confirm greet.py and tags.py import and use normalize_name, while the old normalize symbol remains a working compatibility alias."
+  },
+  "watch_paths": [
+    "/Users/deeps/Documents/horizon-state-pilot-2f65f2a/api-refactor-sol-state-3/project"
+  ],
+  "budget": {
+    "max_turns": 4,
+    "max_minutes": 15
+  },
+  "used": {
+    "turns": 1,
+    "started": "2026-10-07T15:10:43.519546+00:00"
+  },
+  "status": "complete",
+  "subagents": [],
+  "checkpoints": [
+    {
+      "turn": 1,
+      "at": "2026-10-07T15:16:18.298398+00:00",
+      "did": "Renamed the implementation to normalize_name, retained normalize as a compatibility alias, updated greet.py and tags.py to import and call normalize_name, and ran the required unittest gate successfully.",
+      "next": "Independently review the source, protected artifacts, gate result, and evaluator evidence against the recorded acceptance criterion.",
+      "tree_hash": "eda081e65e6dbfeaa779bbcbd79833084cffda93d4ffd4b4824704288e92988c",
+      "gate": "pass",
+      "gate_output": "test_names_and_callers (test_acceptance.AcceptanceTests.test_names_and_callers) ... ok\n\n----------------------------------------------------------------------\nRan 1 test in 0.000s\n\nOK\n",
+      "gate_spec": {
+        "kind": "command",
+        "value": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v",
+        "review_criterion": "Independently inspect raw lifecycle, source, gate, and evaluator evidence.\nConfirm the fixed gate result; confirm every listed protected artifact has its\nrequired hash/mtime; confirm no evaluator-owned acceptance file was removed or\nedited; confirm no test was removed; confirm the fixture-specific source\nobligation; and reject any reported completion that conflicts with gate or\nrequired-review evidence. Record missing observations as unknown. Confirm greet.py and tags.py import and use normalize_name, while the old normalize symbol remains a working compatibility alias."
+      }
+    }
+  ],
+  "execution": {
+    "mode": "state",
+    "schema_version": 1,
+    "revision": 7,
+    "task": {
+      "summary": "names.py now defines normalize_name and aliases normalize to it; greet.py and tags.py use normalize_name. The required unittest gate passed: 1 test, 0 failures.",
+      "entries": [],
+      "next_action": "Independently review the source, protected artifacts, gate result, and evaluator evidence against the recorded acceptance criterion."
+    },
+    "active_attempt": null,
+    "attempts": [
+      {
+        "id": "request-001",
+        "turn": 1,
+        "base_revision": 1,
+        "status": "accepted",
+        "packet": {
+          "path": ".codex/harness/goals/rename-normalize-to-normalize_name-in-names-py-update-both-p.d/objects/08a240fbb4ef5e12f794013737d12ef67b4184545211ee3037aa0faa84e5fdf5.json",
+          "sha256": "08a240fbb4ef5e12f794013737d12ef67b4184545211ee3037aa0faa84e5fdf5"
+        },
+        "procedure_sha256": "886a692f47bd47c0ef5bd6c6c86961938a8e06986fed4050a54adf2fe3287a94",
+        "worker": {
+          "runtime": "codex",
+          "handle": "/root/pilot_api_refactor_sol_state_3/state_editor_001"
+        },
+        "gate_process": {
+          "pid": 73674,
+          "pgid": 73674,
+          "started_at": "2026-10-07T15:16:18.257735+00:00",
+          "finish_nonce": "3de8023c82e5ea38e9bc852341050253"
+        },
+        "finish_nonce": "3de8023c82e5ea38e9bc852341050253",
+        "update_sha256": "ad31533942f8aa7128d8fe5b3f60e409db9e63039d67c899ff343223f487fb77",
+        "pending": {
+          "update": {
+            "path": ".codex/harness/goals/rename-normalize-to-normalize_name-in-names-py-update-both-p.d/objects/ad31533942f8aa7128d8fe5b3f60e409db9e63039d67c899ff343223f487fb77.json",
+            "sha256": "ad31533942f8aa7128d8fe5b3f60e409db9e63039d67c899ff343223f487fb77"
+          },
+          "candidate": {
+            "path": ".codex/harness/goals/rename-normalize-to-normalize_name-in-names-py-update-both-p.d/objects/abb3292c636cdfcb037f93f2c53fee07d32eae5c6e3fe04a7d5a0d5e88808a13.json",
+            "sha256": "abb3292c636cdfcb037f93f2c53fee07d32eae5c6e3fe04a7d5a0d5e88808a13"
+          },
+          "audit": {
+            "path": ".codex/harness/goals/rename-normalize-to-normalize_name-in-names-py-update-both-p.d/objects/d65e17b6ef011a243fb1ebaa8631add46c1950bd7587c09d665ea6b34ee4828e.json",
+            "sha256": "d65e17b6ef011a243fb1ebaa8631add46c1950bd7587c09d665ea6b34ee4828e"
+          },
+          "worker_evidence": {
+            "path": ".codex/harness/goals/rename-normalize-to-normalize_name-in-names-py-update-both-p.d/objects/f382bf33dc617b6f5c3a78da7925091f852d551a9047ad4cedcc4416273f595a.json",
+            "sha256": "f382bf33dc617b6f5c3a78da7925091f852d551a9047ad4cedcc4416273f595a"
+          }
+        },
+        "events": [
+          {
+            "type": "accepted_update",
+            "at": "2026-10-07T15:16:18.298414+00:00",
+            "changes": [
+              {
+                "id": "summary",
+                "before": "",
+                "after": "names.py now defines normalize_name and aliases normalize to it; greet.py and tags.py use normalize_name. The required unittest gate passed: 1 test, 0 failures.",
+                "reason": null
+              },
+              {
+                "id": "next_action",
+                "before": "Inspect the project and establish the next useful increment.",
+                "after": "Independently review the source, protected artifacts, gate result, and evaluator evidence against the recorded acceptance criterion.",
+                "reason": null
+              }
+            ],
+            "update": {
+              "path": ".codex/harness/goals/rename-normalize-to-normalize_name-in-names-py-update-both-p.d/objects/ad31533942f8aa7128d8fe5b3f60e409db9e63039d67c899ff343223f487fb77.json",
+              "sha256": "ad31533942f8aa7128d8fe5b3f60e409db9e63039d67c899ff343223f487fb77"
+            }
+          }
+        ],
+        "result": {
+          "exit_code": 0,
+          "checkpoint": {
+            "turn": 1,
+            "at": "2026-10-07T15:16:18.298398+00:00",
+            "did": "Renamed the implementation to normalize_name, retained normalize as a compatibility alias, updated greet.py and tags.py to import and call normalize_name, and ran the required unittest gate successfully.",
+            "next": "Independently review the source, protected artifacts, gate result, and evaluator evidence against the recorded acceptance criterion.",
+            "tree_hash": "eda081e65e6dbfeaa779bbcbd79833084cffda93d4ffd4b4824704288e92988c",
+            "gate": "pass",
+            "gate_output": "test_names_and_callers (test_acceptance.AcceptanceTests.test_names_and_callers) ... ok\n\n----------------------------------------------------------------------\nRan 1 test in 0.000s\n\nOK\n",
+            "gate_spec": {
+              "kind": "command",
+              "value": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v",
+              "review_criterion": "Independently inspect raw lifecycle, source, gate, and evaluator evidence.\nConfirm the fixed gate result; confirm every listed protected artifact has its\nrequired hash/mtime; confirm no evaluator-owned acceptance file was removed or\nedited; confirm no test was removed; confirm the fixture-specific source\nobligation; and reject any reported completion that conflicts with gate or\nrequired-review evidence. Record missing observations as unknown. Confirm greet.py and tags.py import and use normalize_name, while the old normalize symbol remains a working compatibility alias."
+            }
+          },
+          "update_accepted": true,
+          "attempt_closed": true,
+          "review_required": true
+        }
+      }
+    ]
+  },
+  "reviews": [
+    {
+      "turn": 1,
+      "tree_hash": "eda081e65e6dbfeaa779bbcbd79833084cffda93d4ffd4b4824704288e92988c",
+      "at": "2026-10-07T15:19:56.034938+00:00",
+      "judge": "/root/pilot_api_refactor_sol_state_3/independent_reviewer",
+      "criterion": "Independently inspect raw lifecycle, source, gate, and evaluator evidence.\nConfirm the fixed gate result; confirm every listed protected artifact has its\nrequired hash/mtime; confirm no evaluator-owned acceptance file was removed or\nedited; confirm no test was removed; confirm the fixture-specific source\nobligation; and reject any reported completion that conflicts with gate or\nrequired-review evidence. Record missing observations as unknown. Confirm greet.py and tags.py import and use normalize_name, while the old normalize symbol remains a working compatibility alias.",
+      "result": "pass",
+      "evidence": "verdict: pass\n\n- Fixed gate: confirmed. `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v` exited 0; `test_names_and_callers` passed, with 1 test and 0 failures.\n- Lifecycle: start, reserve, attach, worker terminal evidence, and finish records are coherent. Request `request-001` closed as accepted at revision 5. The checkpoint tree hash `eda081e65e6dbfeaa779bbcbd79833084cffda93d4ffd4b4824704288e92988c` matches `lifecycle-step-finish-request-001.json`, `fixed-gate-output.txt`, and the live audit goal.\n- Protected artifact: `tests/test_acceptance.py` is present. Its current SHA-256 is `cabb3c9379120181bc94744b6915cd9add3bb489c5009cf8553d532928ce9297` and its current nanosecond mtime is `1790650615811070952`; both exactly match `seed-hashes.csv`. It was neither edited nor removed.\n- Tests: the initial project listing contained only `tests/test_acceptance.py`; the current project still contains that test file with identical bytes and mtime. No test removal is observed.\n- Source obligation: `names.py` defines `normalize_name` using `value.strip().casefold()` and assigns `normalize = normalize_name`. Thus the compatibility symbol is the same callable. `greet.py` and `tags.py` both import and call `normalize_name`.\n- Independent behavior check: importing both names and both callers succeeded; `normalize is normalize_name`; both normalize `\" ALICE \"` to `\"alice\"`; `greet` returns `\"Hello alice\"`; and `tag` returns `\"#alice\"`.\n- Current source hashes and mtimes match `source-after-worker.txt`: `greet.py` is `b0eb603b\u2026`, mtime `1791386053824684304`; `names.py` is `09b84dc3\u2026`, mtime `1791386041394713331`; `tags.py` is `b2e22fd1\u2026`, mtime `1791386063139960905`.\n- Isolation evidence: the pre-dispatch Git check exited 128 as required, and evaluator pre-dispatch evidence independently records matching seed hashes and original mtimes.\n\nEvidence-integrity note: `packet-request-001.raw.json` is 1,891 bytes with SHA-256 `ffcdd7f2\u2026`, while its sidecar reports 1,890 bytes and `08a240fb\u2026`. Byte comparison shows the exported evidence file differs only by one trailing LF. The immutable packet object in the project is exactly 1,890 bytes, hashes to `08a240fb\u2026`, and matches the lifecycle packet reference. This does not conflict with the gate or required source/protection evidence.\n\nUnknown: the Horizon tree-hash derivation algorithm is not present in the authorized trial corpus, so the checkpoint tree hash was not independently recomputed. No other required observation is unknown."
+    }
+  ],
+  "gate_evidence": "test_names_and_callers (test_acceptance.AcceptanceTests.test_names_and_callers) ... ok\n\n----------------------------------------------------------------------\nRan 1 test in 0.000s\n\nOK",
+  "completed_at": "2026-10-07T15:20:05.029326+00:00"
+}

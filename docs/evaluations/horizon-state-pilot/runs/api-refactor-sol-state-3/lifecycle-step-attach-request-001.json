@@ -1,0 +1,25 @@
+{
+  "slug": "rename-normalize-to-normalize_name-in-names-py-update-both-p",
+  "status": "active",
+  "runtime": "codex",
+  "execution_mode": "state",
+  "execution_revision": 2,
+  "active_attempt": {
+    "id": "request-001",
+    "status": "attached",
+    "worker": {
+      "runtime": "codex",
+      "handle": "/root/pilot_api_refactor_sol_state_3/state_editor_001"
+    },
+    "packet": {
+      "path": ".codex/harness/goals/rename-normalize-to-normalize_name-in-names-py-update-both-p.d/objects/08a240fbb4ef5e12f794013737d12ef67b4184545211ee3037aa0faa84e5fdf5.json",
+      "sha256": "08a240fbb4ef5e12f794013737d12ef67b4184545211ee3037aa0faa84e5fdf5"
+    }
+  },
+  "attempt_id": "request-001",
+  "attempt_status": "attached",
+  "replayed": false,
+  "update_accepted": false,
+  "attempt_closed": false,
+  "exit_code": 0
+}

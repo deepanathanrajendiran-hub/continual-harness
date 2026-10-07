@@ -1,0 +1,13 @@
+source: coordinator read-only verification before marker creation and dispatch
+working_directory: /Users/deeps/Documents/horizon-state-pilot-2f65f2a/api-refactor-sol-state-3/project
+hash_command: shasum -a 256 greet.py names.py tags.py tests/test_acceptance.py
+hash_exit_code: 0
+hash_stdout: |
+  f4e2bc6755318e5ecbb9b52e0c8174d5342512d171229b5a666acac02d97f6fb  greet.py
+  c9eb9fffca5197eb3193ac1d0ccea0136d347104e3652bfc1817abcbd54038a2  names.py
+  45627c624d598d3172896d7b3276b6643407f2a36a5360b49efdee530673987a  tags.py
+  cabb3c9379120181bc94744b6915cd9add3bb489c5009cf8553d532928ce9297  tests/test_acceptance.py
+seed_hash_record: seed-hashes.csv
+comparison: all four hashes matched the protected seed record
+trial_home_listing_before_lifecycle: only the directory entry itself; no files or subdirectories
+project_listing_before_lifecycle: greet.py, names.py, tags.py, tests/test_acceptance.py

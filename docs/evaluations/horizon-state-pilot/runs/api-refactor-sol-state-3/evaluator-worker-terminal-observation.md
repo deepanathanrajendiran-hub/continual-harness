@@ -1,0 +1,3 @@
+# Root worker terminal observation
+
+At 2026-10-07T15:18:28.883561+00:00, root native list_agents returned state_editor_001 terminal completed with schema1/request-001/base_revision1. It reported the rename, compatibility alias, both caller updates and a passing required unittest command. The returned ops set only summary and next_action; no evidence-backed upsert entry is present. Coordinator and independent_reviewer were running. A separate live-goal read showed accepted attempt, one passing checkpoint, revision5 and zero entries. This is a root-authored host status/payload account, not a complete native internal tool transcript; root did not observe the instant before coordinator finish. It is separate from the earlier immutable evaluator-native-observations.md.

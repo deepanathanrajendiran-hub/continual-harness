@@ -1,0 +1,4 @@
+Native host handle: /root/pilot_api_refactor_sol_state_3/state_editor_001
+Native host role: fresh state editing worker; model gpt-5.6-sol; reasoning high.
+Bound lifecycle attempt: request-001.
+The collaboration wait returned the worker's FINAL_ANSWER, and a subsequent native agent-status observation reported this exact handle as completed. The terminal payload is preserved verbatim in worker-request-001-update.raw.json. Source and protected-artifact bytes were independently inspected by the coordinator after terminal state and before step-finish.
