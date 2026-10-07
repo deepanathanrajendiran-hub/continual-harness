@@ -1,6 +1,6 @@
 # Horizon state-mode pilot report — incomplete
 
-Eighteen of 72 (18/72) canonical manifest rows have been scored: fifteen completed
+Nineteen of 72 (19/72) canonical manifest rows have been scored: sixteen completed
 with passing acceptance and independent review; rows five, thirteen and sixteen are
 incomplete after external interruptions.
 No false completion was observed, and no fixture-observed regression was found
@@ -173,7 +173,26 @@ unscoped inventory, which limits its blinding. Elapsed time was 613.780478
 seconds from root dispatch and 561.50978 seconds from goal start. Ten final
 files are archived in `runs/api-refactor-sol-state-3/`.
 
-The 54 later rows have prepared briefs but have not run. Their empty temporary projects were
+The api-refactor / Terra conversation repeat 1 row passed in one checkpoint
+with exact controls, protected hash/mtime and matching gate/review hash. Root
+verified the rename, alias and both callers. The coordinator made the source
+edits in its retained conversation; no separate editing worker was launched.
+An initial reviewer launch omitted explicit model/reasoning and was interrupted
+before any reported review. Its resolved controls are unknown; a fresh explicit
+Terra/high replacement supplied the required passing verdict. These role and
+launch differences limit comparison with earlier trials. Worker-format repairs
+were zero. Elapsed time was 375.309429 seconds from root dispatch and 306.771584
+seconds from goal start. Five final files are archived in
+`runs/api-refactor-terra-conversation-1/`.
+
+The remaining 53 rows have prepared briefs but have not run; next is Terra's
+api-refactor state repeat 1. Starting with row nineteen, all remaining
+coordinators receive the same own-branch native inventory reminder to enforce
+the existing other-row prohibition. The reminder's introduction is recorded in
+[inventory scoping evidence](evidence/native-inventory-scoping.md); earlier
+exposure cannot be excluded from unavailable histories, and before/after
+coordinator contexts differ. Frozen briefs, source and controls remain unchanged.
+Their empty temporary projects were
 restored into a persistent directory outside Git with exact
 seed bytes and original per-row nanosecond mtimes. Only allowed project/home
 path substitutions changed. Original briefs and Git observations are retained

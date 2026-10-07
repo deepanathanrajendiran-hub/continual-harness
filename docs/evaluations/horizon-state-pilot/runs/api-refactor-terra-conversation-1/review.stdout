@@ -1,0 +1,51 @@
+{
+  "slug": "rename-normalize-to-normalize_name-in-names-py-update-both-p",
+  "goal": "Rename normalize to normalize_name in names.py, update both project callers, and retain normalize as a compatibility alias. Both names must trim/case-fold identically and existing imports must stay valid.",
+  "status": "active",
+  "runtime": "codex",
+  "gate": {
+    "kind": "command",
+    "value": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v",
+    "review_criterion": "Independently inspect raw lifecycle, source, gate, and evaluator evidence.\nConfirm the fixed gate result; confirm every listed protected artifact has its\nrequired hash/mtime; confirm no evaluator-owned acceptance file was removed or\nedited; confirm no test was removed; confirm the fixture-specific source\nobligation; and reject any reported completion that conflicts with gate or\nrequired-review evidence. Record missing observations as unknown. Confirm greet.py and tags.py import and use normalize_name, while the old normalize symbol remains a working compatibility alias."
+  },
+  "budget": {
+    "max_turns": 4,
+    "max_minutes": 15
+  },
+  "used": {
+    "turns": 1,
+    "started": "2026-10-07T15:34:45.274930+00:00"
+  },
+  "budget_exhausted": false,
+  "last_checkpoint": {
+    "turn": 1,
+    "at": "2026-10-07T15:36:52.407943+00:00",
+    "did": "Renamed names.normalize to normalize_name, retained normalize as an alias, and updated greet.py and tags.py imports and calls.",
+    "next": "Obtain an independent review of the fixed gate checkpoint and protected-artifact evidence.",
+    "tree_hash": "879a86fbca41a54f6592cc8d8bf927f1b7cf0fcbca4a30dd9c597dcee9b0df59",
+    "gate": "pass",
+    "gate_output": "test_names_and_callers (test_acceptance.AcceptanceTests.test_names_and_callers) ... ok\n\n----------------------------------------------------------------------\nRan 1 test in 0.000s\n\nOK\n",
+    "gate_spec": {
+      "kind": "command",
+      "value": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v",
+      "review_criterion": "Independently inspect raw lifecycle, source, gate, and evaluator evidence.\nConfirm the fixed gate result; confirm every listed protected artifact has its\nrequired hash/mtime; confirm no evaluator-owned acceptance file was removed or\nedited; confirm no test was removed; confirm the fixture-specific source\nobligation; and reject any reported completion that conflicts with gate or\nrequired-review evidence. Record missing observations as unknown. Confirm greet.py and tags.py import and use normalize_name, while the old normalize symbol remains a working compatibility alias."
+    }
+  },
+  "reviews": [
+    {
+      "turn": 1,
+      "tree_hash": "879a86fbca41a54f6592cc8d8bf927f1b7cf0fcbca4a30dd9c597dcee9b0df59",
+      "at": "2026-10-07T15:39:42.512387+00:00",
+      "judge": "/root/pilot_api_refactor_terra_conversation_1/independent_reviewer_terra",
+      "criterion": "Independently inspect raw lifecycle, source, gate, and evaluator evidence.\nConfirm the fixed gate result; confirm every listed protected artifact has its\nrequired hash/mtime; confirm no evaluator-owned acceptance file was removed or\nedited; confirm no test was removed; confirm the fixture-specific source\nobligation; and reject any reported completion that conflicts with gate or\nrequired-review evidence. Record missing observations as unknown. Confirm greet.py and tags.py import and use normalize_name, while the old normalize symbol remains a working compatibility alias.",
+      "result": "pass",
+      "evidence": "PASS — Raw checkpoint evidence records the fixed gate `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v` as passed: 1 test ran and returned `OK`; `check-1.stderr` is empty. The persisted goal-after-check JSON hash matches its recorded SHA-256.\n\n`tests/test_acceptance.py` is present as the only current test file. Its SHA-256 and nanosecond mtime exactly match the seed record (`cabb3c…9297`, `1790650615817904560`), so the evaluator-owned acceptance fixture was neither edited nor removed and no seeded test was removed.\n\nThe three source files differ from their seed hashes/mtimes, as the requested implementation requires. The explicitly protected evaluator fixture is unchanged. `names.py` defines `normalize_name(value)` as `value.strip().casefold()` and assigns `normalize = normalize_name`, leaving the legacy symbol working identically. `greet.py` and `tags.py` both import and call `normalize_name`. The unchanged fixture directly verifies normalization, alias equivalence, greeting, and tag behavior.\n\nLifecycle state is active at checkpoint 1 and correctly says independent review is next; it does not falsely report completion. Unknown: there is no separate standalone gate transcript beyond the serialized raw checkpoint/status evidence, and no prior reviewer record yet."
+    }
+  ],
+  "gate_evidence": null,
+  "execution_mode": "conversation",
+  "turn_unit": "checkpoint",
+  "execution_revision": null,
+  "active_attempt": null,
+  "next_action": "Obtain an independent review of the fixed gate checkpoint and protected-artifact evidence."
+}

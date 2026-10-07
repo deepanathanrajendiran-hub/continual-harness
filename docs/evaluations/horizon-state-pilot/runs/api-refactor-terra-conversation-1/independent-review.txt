@@ -1,0 +1,7 @@
+PASS — Raw checkpoint evidence records the fixed gate `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v` as passed: 1 test ran and returned `OK`; `check-1.stderr` is empty. The persisted goal-after-check JSON hash matches its recorded SHA-256.
+
+`tests/test_acceptance.py` is present as the only current test file. Its SHA-256 and nanosecond mtime exactly match the seed record (`cabb3c…9297`, `1790650615817904560`), so the evaluator-owned acceptance fixture was neither edited nor removed and no seeded test was removed.
+
+The three source files differ from their seed hashes/mtimes, as the requested implementation requires. The explicitly protected evaluator fixture is unchanged. `names.py` defines `normalize_name(value)` as `value.strip().casefold()` and assigns `normalize = normalize_name`, leaving the legacy symbol working identically. `greet.py` and `tags.py` both import and call `normalize_name`. The unchanged fixture directly verifies normalization, alias equivalence, greeting, and tag behavior.
+
+Lifecycle state is active at checkpoint 1 and correctly says independent review is next; it does not falsely report completion. Unknown: there is no separate standalone gate transcript beyond the serialized raw checkpoint/status evidence, and no prior reviewer record yet.

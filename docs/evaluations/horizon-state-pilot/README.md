@@ -2,8 +2,8 @@
 
 This directory freezes the Task 10 protocol before any measured run.  It is a
 72-run comparative pilot: six fixtures × two models × two execution modes ×
-three repetitions. It is not a model API runner. Eighteen of 72 (18/72) canonical rows have
-been independently scored: fifteen passed and three are incomplete. The pilot makes no
+three repetitions. It is not a model API runner. Nineteen of 72 (19/72) canonical rows have
+been independently scored: sixteen passed and three are incomplete. The pilot makes no
 comparative efficiency claim. See [report.md](report.md)
 for results and limitations.
 
@@ -72,7 +72,7 @@ canonical comparison. Its canonical repeat passed under
 `runs/module-bug-sol-state-1/isolated-rerun/` and is the only record eligible
 for that manifest row.  The 72-row manifest itself is unchanged.
 
-[results.jsonl](results.jsonl) currently contains eighteen of 72 (18/72) scored records. Append exactly one
+[results.jsonl](results.jsonl) currently contains nineteen of 72 (19/72) scored records. Append exactly one
 schema-valid record only after independent evaluator scoring of a run's raw
 evidence.  Preserve unknown values as JSON `null`, not zero.  The current
 [report.md](report.md) is intentionally incomplete and must remain so until

@@ -1,0 +1,8 @@
+test_names_and_callers (test_acceptance.AcceptanceTests.test_names_and_callers) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 0.000s
+
+OK
+
+exit_code: 0
