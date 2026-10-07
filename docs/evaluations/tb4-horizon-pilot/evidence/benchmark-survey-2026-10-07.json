@@ -1,0 +1,852 @@
+{
+ "ranking": {
+  "ranked": [
+   {
+    "name": "Terminal-Bench 4.0 (harbor-framework/terminal-bench @ v4.0.0)",
+    "rank": 1,
+    "verdict": "strong fit",
+    "why": "This is the best match on every weighted criterion. (1) Length and headroom: I parsed all 66 v4.0.0 task.toml files. The expert-estimate median is 4.0 h, 52 of 66 tasks fall in the 1-8 h band, and every task has a flat 28,800 s agent timeout (https://github.com/harbor-framework/terminal-bench/tree/v4.0.0/tasks; https://www.tbench.ai/news/terminal-bench-4-0). Claude Code + Sonnet 5.5 scores 61.8% \u00b12.9 (Snorkel, https://snorkel.ai/leaderboard/terminal-bench-4-0/). Vals reports Sonnet 5.5 at 64.14% with an average of 1h22m and $16.51 per task (mini-swe-agent, avg@3, https://vals.ai/benchmarks/terminal-bench-4), so the baseline is mid-range and a typical run fits the 30-90 min budget. (2) Hidden objective scoring: all 66 tasks set verifier environment_mode=\"separate\" (my count from the task.toml files), and the leaderboard gives no partial credit (Vals). (3) arm64: no task.toml sets docker_image, so Harbor builds locally from Dockerfiles. The shortlisted bases are multi-arch: python:3.x-slim, ubuntu:24.04, node, oven/bun. No task sets network_mode, so the default is public and Harbor's macOS nftables bugs do not apply. (4)/(5) Harbor's claude-code agent accepts CLAUDE_CODE_OAUTH_TOKEN with CLAUDE_FORCE_OAUTH=1; its error message tells you to run `claude setup-token` (https://raw.githubusercontent.com/harbor-framework/harbor/main/src/harbor/agents/installed/claude_code.py). The source also shows `--skill` copying the skill dir into $CLAUDE_CONFIG_DIR/skills (https://docs.harborframework.com/jobs/skills). The treatment arm is therefore just `--skill .claude/skills/horizon`, and both arms share the same agent and token. Bonus: --resume-trajectory and multi-step tasks give a hook for interrupt/resume (https://docs.harborframework.com/tasks/multi-step). Conflicts I resolved: the v4.0.0 GitHub release is dated 2026-08-26 and v3.0.0 (74 tasks) 2026-07-23 (https://api.github.com/repos/harbor-framework/terminal-bench/releases). Snorkel's token figures are per model: Opus 5.5 used 8.0B tokens / $4.7k and Sonnet 5.5 19.4B / $7.3k for the full 66-task run, so both searchers' numbers were right. Snorkel lists Sonnet 5.5's release as 2026-09-28.",
+    "risks": "Five tasks are open-flagged as not multi-platform (#1802 coq-block-bound, #1803 hof-topology-interpenetration, #1804 math-eval-grader, #1805 gsea-proteomics, #1806 wdm-design; all 2026-08-26), and #1601 records a task that was silently unsolvable on arm64 (https://github.com/harbor-framework/terminal-bench/issues?q=is%3Aissue+amd64). Harbor #2758 (open): an arm64/x86 mismatch yields reward 0 that is indistinguishable from an agent failure, so every task must be oracle-validated on the M4 (https://github.com/harbor-framework/harbor/issues/2758). Resources: memory requests are 4/8/16/32 GB for 35/22/8/1 tasks, and 3 tasks need a GPU. Docker Desktop's VM defaults to 50% of host RAM, so raise it above 8 GB and run n_concurrent=1. Binary rewards at n=10 give low statistical power. Some tasks are non-coding (FreeCAD, science, media). Some shortlisted bases (ubuntu:24.04, node:*-slim) may lack python3, which horizon's scripts need. Contamination: the public repo has had solution/ directories and a canary GUID since 2026-07-23, before Sonnet 5.5 shipped on 2026-09-28. The blog says 2 tasks were removed for public solutions. Usage: 1-1.5 h of Sonnet 5.5 per trial, so 20 trials is roughly $330 API-equivalent and 100 trials roughly $1.65k.",
+    "key_facts_to_verify": [
+     "At least 10-15 shortlisted CPU tasks build natively on arm64 and score reward=1 with `harbor run -p tasks/<t> -a oracle --force-build` on the M4. Harbor #2758 makes arm64 failures look like agent failures, and 5 TB4 tasks are already flagged amd64-only (#1802-#1806).",
+     "Harbor's claude-code agent runs on the subscription via CLAUDE_FORCE_OAUTH=1 + CLAUDE_CODE_OAUTH_TOKEN from `claude setup-token` (the code path is verified in claude_code.py), and the plan's usage limits tolerate about 20 trials of about 1-1.5 h of Sonnet 5.5 each (Vals: 1h22m, $16.51/task; Snorkel full run: 19.4B tokens).",
+     "The plain Claude Code + Sonnet 5.5 baseline on the chosen subset lands roughly between 20% and 80% (61.8% overall on Snorkel, 64.14% on Vals). If the chosen tasks are all-pass or all-fail for the baseline, no horizon effect can show.",
+     "horizon's scripts can run inside each task container: python3 is present (ubuntu:24.04 and node:*-slim bases may not ship it), `--skill` copies the scripts/ and references/ subdirs (Harbor does `cp -r <skills_dir>/*`), and the horizon ledger writes to the container rather than the host repo.",
+     "Agent network stays public by default (no network_mode in any v4.0.0 task.toml, which I verified), so Harbor macOS issues #2593 and #2527 do not block runs.",
+     "Contamination: whether Sonnet 5.5's training data included TB3/TB4 public solution/ dirs. If it did, the baseline is inflated and headroom shrinks."
+    ],
+    "setup_effort": "Low to medium. `uv tool install harbor` (0.24.0, https://pypi.org/pypi/harbor/json), start Docker Desktop and raise its VM memory to about 12 GB, run `claude setup-token`, then check out tag v4.0.0 and oracle-validate about 15 tasks with --force-build. Images build locally, so expect 10-30 min of building per task the first time. Both arms: `-a claude-code -m anthropic/<sonnet-5.5> --agent-timeout-multiplier 0.1875` (90 min) or 0.25 (2 h); the treatment arm adds `--skill .claude/skills/horizon`. About half a day before any model spend.",
+    "pilot_subset_idea": "Start from the 45 tasks I computed that have no GPU, \u22648 CPU, \u22648 GB, a 1-8 h expert estimate, and are not in #1802-1806. Drop the compose/multi-container ones (e.g. payments-pipeline-fix). Prefer Software/ML/Operations tasks with 2-8 h estimates: mvcc-lsm-compaction (4 h), wal-recovery-ordering (6 h), session-window-debug (8 h), vf2-speedup-networkx (4 h), embedding-drift-monitor (5 h), mp-checkpoint-consolidation (6 h), risk-scorer-replay (4 h), production-planning (4 h), cargo-flight-dispatch (2.5 h), react-lead-form (5 h), pretrain-shard-corruption (2 h), bun-sourcemap-leak (1.5 h). Keep the first 10 that pass the arm64 oracle. If the Harbor Hub leaderboard exposes per-task Claude Code + Sonnet 5.5 success, prefer tasks at 20-80%. Cap both arms at the same multiplier."
+   },
+   {
+    "name": "DeepSWE v1.1 (Datacurve)",
+    "rank": 2,
+    "verdict": "strong fit",
+    "why": "Best SWE-domain option. It has 113 original long-horizon feature tasks in 91 repos (https://github.com/datacurve-ai/deep-swe; the tasks/ directory lists 113 task dirs plus 4 metadata files). Grading is hidden and program-based: a collect hook writes `git diff <base> HEAD` to model.patch, which is graded in a separate no-network verifier container (verified in task.toml, https://raw.githubusercontent.com/datacurve-ai/deep-swe/main/tasks/bandit-incremental-cache-control/task.toml), and reward.json carries a binary reward plus pass fractions, which gives partial credit for statistical power (README). It is mid-range for Claude: Sonnet 5 [max] 54%\u00b14% at $26.40/task over 268 steps, Opus 5 74%\u00b14%, with no Sonnet 5.5 row (https://deepswe.datacurve.ai/, updated 2026-09-22). Long trajectories leave room for early stopping. Each task needs 2 CPU, 8 GB and a 3 h agent timeout. The dataset is on Harbor Hub (https://hub.harborframework.com/datasets/datacurve/deep-swe-1-1/latest), so stock Harbor's OAuth-capable claude-code agent can be used instead of Pier, whose docs only show ANTHROPIC_API_KEY or ANTHROPIC_AUTH_TOKEN (https://github.com/datacurve-ai/pier). Conflicts I resolved: (a) the prebuilt task images are amd64-only. I read the registry manifests for 6 sampled tags (bandit, wasmi, kcp-go, vitest, textual, helm): single-arch, config architecture=amd64, built 2026-06-11. However, each task ships environment/Dockerfile FROM public.ecr.aws/x8v8d7g8/mars-base:latest, which is a multi-arch amd64+arm64 manifest list (verified), so a native arm64 rebuild via --force-build is plausible. (b) The claim that reference solutions are not public is wrong: tasks/<id>/solution/solution.patch is in the public repo (34 KB for bandit-incremental-cache-control).",
+    "risks": "Both the agent and verifier set network_mode=\"no-network\". On Docker Desktop, Harbor rejects static no-network (#2593, open, https://github.com/harbor-framework/harbor/issues/2593) and allowlist mode fails because LinuxKit lacks NFT_FIB (#2527, open; the issue says no Docker Desktop upgrade fixes it, https://github.com/harbor-framework/harbor/issues/2527). You would therefore set network to public in local task copies, which departs from the official protocol, and disallow WebFetch/WebSearch. 8 GB per container plus the Docker VM leaves room for only one concurrent task. There are no human-time estimates (the paper says it makes none). The leaderboard is mini-swe-agent, not Claude Code; Claude Code scaffolding lifted Sonnet 5 to 88-93% on SWE-bench Pro V2, so Sonnet 5.5 + Claude Code could approach ceiling here too. Solutions have been public on GitHub since about 2026-07, before Sonnet 5.5. Rebuilding Go/Rust/TS toolchains natively may fail for some repos.",
+    "key_facts_to_verify": [
+     "Task Dockerfiles rebuild natively on arm64 and the oracle (solution.patch) scores reward 1. The prebuilt task images are amd64-only (verified on 6 tags), but mars-base:latest is amd64+arm64 (verified); each repo's dependencies must also build on arm64, otherwise every run is an emulated 8 GB container.",
+     "Stock Harbor runs datacurve/deep-swe-1-1 (or `-p deep-swe/tasks`) with `-a claude-code` and the verifier.collect hook that produces /logs/artifacts/model.patch. The official runs used Pier + mini-swe-agent, and Pier documents only API-key or auth-token env vars.",
+     "Flipping [agent] and [verifier] network_mode to public in local copies is enough to run on Docker Desktop (#2593 and #2527 are still open) and does not change grading results.",
+     "Sonnet 5.5 + Claude Code is not near ceiling on the chosen subset (Sonnet 5 via mini-swe-agent: 54%; Opus 5: 74%).",
+     "reward.json pass fractions are populated per task, so partial credit can be used as the primary metric.",
+     "Sonnet 5.5 wall-clock per task fits about 90 min (no published duration; Sonnet 5 averaged 268 steps)."
+    ],
+    "setup_effort": "Medium. Clone the repo; for each pilot task, edit network_mode to public, run `harbor run -p deep-swe/tasks/<t> -a oracle --force-build` on the M4, then run both arms with `--agent-timeout-multiplier 0.5`. Raise the Docker Desktop VM to at least 12 GB. Expect a full day to validate about 15 tasks.",
+    "pilot_subset_idea": "Start with Python tasks, since pip-based images are the most likely to rebuild cleanly on arm64: bandit-*, httpx-*, textual-*, kombu-*, fastapi-*, narwhals-*, tomlkit-*, sqlite-utils-*, vulture-*, mashumaro-*. Add a few TS/Go tasks once they pass the oracle. Rank by solution.patch size and test count as a length proxy, take the middle-to-upper tercile, skip the very largest, and keep 10 that pass the oracle natively."
+   },
+   {
+    "name": "Long-Horizon-Terminal-Bench (LHTB)",
+    "rank": 3,
+    "verdict": "strong fit",
+    "why": "Purpose-built for our failure mode. It has 46 tasks with a standard 90-minute budget (https://github.com/zli12321/LHTB README; paper average 85.3 min and 9.9M tokens per run, https://arxiv.org/abs/2607.08964). Hidden, deterministic subtask graders give dense partial credit (mean reward 0-1), which gives far more power at n=10 than binary reward. Resources are small (mostly 2 CPU / 4 GB), and expert estimates put 39 of 47 tasks in the 1-8 h band (searcher count). It is Apache-2.0. Uniquely, the bundled Harbor fork has a continue-until-timeout mode: it reruns the agent with only a binary rejection whenever the hidden verifier fails, which in effect is a perfect external gate (README). Run single-shot with stock Harbor for both arms; stock Harbor ignores the flag and runs tasks single-shot (README). You can then use the fork's mode as a ceiling reference to measure how much of a perfect gate's benefit horizon's self-authored gate recovers. Claude baselines (README, July 2026 snapshot, fork harness): Sonnet 5 mean reward 0.497 with 8/46 solved at $60.37/task, Opus 4.8 0.492, Sonnet 4.6 0.373. These are mid-range, not floor.",
+    "risks": "Every image is amd64-only. The README tells Apple Silicon users to export DOCKER_DEFAULT_PLATFORM=linux/amd64, so every run is emulated (Rosetta must be enabled in Docker Desktop). That is slower and possibly flaky for scientific-computing tasks, and Harbor PR #2794 (open) reports the arm64 egress sidecar breaking under this setting, although that only matters for non-public network tasks. The README quickstart uses OPENAI_API_KEY/OPENROUTER_API_KEY for Terminus-2; Claude Code through stock Harbor is undocumented and unverified. Published numbers come from the fork's continue-until-timeout loop, so single-shot scores will be lower. task.toml agent timeouts vary from 3,600 to 28,800 s, and Harbor offers only --agent-timeout-multiplier (verified in jobs.py), so a uniform 90-min cap needs per-task configs. Git LFS is required. About $60/task API-equivalent is heavy on a subscription. Tasks were public from 2026-07, before Sonnet 5.5.",
+    "key_facts_to_verify": [
+     "The chosen tasks pass `-a oracle` with reward about 1 under amd64 emulation on the M4 (all images amd64-only), and emulation slowdown leaves the 90-min agent budget usable.",
+     "Stock Harbor `-a claude-code` with OAuth loads LHTB task dirs single-shot, and the separate grading environment still isolates the verifier from the agent.",
+     "Single-shot Sonnet 5.5 mean reward on the pilot tasks is clearly above 0. Published Claude numbers (Sonnet 5: 0.497) were produced with the fork's verifier-feedback loop, so single-shot will be lower.",
+     "A uniform 90-min cap can be enforced per task despite the differing task.toml timeouts, via a per-task config or edited copies, because Harbor exposes only multipliers.",
+     "Git LFS assets pull completely, and no grader needs an API key (no API-key env vars in any task.toml, per the searcher)."
+    ],
+    "setup_effort": "Medium. git lfs install/pull, enable Rosetta emulation in Docker Desktop, install stock Harbor, write per-task timeout overrides, and oracle-validate the pilot tasks under emulation. Optionally install the bundled fork (`pip install -e harbor`) in a separate venv to run the oracle-gated reference arm.",
+    "pilot_subset_idea": "Pick the 10 tasks that have \u22644 GB memory, a 2-8 h expert estimate and a 3,600-5,400 s timeout, from the SWE, systems/security, scientific computing and professional-workflow categories (avoid the multimodal and game tasks). Prefer tasks where the README's per-model results show partial but not full solves, and drop any that fail the emulated oracle."
+   },
+   {
+    "name": "FeatureBench (LiberCoders, ICLR 2026)",
+    "rank": 4,
+    "verdict": "possible",
+    "why": "Large feature tasks (790 lines across about 16 files on average) with hidden F2P/P2P pytest tests and a continuous %Passed metric for partial credit. Claude Code is supported natively via `fb infer` and through a Harbor adapter, and Opus-class resolve rates are low to moderate (https://github.com/LiberCoders/FeatureBench; https://arxiv.org/abs/2602.10975). Dataset v1.1 is from 2026-08.",
+    "risks": "I verified on Docker Hub (https://hub.docker.com/v2/repositories/libercoders/) that the images are amd64-only and about 10-12 GB compressed each: flask 10.2 GB, pandas 12.1 GB, sympy 10.6 GB. So 10 tasks is more than 100 GB of disk, with every run emulated. 44 of 200 tasks need a GPU and fail silently with reward 0. Tasks are mined from public repo histories, so contamination is possible. Subscription auth in config.toml is unknown; use Harbor's adapter for OAuth.",
+    "key_facts_to_verify": [],
+    "setup_effort": "Medium to high: very large amd64 images and emulation.",
+    "pilot_subset_idea": "Use the CPU-only 'fast' or 'lite' split and pick mid-size L1 tasks with the smallest images."
+   },
+   {
+    "name": "SWE-Chain (CUHK-ARISE)",
+    "rank": 5,
+    "verdict": "possible",
+    "why": "Chained release-level upgrades in which every version step is a natural checkpoint, which suits the interrupt/resume test. Claude Code is supported, and the README explicitly supports CLAUDE_CODE_OAUTH_TOKEN, copying local credentials into the sandbox (https://github.com/CUHK-ARISE/SWE-Chain). Claude Code + Opus 4.7 resolves 60.8%, which is mid-range, and target-version tests are run in isolated containers (https://arxiv.org/html/2605.14415v1).",
+    "risks": "Targets are famous packages (Flask, Jinja2, pytest, urllib3), so the model may recall the target-version code, and with network access it could pip-download the answer. Whether target tests are hidden is not explicit. Image architecture is unknown. A whole chain takes 3+ h, so use single transitions.",
+    "key_facts_to_verify": [],
+    "setup_effort": "Medium.",
+    "pilot_subset_idea": "Single version transitions with 500-1,300 diff lines from the less-famous packages (conan, PyJWT, xarray), with network blocked."
+   },
+   {
+    "name": "Terminal-Bench 2.0 / 2.1",
+    "rank": 6,
+    "verdict": "possible",
+    "why": "The cheapest well-documented pipeline smoke test. It has 89 tasks with expert and junior time estimates (expert median 60 min; about 40 tasks at 1-8 h), small prebuilt images, hidden tests and Harbor claude-code support (https://github.com/harbor-framework/terminal-bench-2; https://arxiv.org/abs/2601.11868). This repo supersedes laude-institute/terminal-bench-2.",
+    "risks": "All 89 prebuilt images are amd64-only (per the searcher's Docker Hub check), so they run under emulation. Default timeouts are short (900 s for 48 tasks). Tasks have been public since 2025-11, and the 2.x scores of Opus 4.7 (69.4%) and GPT-5.5 (82%) suggest Sonnet 5.5 may be near ceiling (https://benchlm.ai/md/benchmarks/terminal-bench-2.md). Use it only to debug the Harbor + OAuth + --skill pipeline before spending on TB4.",
+    "key_facts_to_verify": [],
+    "setup_effort": "Low.",
+    "pilot_subset_idea": "2-3 tasks from terminal-bench-sample@2.0 to validate plumbing; not for the main comparison."
+   },
+   {
+    "name": "NL2Repo-Bench",
+    "rank": 7,
+    "verdict": "possible",
+    "why": "Builds a whole Python library from a natural-language spec, scored by hidden upstream pytest suites with a partial pass rate. The paper documents premature termination and non-finish behavior directly (https://arxiv.org/abs/2512.12730v1).",
+    "risks": "The repo documents only OpenHands, so a Claude Code adapter is needed (https://github.com/multimodal-art-projection/NL2RepoBench). Target libraries are public OSS, so memorization is possible. Architecture is unknown. Opus 5 reaches 75% on the aggregator leaderboard (https://benchlm.ai is not the source; see https://benchmarklist.com/benchmarks/nl2repo/), so headroom shrinks for Sonnet 5.5.",
+    "key_facts_to_verify": [],
+    "setup_effort": "Medium to high (custom runner).",
+    "pilot_subset_idea": "Medium-tier specs (1.5k-4k LOC)."
+   },
+   {
+    "name": "LongCLI-Bench",
+    "rank": 8,
+    "verdict": "possible",
+    "why": "Its profile matches horizon's target exactly: human average of more than 1,000 min, agents stall early at 8.8-30.2 min per attempt, and Claude Code + Opus 4.6 passes 16.7% (F2P step score 50.7%), with hidden F2P/P2P tests and step-level partial credit (https://arxiv.org/html/2602.14337v1).",
+    "risks": "The harness is the older TB1-style `tb` CLI, and the README requires LLM_BASE_URL/LLM_API_KEY (https://github.com/finyorko/longcli-bench). Claude Code subscription support is unknown, n=20, and architecture is unknown.",
+    "key_facts_to_verify": [],
+    "setup_effort": "Medium to high.",
+    "pilot_subset_idea": "All 20 tasks are candidates; pick by step-score mid-range."
+   },
+   {
+    "name": "SWE-Milestone (DeepCommit-ai)",
+    "rank": 9,
+    "verdict": "possible",
+    "why": "Dependency-ordered milestones act as natural checkpoints, and the runner auto-resumes interrupted trials (https://github.com/DeepCommit-ai/SWE-Milestone). Isolated evaluation containers support F2P and regression scoring (https://arxiv.org/html/2603.13428).",
+    "risks": "Claude Code auth goes through UNIFIED_API_KEY/UNIFIED_BASE_URL (README), so the subscription path is unknown. Milestone resolve rates are 1.3-13.4%, a floor risk. Built from public histories. Architecture and test hiding are unknown.",
+    "key_facts_to_verify": [],
+    "setup_effort": "Medium to high.",
+    "pilot_subset_idea": "Single milestones that have partial-credit Score."
+   },
+   {
+    "name": "ImpossibleBench (Impossible-SWEbench)",
+    "rank": 10,
+    "verdict": "possible",
+    "why": "Not long-horizon, but the most direct cheap probe of horizon's gate behavior under pressure. The tests contradict the spec, so any pass means cheating, and an honest budget-exhausted report is the correct outcome (https://github.com/safety-research/impossiblebench; https://arxiv.org/abs/2510.20270).",
+    "risks": "SWE-bench-based: amd64 images, short tasks, contaminated source. The official runner is Inspect (API key); a claude -p wrapper is needed.",
+    "key_facts_to_verify": [],
+    "setup_effort": "Medium.",
+    "pilot_subset_idea": "10 paired conflicting/original instances as a side probe, not the main study."
+   },
+   {
+    "name": "METR public-tasks / hcast-public (cowthello, complex_payments)",
+    "rank": 11,
+    "verdict": "possible",
+    "why": "Images are multi-arch amd64+arm64, and cowthello has a 5-15 h human estimate with automatic scoring (https://github.com/METR/public-tasks; https://hub.docker.com/r/metrevals/public-tasks/tags).",
+    "risks": "The Inspect bridge means API keys, so a custom claude -p adapter is required. Only 1-2 public tasks are genuinely long; hcast-public tasks are 95 human-minutes or less and near ceiling for Opus 4.6 (METR runs.jsonl). clone_game needs manual scoring.",
+    "key_facts_to_verify": [],
+    "setup_effort": "Medium to high (custom adapter).",
+    "pilot_subset_idea": "cowthello and complex_payments as an arm64-native supplement."
+   },
+   {
+    "name": "RepoMod-Bench (Modelcode-ai)",
+    "rank": 12,
+    "verdict": "possible",
+    "why": "Hidden black-box tests and a Claude Code-native runner (https://github.com/Modelcode-ai/mcode-benchmark; https://arxiv.org/html/2602.22518v1).",
+    "risks": "Only 21 repos. Pass rate collapses above 50k LOC, so there is a floor risk. Subscription auth is unknown and architecture is unknown.",
+    "key_facts_to_verify": [],
+    "setup_effort": "Medium.",
+    "pilot_subset_idea": "Repos under 50k LOC."
+   },
+   {
+    "name": "Terminal-Bench-Science 0.1",
+    "rank": 13,
+    "verdict": "possible",
+    "why": "Same Harbor pipeline as TB4, with an 8 h timeout and hidden tests; 32 tasks are in the 1-8 h band (https://github.com/harbor-framework/terminal-bench-science; https://www.tbench.ai/news/terminal-bench-science-0-1).",
+    "risks": "Skewed hard (Opus 5 tops at 30%) and domain-specific. 11 tasks need 16 GB. arm64 is unknown. Use only as a reserve pool.",
+    "key_facts_to_verify": [],
+    "setup_effort": "Low to medium (same as TB4).",
+    "pilot_subset_idea": "The 1-8 h, \u22648 GB tasks, if TB4 runs out."
+   },
+   {
+    "name": "SlopCodeBench",
+    "rank": 14,
+    "verdict": "possible",
+    "why": "Its checkpointed spec sequence is a natural fit for interrupt/resume, it has hidden black-box tests, and it has a claude_code agent (https://github.com/SprocketLab/slop-code-bench; https://arxiv.org/abs/2603.24755).",
+    "risks": "The README explicitly requires an Anthropic API key rather than a subscription (verified). Strict solve rates are low (Opus 4.6 17.2%), so there is a floor risk.",
+    "key_facts_to_verify": [],
+    "setup_effort": "Medium.",
+    "pilot_subset_idea": "Whole problems, 3-6 checkpoints each."
+   },
+   {
+    "name": "Multi-SWE-bench (hard subset)",
+    "rank": 15,
+    "verdict": "possible",
+    "why": "Per-instance human-time buckets: there are 608 non-Python tasks labeled 1 h or more. It has hidden tests and a Harbor adapter (https://arxiv.org/pdf/2504.02605; https://github.com/harbor-framework/harbor/tree/main/adapters/multi-swe-bench).",
+    "risks": "Images are amd64. Tasks are still issue-sized. It has been public since 2025, and there are no Claude 5.x baselines.",
+    "key_facts_to_verify": [],
+    "setup_effort": "Medium.",
+    "pilot_subset_idea": "Hard Go/TS tasks with more than 300 changed lines."
+   },
+   {
+    "name": "SWE-EVO",
+    "rank": 16,
+    "verdict": "possible",
+    "why": "Release-sized changes (about 610 lines across 21 files) with hidden F2P/P2P tests and a partial Fix Rate (https://arxiv.org/abs/2512.18470).",
+    "risks": "There is no Claude Code harness (OpenHands/SWE-agent only, https://github.com/SWE-EVO/SWE-EVO). It is SWE-bench-style amd64, has 48 tasks, uses public history, and has no Claude baselines.",
+    "key_facts_to_verify": [],
+    "setup_effort": "High.",
+    "pilot_subset_idea": "n/a"
+   },
+   {
+    "name": "MLE-bench Lite",
+    "rank": 17,
+    "verdict": "possible",
+    "why": "Long ML engineering work with hidden held-out grading and a natural premature-stop mode (https://github.com/openai/mle-bench).",
+    "risks": "The base image is built for amd64 (about 25 GB). It needs Kaggle credentials (not a model key). No human times. The reference budget is 24 h on a GPU.",
+    "key_facts_to_verify": [],
+    "setup_effort": "High.",
+    "pilot_subset_idea": "CPU-friendly tabular/text competitions."
+   },
+   {
+    "name": "ABC-Bench (OpenMOSS)",
+    "rank": 18,
+    "verdict": "possible",
+    "why": "Environment setup and deployment tasks, a known source of false 'done' claims. A Harbor adapter exists (https://huggingface.co/papers/2601.11077).",
+    "risks": "Barely researched: duration, architecture and baselines are unknown.",
+    "key_facts_to_verify": [],
+    "setup_effort": "Unknown.",
+    "pilot_subset_idea": "n/a"
+   },
+   {
+    "name": "DevOps-Gym (Harbor adapter)",
+    "rank": 19,
+    "verdict": "possible",
+    "why": "Hidden tests, a Harbor adapter, and Java/Go build and ops work (https://github.com/harbor-framework/harbor/tree/main/adapters/devopsgym).",
+    "risks": "Durations and architecture are unknown, and it is weakly long-horizon.",
+    "key_facts_to_verify": [],
+    "setup_effort": "Medium.",
+    "pilot_subset_idea": "End-to-end category only."
+   },
+   {
+    "name": "ML-Dev-Bench (Harbor adapter)",
+    "rank": 20,
+    "verdict": "possible",
+    "why": "Hidden validators, Harbor claude-code support, binary scoring (https://github.com/laude-institute/harbor/tree/main/adapters/ml_dev_bench).",
+    "risks": "No time estimates. GPU and WandB needs are unknown.",
+    "key_facts_to_verify": [],
+    "setup_effort": "Medium.",
+    "pilot_subset_idea": "n/a"
+   },
+   {
+    "name": "MLGym-Bench CPU subset (Harbor adapter)",
+    "rank": 21,
+    "verdict": "possible",
+    "why": "Six CPU-only tasks with automatic continuous metrics (https://github.com/laude-institute/harbor/tree/main/adapters/mlgym-bench).",
+    "risks": "Moderate length; mainly a pipeline check.",
+    "key_facts_to_verify": [],
+    "setup_effort": "Low to medium.",
+    "pilot_subset_idea": "n/a"
+   },
+   {
+    "name": "SWE-Marathon",
+    "rank": 22,
+    "verdict": "poor fit",
+    "why": "Its failure taxonomy (premature termination, poor self-verification, reward hacking) is exactly on target (https://arxiv.org/abs/2606.07682), and it is on Harbor Hub.",
+    "risks": "Human estimates are 40-400 h and agent limits 2-10 h. Some tasks need a GPU, Tinker or 32 GB. No configuration exceeds 30%. Too long for the 30-90 min budget.",
+    "key_facts_to_verify": [],
+    "setup_effort": "High.",
+    "pilot_subset_idea": "At most 1-2 CPU tasks as a stress test."
+   },
+   {
+    "name": "ProgramBench (Meta)",
+    "rank": 23,
+    "verdict": "poor fit",
+    "why": "Hidden fuzzed behavioral tests with partial pass rates, plus a Harbor claude-code config (https://github.com/facebookresearch/ProgramBench).",
+    "risks": "The maintainers say not to run it on macOS: images are amd64-only and QEMU is slow (docs README). Resolved rate is near 0%. 6 h runs cost $10-50 each.",
+    "key_facts_to_verify": [],
+    "setup_effort": "High.",
+    "pilot_subset_idea": "n/a"
+   },
+   {
+    "name": "SWE-bench Pro (V1 public, V2 public, HARD-51)",
+    "rank": 24,
+    "verdict": "poor fit",
+    "why": "Hidden tests and ready Claude Code tooling (locked_claude_code), but near ceiling. On the labs.scale.com HARD tab, Claude Code scores 98.0 with Opus 5 and 88.2 with Sonnet 5 (https://labs.scale.com/leaderboard/swe_bench_pro_public_v2?tab=hard). This does not contradict the V2 README's definition of HARD-51 as tasks failed by at least 2 of 5 families under the locked mini-swe-agent protocol (https://raw.githubusercontent.com/scaleapi/SWE-bench_Pro-os/main/v2/README.md); the harness makes the difference.",
+    "risks": "Images are amd64-only. The locked protocol uses no-network, which fails on Docker Desktop (Harbor #2593/#2527). The budget is 50 min. Git-history leakage is documented in v1.",
+    "key_facts_to_verify": [],
+    "setup_effort": "Medium.",
+    "pilot_subset_idea": "n/a"
+   },
+   {
+    "name": "SWE-bench Verified (incl. 45 tasks \u22651 h)",
+    "rank": 25,
+    "verdict": "poor fit",
+    "why": "Short (about 90% under 1 h), contaminated, and near ceiling (https://openai.com/index/why-we-no-longer-evaluate-swe-bench-verified/; https://epoch.ai/blog/what-skills-does-swe-bench-verified-evaluate). This explains the earlier null results.",
+    "risks": "Official images are amd64 only (https://github.com/SWE-bench/SWE-bench/issues/520).",
+    "key_facts_to_verify": [],
+    "setup_effort": "Low to medium.",
+    "pilot_subset_idea": "n/a"
+   },
+   {
+    "name": "FeatBench (TsinghuaISE)",
+    "rank": 26,
+    "verdict": "poor fit",
+    "why": "Medium tasks (about 162 lines across 2.4 files) with hidden tests (https://arxiv.org/html/2509.22237v2). It mostly measures overreach and regressions.",
+    "risks": "No Claude baseline; architecture unknown.",
+    "key_facts_to_verify": [],
+    "setup_effort": "Medium.",
+    "pilot_subset_idea": "n/a"
+   },
+   {
+    "name": "SWE-Lancer / Diamond",
+    "rank": 27,
+    "verdict": "poor fit",
+    "why": "x86-only, more than 200 GB of images, no internet isolation on macOS, tests visible in the Harbor version, and small patches (https://github.com/harbor-framework/harbor/tree/main/adapters/swelancer).",
+    "risks": "See why.",
+    "key_facts_to_verify": [],
+    "setup_effort": "High.",
+    "pilot_subset_idea": "n/a"
+   },
+   {
+    "name": "Commit0",
+    "rank": 28,
+    "verdict": "poor fit",
+    "why": "The unit tests are visible to the agent, so scoring is not hidden. The harness is x86-pinned and the libraries are memorized (https://raw.githubusercontent.com/commit-0/commit0/main/commit0/harness/spec.py; https://arxiv.org/abs/2412.01769).",
+    "risks": "See why.",
+    "key_facts_to_verify": [],
+    "setup_effort": "Medium.",
+    "pilot_subset_idea": "n/a"
+   },
+   {
+    "name": "GSO",
+    "rank": 29,
+    "verdict": "poor fit",
+    "why": "Speedup scoring is hardware-sensitive, and only 39 of 102 tasks replay validly across machines (https://arxiv.org/abs/2607.01211). Not suitable on an emulated M4.",
+    "risks": "See why.",
+    "key_facts_to_verify": [],
+    "setup_effort": "High.",
+    "pilot_subset_idea": "n/a"
+   },
+   {
+    "name": "SWE Atlas - Refactoring",
+    "rank": 30,
+    "verdict": "poor fit",
+    "why": "The LLM rubric judge needs an OPENAI_API_KEY-style endpoint, and the setup is Modal-based (https://github.com/scaleapi/SWE-Atlas).",
+    "risks": "See why.",
+    "key_facts_to_verify": [],
+    "setup_effort": "High.",
+    "pilot_subset_idea": "n/a"
+   },
+   {
+    "name": "TheAgentCompany",
+    "rank": 31,
+    "verdict": "poor fit",
+    "why": "Seven x86 services under emulation, sequential-only, an LLM key for NPCs and graders, and 2024 vintage (https://github.com/TheAgentCompany/TheAgentCompany).",
+    "risks": "See why.",
+    "key_facts_to_verify": [],
+    "setup_effort": "Very high.",
+    "pilot_subset_idea": "n/a"
+   },
+   {
+    "name": "RoadmapBench",
+    "rank": 32,
+    "verdict": "poor fit",
+    "why": "The tasks are large and attractive, but no public code or data release was found (https://arxiv.org/abs/2605.15846).",
+    "risks": "Not runnable.",
+    "key_facts_to_verify": [],
+    "setup_effort": "n/a",
+    "pilot_subset_idea": "n/a"
+   },
+   {
+    "name": "SWE-STEPS",
+    "rank": 33,
+    "verdict": "poor fit",
+    "why": "Only the abstract was found; no release details (https://arxiv.org/abs/2604.03035).",
+    "risks": "Not runnable.",
+    "key_facts_to_verify": [],
+    "setup_effort": "n/a",
+    "pilot_subset_idea": "n/a"
+   },
+   {
+    "name": "Harbor Index",
+    "rank": 34,
+    "verdict": "poor fit",
+    "why": "Its judge ensemble requires OpenAI, Anthropic and Gemini API keys, and frontier median time is about 8-9 min per task (https://raw.githubusercontent.com/harbor-framework/harbor-index/main/README.md; https://www.tbench.ai/news/harbor-index).",
+    "risks": "See why.",
+    "key_facts_to_verify": [],
+    "setup_effort": "n/a",
+    "pilot_subset_idea": "n/a"
+   },
+   {
+    "name": "Terminal-Bench 1 (core 0.1.1)",
+    "rank": 35,
+    "verdict": "poor fit",
+    "why": "Short tasks (most have a 5-min limit) and stale (https://www.tbench.ai/news/leaderboard-integrity-and-timeouts).",
+    "risks": "See why.",
+    "key_facts_to_verify": [],
+    "setup_effort": "n/a",
+    "pilot_subset_idea": "n/a"
+   },
+   {
+    "name": "Terminal-Bench Challenges",
+    "rank": 36,
+    "verdict": "poor fit",
+    "why": "Multi-day tasks at about $1k+ each, one of which needs a GPU (https://www.tbench.ai/news/terminal-bench-challenges).",
+    "risks": "See why.",
+    "key_facts_to_verify": [],
+    "setup_effort": "n/a",
+    "pilot_subset_idea": "n/a"
+   },
+   {
+    "name": "CompileBench (Harbor adapter)",
+    "rank": 37,
+    "verdict": "poor fit",
+    "why": "15 tasks that are probably short (https://github.com/harbor-framework/harbor/tree/main/adapters/compilebench).",
+    "risks": "See why.",
+    "key_facts_to_verify": [],
+    "setup_effort": "Low.",
+    "pilot_subset_idea": "n/a"
+   },
+   {
+    "name": "AppWorld",
+    "rank": 38,
+    "verdict": "poor fit",
+    "why": "Clean state-based scoring, but tasks take minutes and about 40-50 steps (https://github.com/StonyBrookNLP/appworld).",
+    "risks": "Not long-horizon.",
+    "key_facts_to_verify": [],
+    "setup_effort": "Low.",
+    "pilot_subset_idea": "n/a"
+   },
+   {
+    "name": "Toolathlon",
+    "rank": 39,
+    "verdict": "poor fit",
+    "why": "About 20 turns per task, and it needs third-party credentials (https://arxiv.org/abs/2510.25726).",
+    "risks": "See why.",
+    "key_facts_to_verify": [],
+    "setup_effort": "High.",
+    "pilot_subset_idea": "n/a"
+   },
+   {
+    "name": "Cybench",
+    "rank": 40,
+    "verdict": "poor fit",
+    "why": "Saturated for Claude, API-key runners, amd64 sandbox image (https://github.com/andyzorigin/cybench).",
+    "risks": "See why.",
+    "key_facts_to_verify": [],
+    "setup_effort": "High.",
+    "pilot_subset_idea": "n/a"
+   },
+   {
+    "name": "OSWorld-Verified",
+    "rank": 41,
+    "verdict": "poor fit",
+    "why": "GUI tasks that need KVM, and the adapter says claude-code cannot drive the VM (https://github.com/harbor-framework/harbor/tree/main/adapters/osworld).",
+    "risks": "Infeasible on a Mac.",
+    "key_facts_to_verify": [],
+    "setup_effort": "n/a",
+    "pilot_subset_idea": "n/a"
+   },
+   {
+    "name": "PaperBench / Code-Dev",
+    "rank": 42,
+    "verdict": "poor fit",
+    "why": "Graded by an LLM judge with an OpenAI key by default, not hidden tests (https://github.com/openai/frontier-evals/tree/main/project/paperbench).",
+    "risks": "See why.",
+    "key_facts_to_verify": [],
+    "setup_effort": "High.",
+    "pilot_subset_idea": "n/a"
+   },
+   {
+    "name": "RE-Bench",
+    "rank": 43,
+    "verdict": "poor fit",
+    "why": "Needs H100s, and one task needs an OpenAI key (https://github.com/METR/RE-Bench).",
+    "risks": "Infeasible on an M4.",
+    "key_facts_to_verify": [],
+    "setup_effort": "n/a",
+    "pilot_subset_idea": "n/a"
+   },
+   {
+    "name": "AIRS-Bench",
+    "rank": 44,
+    "verdict": "poor fit",
+    "why": "The reference setup is 24 h on an H200 (https://github.com/facebookresearch/airs-bench).",
+    "risks": "See why.",
+    "key_facts_to_verify": [],
+    "setup_effort": "n/a",
+    "pilot_subset_idea": "n/a"
+   },
+   {
+    "name": "RExBench",
+    "rank": 45,
+    "verdict": "poor fit",
+    "why": "Needs an A100, and only 2 tasks are public (https://arxiv.org/abs/2506.22598).",
+    "risks": "See why.",
+    "key_facts_to_verify": [],
+    "setup_effort": "n/a",
+    "pilot_subset_idea": "n/a"
+   },
+   {
+    "name": "ReplicationBench / ResearchCodeBench",
+    "rank": 46,
+    "verdict": "poor fit",
+    "why": "Snippet-level tasks or unknown durations (https://github.com/laude-institute/harbor/tree/main/adapters/replicationbench).",
+    "risks": "See why.",
+    "key_facts_to_verify": [],
+    "setup_effort": "Unknown.",
+    "pilot_subset_idea": "n/a"
+   },
+   {
+    "name": "CORE-Bench Hard",
+    "rank": 47,
+    "verdict": "poor fit",
+    "why": "Declared solved: Opus 4.5 + Claude Code scored 95.5% after manual validation (https://hal.cs.princeton.edu/corebench_hard).",
+    "risks": "Ceiling.",
+    "key_facts_to_verify": [],
+    "setup_effort": "n/a",
+    "pilot_subset_idea": "n/a"
+   },
+   {
+    "name": "MLRC-Bench",
+    "rank": 48,
+    "verdict": "poor fit",
+    "why": "Has manual Kaggle steps and needs AIcrowd, Kaggle and HF credentials (https://github.com/UKGovernmentBEIS/inspect_evals/tree/main/src/inspect_evals/mlrc_bench).",
+    "risks": "See why.",
+    "key_facts_to_verify": [],
+    "setup_effort": "High.",
+    "pilot_subset_idea": "n/a"
+   },
+   {
+    "name": "EvilGenie",
+    "rank": 49,
+    "verdict": "poor fit",
+    "why": "Problems are capped at 10 minutes, and it uses a GPT-5 judge by default (https://arxiv.org/abs/2511.21654).",
+    "risks": "See why.",
+    "key_facts_to_verify": [],
+    "setup_effort": "Medium.",
+    "pilot_subset_idea": "n/a"
+   },
+   {
+    "name": "CheatBench (CAIS)",
+    "rank": 50,
+    "verdict": "poor fit",
+    "why": "Requires Linux with Enroot and an OpenAI judge (https://github.com/centerforaisafety/cheatbench).",
+    "risks": "See why.",
+    "key_facts_to_verify": [],
+    "setup_effort": "High.",
+    "pilot_subset_idea": "n/a"
+   },
+   {
+    "name": "METR Time Horizon 1.1 full suite (calibration reference only)",
+    "rank": 51,
+    "verdict": "poor fit",
+    "why": "Not runnable, because most tasks are private. Its value is the published per-task human_minutes and per-model successes, which let you place Sonnet 5.5 results on METR's curve (https://metr.org/assets/task_results_1_1.yaml). METR also found no significant difference between Claude Code and ReAct, a warning about statistical power (https://evals.alignment.org/notes/2026-02-13-measuring-time-horizon-using-claude-code-and-codex/).",
+    "risks": "n/a",
+    "key_facts_to_verify": [],
+    "setup_effort": "n/a",
+    "pilot_subset_idea": "n/a"
+   },
+   {
+    "name": "METR MALT (labeled transcripts, not tasks)",
+    "rank": 52,
+    "verdict": "poor fit",
+    "why": "Not a task source. Use it to validate a 'gave up early' or 'false done' classifier before scoring transcripts from disk (https://huggingface.co/datasets/metr-evals/malt-public).",
+    "risks": "n/a",
+    "key_facts_to_verify": [],
+    "setup_effort": "Low.",
+    "pilot_subset_idea": "n/a"
+   },
+   {
+    "name": "OverclaimBench / false-success papers (metric definition, not tasks)",
+    "rank": 53,
+    "verdict": "poor fit",
+    "why": "These papers give the operational definition of false done: a final success claim while the hidden checker fails. They also warn that LLM judges detect it poorly (AUROC \u22640.65) (https://arxiv.org/abs/2606.09863; https://arxiv.org/abs/2609.20812v3).",
+    "risks": "n/a",
+    "key_facts_to_verify": [],
+    "setup_effort": "n/a",
+    "pilot_subset_idea": "n/a"
+   },
+   {
+    "name": "Harbor (runner, not a benchmark)",
+    "rank": 54,
+    "verdict": "poor fit",
+    "why": "Not a task source; it is the recommended runner for ranks 1-3. Verified in source and docs: OAuth via CLAUDE_FORCE_OAUTH + CLAUDE_CODE_OAUTH_TOKEN, `--skill` copied into $CLAUDE_CONFIG_DIR/skills, flags --resume-trajectory, --load-trajectory, --allow-agent-host, --override-memory-mb and --agent-timeout-multiplier (no absolute agent-timeout flag), and results on disk (https://raw.githubusercontent.com/harbor-framework/harbor/main/src/harbor/cli/jobs.py; https://raw.githubusercontent.com/harbor-framework/harbor/main/src/harbor/agents/installed/claude_code.py). This resolves the searcher conflict: the claude-code agent does support subscription OAuth. Claude Code runs inside the task container with outbound network, not through the host `claude -p`.",
+    "risks": "Open macOS issues: #2593 (no-network rejected), #2527 (allowlist fails), #2758 (platform not recorded, silent zeros), and PR #2794 (amd64 sidecar).",
+    "key_facts_to_verify": [],
+    "setup_effort": "Low.",
+    "pilot_subset_idea": "n/a"
+   },
+   {
+    "name": "mini-swe-agent (reference harness)",
+    "rank": 55,
+    "verdict": "poor fit",
+    "why": "It does not drive Claude Code and needs litellm or OpenRouter keys (https://github.com/SWE-agent/mini-swe-agent). Only relevant because the Vals TB4 and DeepSWE baselines come from it, so those are not Claude Code numbers.",
+    "risks": "n/a",
+    "key_facts_to_verify": [],
+    "setup_effort": "n/a",
+    "pilot_subset_idea": "n/a"
+   },
+   {
+    "name": "Example runners: does-caveman-kill-claude, jimmc414 and ttxs69 SWE-bench runners",
+    "rank": 56,
+    "verdict": "poor fit",
+    "why": "These are precedents, not tasks. The caveman paired claude -p A/B on SWE-bench Pro landed at ceiling (Haiku 4.5 93.5% vs 90.2%, not significant) with visible tests and host-side execution, which are the mistakes to avoid (https://github.com/ncvgl/does-caveman-kill-claude).",
+    "risks": "n/a",
+    "key_facts_to_verify": [],
+    "setup_effort": "n/a",
+    "pilot_subset_idea": "n/a"
+   }
+  ],
+  "combination_idea": "Use one runner for every arm: stock Harbor 0.24 with the claude-code agent on the subscription token (CLAUDE_FORCE_OAUTH=1 + CLAUDE_CODE_OAUTH_TOKEN). Both arms get identical model, effort and timeout multiplier, and the treatment arm adds only `--skill .claude/skills/horizon`. Score from jobs/<job>/<trial>/ on disk.\n\nPilot: 10 Terminal-Bench 4.0 tasks \u00d7 2 arms. Choose them only after `-a oracle --force-build` passes natively on the M4. Mix Software, ML and Operations tasks with 2-8 h expert estimates and a 90-120 min cap.\n\nStage 2 (30-50 tasks): add DeepSWE Python tasks that rebuild natively on arm64. Edit their network mode to public and disallow WebFetch/WebSearch. Their pass fractions add a partial-credit SWE signal that raises statistical power.\n\nOptionally run 10 LHTB tasks under emulation. LHTB's continue-until-timeout fork reruns plain Claude Code with hidden-verifier rejections, which makes it a perfect-gate ceiling arm. Report what share of the gap between plain single-shot and that ceiling horizon's self-written gate closes. That is the cleanest test of the gate mechanism.\n\nPrimary metrics:\n- Verifier reward or pass fraction.\n- False done: the final message claims success while the hidden reward is below 1 (the OverclaimBench definition). Validate the claim classifier on METR MALT, not with an LLM judge.\n- Tokens and wall time.\n\nAnalysis: binary rewards at n=10 detect only very large effects (METR could not separate Claude Code from ReAct). Use paired tests (McNemar or sign test), and run 2 attempts per task-arm if usage allows.\n\nInterruption bonus: wrap a task as Harbor multi-step, or use a small custom agent that sends SIGTERM to claude at T/2 and relaunches it with `--resume`. Apply it identically to both arms.\n\nA 10-pair ImpossibleBench side probe can test whether horizon's mandatory gate leads to honest failure reports or to test tampering."
+ },
+ "verified": [
+  {
+   "name": "Terminal-Bench 4.0 (harbor-framework/terminal-bench @ v4.0.0, commit 452bf305)",
+   "facts": [
+    {
+     "fact": "Ranker's task-metadata counts: 66 tasks, expert-estimate median 4.0 h, 52 of 66 in the 1-8 h band, verifier environment_mode=\"separate\" on all 66, agent timeout 28,800 s on all 66, no docker_image or network_mode in any source task.toml, memory 4/8/16/32 GB on 35/22/8/1 tasks, 3 GPU tasks (H100). Release dates: v4.0.0 on 2026-08-26, v3.0.0 (74 tasks) on 2026-07-23.",
+     "verdict": "confirmed",
+     "source": "I parsed all 66 tasks/*/task.toml files at https://github.com/harbor-framework/terminal-bench/tree/452bf305c6daa62fc59061d22133a7cbc7c1572e/tasks and checked https://api.github.com/repos/harbor-framework/terminal-bench/releases",
+     "correction": "Also from the parse: 14 tasks need 8 CPUs and 2 need 16 (more than the M4's 10 cores). 12 tasks have an expert estimate above 8 h (takens-embedding-lean = 60 h). The estimates are author guesses, not METR-style measured human times. The blog's 8 removed tasks were: 2 saturated, 2 refusals, 2 with public solutions, 2 quality/platform (https://www.tbench.ai/news/terminal-bench-4-0)."
+    },
+    {
+     "fact": "1. At least 10-15 shortlisted CPU tasks build natively on arm64 and score reward=1 with `harbor run -p tasks/<t> -a oracle --force-build` on the M4.",
+     "verdict": "unclear",
+     "source": "https://github.com/harbor-framework/terminal-bench/issues/1793 (maintainer sweep); issues #1802-#1806; https://github.com/harbor-framework/terminal-bench/issues/1601; https://github.com/harbor-framework/harbor/issues/2758; https://github.com/harbor-framework/terminal-bench/blob/v4.0.0/scripts/README-release-prebuilt.md; https://github.com/harbor-framework/terminal-bench/releases/download/v4.0.0/prebuilt-images.json; Docker Hub registry manifests for harborframework/terminal-bench, coqorg/coq:8.18 and library/ubuntu@sha256:67efaecc...",
+     "correction": "No primary source shows oracle passes on arm64, so this has to be run before trusting it. What I could confirm: the 5 amd64-only tasks are real. coqorg/coq:8.18 and the ubuntu digest pinned by hof-topology are single-arch amd64 manifests (I checked the registry). Issue #1601's task (fix-uautomizer-soundness) was removed in v4.0.0. The ranker's 'Harbor builds locally' only applies to `-p` on a git checkout. The official dataset `-d terminal-bench/terminal-bench@4.0.0`, which Snorkel uses, swaps in prebuilt linux/amd64-only images. I checked the ctr-optimization, atrx-vep-crispr and shadow-relay images: all amd64. So the leaderboard path runs under emulation on an M4. Native source builds do not pin base images ('Base images are not pinned by this process'), so builds drift and results are not comparable to the leaderboard. Static filter: removing amd64-only, GPU, >8 GB, >8 CPU, outside 1-8 h, verifier no-network and no-python3 tasks leaves 39. That is plenty of room for a pilot of 10-15, but only if they pass the oracle on the M4."
+    },
+    {
+     "fact": "2a. Harbor's claude-code agent runs on the subscription via CLAUDE_FORCE_OAUTH=1 plus CLAUDE_CODE_OAUTH_TOKEN from `claude setup-token`.",
+     "verdict": "confirmed",
+     "source": "https://raw.githubusercontent.com/harbor-framework/harbor/v0.24.0/src/harbor/agents/installed/claude_code.py (_should_force_oauth/_resolve_auth_env; identical on main); https://code.claude.com/docs/en/authentication#generate-a-long-lived-token",
+     "correction": "setup-token gives a one-year token that authenticates with a Pro/Max/Team/Enterprise subscription. Harbor installs Claude Code inside each container via bootstrap.sh and uses the latest version unless you set an agent version. Pin it to 2.1.293. Harbor also apt-installs nodejs, npm and procps into the task container. The TB4 blog notes Sonnet 5 hit output-token-exceeded errors, and the repo's own defaults set CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000 (.github/harbor-run-defaults.yml)."
+    },
+    {
+     "fact": "2b. The usage limits can absorb about 20 trials of about 1-1.5 h of Sonnet 5.5 each (Vals: 1h22m and $16.51 per task; Snorkel full run: 19.4B tokens).",
+     "verdict": "unclear",
+     "source": "https://vals.ai/benchmarks/terminal-bench-4; https://snorkel.ai/leaderboard/terminal-bench-4-0/",
+     "correction": "The Vals figures (64.14%, 1h22m, $16.51) come from mini-swe-agent on Daytona, not Claude Code. Snorkel's Claude Code + Sonnet 5.5 run cost $7.3k / 19.4B tokens, about 2.4x Opus 5.5's 8.0B, and Snorkel does not state trials per task, so the per-trial cost under Claude Code is unknown and may be above $16.51. 1h22m is a mean against an 8 h timeout, so many trials will run past 90 min. Anthropic publishes no fixed subscription caps, and the user's plan is unknown. A usage-limit hit mid-trial ends the agent run and gets scored like a failure."
+    },
+    {
+     "fact": "3a. Overall plain Claude Code + Sonnet 5.5 baseline: 61.8% \u00b12.9 (Snorkel), 64.14% (Vals).",
+     "verdict": "confirmed",
+     "source": "https://snorkel.ai/leaderboard/terminal-bench-4-0/ (Claude Code, Sonnet 5.5, 61.8% \u00b12.9, release 2026-09-28); https://vals.ai/benchmarks/terminal-bench-4 (64.14%, avg@3, no partial credit)",
+     "correction": "Snorkel ran Claude Code on the prebuilt amd64 hub dataset. Vals used a different harness. Effort level is not stated, and the score depends on it: secondary sources report Anthropic's 70.6% headline was at max effort."
+    },
+    {
+     "fact": "3b. The chosen subset's baseline will land between 20% and 80%.",
+     "verdict": "unclear",
+     "source": "https://www.tbench.ai/news/terminal-bench-4-0 (saturation = every model class solves it 5/5); the tbench.ai leaderboard shows no per-task breakdown",
+     "correction": "I found no public per-task pass rates. Removal for saturation needs every model class to solve a task 5/5, so some remaining tasks may be 5/5 for Sonnet 5.5 and others 0/5. Local arm64 builds on a 16 GB machine also differ from the cloud amd64 setup. So the baseline per task has to be measured locally, or picked from a pilot, before the 2-arm run."
+    },
+    {
+     "fact": "4. horizon's scripts run inside each task container: python3 is present, `--skill` copies the scripts/ and references/ subdirs (`cp -r <skills_dir>/*`), and the ledger writes to the container rather than the host repo.",
+     "verdict": "wrong",
+     "source": "Harbor v0.24.0 trial.py _upload_injected_skills and docker_unix.py upload_dir (`docker compose cp <src>/. main:/harbor/skills/<name>`); claude_code.py _build_register_skills_command; https://docs.harborframework.com/jobs/skills; https://docs.docker.com/reference/cli/docker/container/cp/; local files .claude/skills/horizon/{scripts/harness.py,references/commands.md} (symlinks) and harness/cli.py; task Dockerfiles at commit 452bf305",
+     "correction": "(a) The copy works but delivers broken files. In the local skill, scripts/harness.py links to ../../../../harness/cli.py and references/commands.md links to ../../../../docs/harness-cli.md. docker cp and cp -r copy symlinks as-is, so both arrive dangling. Even dereferenced, cli.py imports gate, goal, paths, refine_log and tree_hash from its own directory. Horizon will fail in every container unless it is shipped as a self-contained bundle. (b) python3 is missing on some tasks. These install none on a non-Python base: distributed-dedup (eclipse-temurin:17-jdk-jammy), nextjs-performance (node:22-bookworm-slim), react-lead-form (node:20-slim), coq-block-bound (coqorg/coq). These have Python only in a uv venv or conda env: gsea-proteomics, roy-polymorph-cn, formal-crypto. cumulative-layout-shift (node:22-bookworm) is unverified. The harness also needs Python 3.10+ because of `str | None` annotations. (c) The ledger part is right: SKILL.md writes to PROJECT/.claude/harness inside the container. But the verifiers of shadow-relay, cumulative-layout-shift and live-database-cutover grade a `git add -A` diff, so ledger files end up in the graded patch. cumulative-layout-shift also sets skills_dir=/app/barber-shop-site/.agents/skills, which puts the injected skill inside the graded repo."
+    },
+    {
+     "fact": "5. Agent network stays public by default (no network_mode in any v4.0.0 task.toml), so Harbor macOS issues #2593 and #2527 do not block runs.",
+     "verdict": "wrong",
+     "source": "Task tomls for batched-eval-parity and lake-temp-glm; https://raw.githubusercontent.com/harbor-framework/harbor/v0.24.0/src/harbor/models/task/config.py (_apply_legacy_allow_internet: false -> NetworkMode.NO_NETWORK); harbor v0.24.0 docker.py _egress_control_kernel_support; https://github.com/harbor-framework/harbor/issues/2593; PR https://github.com/harbor-framework/harbor/pull/2594 (open)",
+     "correction": "The agent environment is public on all 66 tasks; checks/check-allow-internet.sh enforces it. But batched-eval-parity and lake-temp-glm set [verifier.environment] allow_internet=false. Harbor maps that to no-network, which needs the nftables egress-control kernel probe to pass. #2593 is open. A commenter reports that Harbor 0.22.0 on Docker Desktop 4.87.0 rejects no-network, and the fix PR #2594 is not merged. Exclude these 2 tasks or validate them first. The other 64 are unaffected."
+    },
+    {
+     "fact": "6a. Contamination timeline: the repo has had public solution/ dirs since 2026-07-23, before Sonnet 5.5 shipped on 2026-09-28.",
+     "verdict": "wrong",
+     "source": "https://api.github.com/repos/harbor-framework/terminal-bench/issues?state=all&direction=asc (external PRs #2 and #4 on 2026-01-27/29); commits?path=tasks/ctr-optimization/solution (2026-06-06) and tasks/cad-model/solution (2026-06-17); https://platform.claude.com/docs/en/about-claude/models/overview (Sonnet 5.5 training data cutoff Jun 2026)",
+     "correction": "The repo (formerly frontier-bench) took public community PRs from late January 2026. Solution dirs were on main by June 2026 for some tasks, before Sonnet 5.5's June 2026 training cutoff, so the exposure window starts earlier than the ranker says."
+    },
+    {
+     "fact": "6b. Whether Sonnet 5.5's training data included the TB3/TB4 solutions and so inflates the baseline.",
+     "verdict": "unclear",
+     "source": "https://platform.claude.com/docs/en/about-claude/models/overview; https://www.tbench.ai/news/terminal-bench-4-0 (canary GUID 26b5c67b-...; 2 tasks removed for public solutions)",
+     "correction": "No primary source says either way. A further risk: tests and solutions are public on GitHub and the agent has public internet, so it could fetch them at run time. Issue #2086 also lists open reward-hacking vectors for many tasks, so read the trajectories from disk."
+    },
+    {
+     "fact": "Docker Desktop's VM defaults to 50% of host RAM.",
+     "verdict": "confirmed",
+     "source": "https://docs.docker.com/desktop/settings-and-maintenance/settings/",
+     "correction": "Rosetta amd64 emulation is off by default. With 16 GB of RAM, the 9 tasks that need 16 GB or more cannot run."
+    }
+   ],
+   "dealbreakers": [
+    "BLOCKING UNTIL FIXED: the horizon skill is not self-contained. scripts/harness.py and references/commands.md are symlinks that reach outside the skill dir (../../../../harness/cli.py, ../../../../docs/harness-cli.md), and cli.py imports 5 sibling modules. Harbor's docker cp upload keeps symlinks, so they arrive dangling in the container. `--skill .claude/skills/horizon` as-is gives a broken treatment arm. Fix: a bundle with real files, containing the whole harness/ package, plus python3 >= 3.10 in the image.",
+    "BLOCKING BY DESIGN: horizon's SKILL.md description only triggers on an explicit request ('explicitly requested bounded work', 'Create one when the user requests bounded continuation or invokes /horizon'). TB4 instructions never ask for it, so with `--skill` alone the treatment arm is likely the same as the baseline. The treatment must invoke horizon explicitly, via an instruction template or `--ak append_system_prompt=...`. That makes the arms differ in prompt, so the design should use a matched no-skill control prompt.",
+    "The official TB4 dataset (`-d terminal-bench/terminal-bench@4.0.0`, used by Snorkel) ships linux/amd64-only prebuilt images, so it runs under emulation on an M4. Native arm64 needs `-p tasks/<t>` from a git checkout, with unpinned base images. Each task must pass the oracle on the M4 first, because arm64 failures look exactly like agent failures (harbor#2758, tb#1601). The results will not be comparable to the leaderboard.",
+    "Exclusions on this hardware: 5 amd64-only tasks (#1802-#1806), 3 that need an H100, 9 that need 16 GB or more, 2 that need 16 CPUs, and 2 whose verifier is no-network (blocked on macOS per harbor#2593, fix PR #2594 still open). A static filter leaves about 39 candidates, enough for a pilot but not for 50 tasks.",
+    "Run length vs budget: every task has an 8 h agent timeout, and Sonnet 5.5's mean is 1h22m on Vals (a different harness). Many trials will run past the 30-90 min window, and capping the timeout changes the benchmark. With n_concurrent=1, 20 trials is about 28 h of wall time and 100 trials about 6 days.",
+    "Subscription usage: Sonnet 5.5 under Claude Code used 19.4B tokens on Snorkel's full run (2.4x Opus 5.5). A 5-hour or weekly limit hit mid-trial ends the agent run and gets scored like a failure. Detect and exclude or rerun those trials, otherwise one arm's extra token use (horizon's reviewer subagent, checkpoints) biases the comparison.",
+    "Scoring integrity: the 'hidden' tests and solutions are public on GitHub, the agent's network is public, and tb#2086 lists open reward-hacking vectors for many tasks. A gate-driven arm may game verifiers more, so audit trajectories, and consider disable_web_search, although that does not block curl."
+   ],
+   "overall": "TB4 is still a good benchmark for the horizon question. Its tasks are long (1-8 h expert estimates), scoring is binary and hidden in a separate verifier, and the overall baseline is mid-range (Claude Code + Sonnet 5.5 at 61.8% on Snorkel). Subscription auth through Harbor works as the ranker says. But the ranker's 'treatment arm is just --skill .claude/skills/horizon' is wrong on two counts. The skill's scripts are symlinks into the repo's harness/ package and arrive dangling in the container. And the skill's description only fires on explicit requests, which TB4 instructions never make. The other corrections: the leaderboard dataset uses amd64-only prebuilt images, so native arm64 means source builds that must each pass the oracle on the M4. Two tasks' no-network verifiers may fail on macOS Harbor. python3 is missing on several tasks. Solutions were public before Sonnet 5.5's June 2026 training cutoff, not only since July. Fix list: ship a self-contained horizon bundle; invoke it explicitly with a matched control prompt; pin Claude Code 2.1.293 and CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000; filter to the ~39 runnable tasks; oracle-validate them on the M4; take a 1-trial baseline pilot to drop tasks that always pass or always fail; and detect usage-limit aborts. With all that done, it is a viable choice. Expect low statistical power at n=10 per arm, and plan for 8 h tails."
+  },
+  {
+   "name": "DeepSWE v1.1 (Datacurve)",
+   "facts": [
+    {
+     "fact": "1. Task Dockerfiles rebuild natively on arm64 and the oracle (solution.patch) scores reward 1. The prebuilt task images are amd64-only and mars-base:latest is amd64+arm64.",
+     "verdict": "unclear",
+     "source": "ECR registry manifests queried directly (public.ecr.aws/v2/x8v8d7g8/mars-base/manifests/latest; public.ecr.aws/v2/d3j8x8q7/swe-bench-202605/manifests/<tag>); https://github.com/datacurve-ai/deep-swe/tree/main/tasks (all */environment/Dockerfile and */tests/Dockerfile); https://github.com/datacurve-ai/deep-swe/issues/48 ; https://github.com/datacurve-ai/deep-swe/issues/51 ; https://github.com/datacurve-ai/deep-swe/issues/30 ; https://github.com/datacurve-ai/deep-swe/issues/52 ; https://github.com/harbor-framework/harbor/blob/main/docs-mintlify/tasks/separate-verifier.mdx",
+     "correction": "Confirmed parts: mars-base:latest is a manifest list with amd64 and arm64. Both configs were created 2025-12-22, and the Go and Rye installs switch on dpkg arch. All 113 environment Dockerfiles are FROM it. The 9 task images I checked (bandit, cliffy, 2 helm, kcp-go, quill, 2 textual, vitest) are single-arch amd64, created 2026-06-11. There is no evidence that the native rebuild works, and there are concrete counter-examples. (a) All 113 tests/Dockerfile (the verifier image; Harbor gives tests/Dockerfile precedence 2) are FROM the amd64-only swe-bench-202605 tag. Rebuilding the agent env with --force-build still leaves grading emulated unless you rewrite every tests/Dockerfile. (b) cliffy-config-file-parsing downloads deno-x86_64-unknown-linux-gnu.zip, so it cannot build natively. (c) drizzle-orm-window-function-builders cannot be built from its Dockerfile on any arch, because the lockfile pins a tarball that returns 404 (#51, open). (d) 29 Dockerfiles have unpinned pip installs, and #30 documents dependency drift that broke base tests in rebuilt images. (e) #48 (open, no maintainer reply) reports QEMU segfaults when running these amd64 images on arm64. The only oracle evidence is on amd64: the independent audit in #52 found 112/113 reference solutions pass, and prometheus-transactional-reload-status fails. No arm64 oracle run has been published."
+    },
+    {
+     "fact": "2. Stock Harbor runs datacurve/deep-swe-1-1 with -a claude-code and the verifier.collect hook. The official runs used Pier + mini-swe-agent, and Pier documents only API-key or auth-token env vars.",
+     "verdict": "unclear",
+     "source": "https://hub.harborframework.com/datasets/datacurve/deep-swe-1-1/latest ; https://github.com/harbor-framework/harbor/blob/main/CHANGELOG.md (Separate Verifier Environments 2026-05-14; Sidecar Artifacts and Collect Hooks) ; https://github.com/harbor-framework/harbor/blob/main/src/harbor/agents/installed/claude_code.py (L1770-1811) ; https://github.com/datacurve-ai/deep-swe/blob/main/README.md ; https://github.com/datacurve-ai/pier/blob/main/README.md ; https://github.com/datacurve-ai/pier/blob/main/src/pier/agents/installed/claude_code.py (L187-197, L1223) ; https://github.com/datacurve-ai/pier/blob/main/src/pier/environments/docker/docker.py",
+     "correction": "The parts exist in stock Harbor: separate verifiers, [[verifier.collect]] hooks, and claude-code OAuth via CLAUDE_FORCE_OAUTH=1 plus CLAUDE_CODE_OAUTH_TOKEN. The Hub lists `harbor run -d datacurve/deep-swe-1-1`. The README confirms that all leaderboard scores came from Pier running mini-swe-agent on Modal. The Pier README does show only ANTHROPIC_API_KEY or ANTHROPIC_AUTH_TOKEN. However, Pier's claude_code.py also forwards CLAUDE_CODE_OAUTH_TOKEN and declares an api.anthropic.com allowlist, enforced by an HTTP egress-proxy sidecar rather than nftables. Pier may therefore be the runner that keeps the official no-network setting with only the model API allowed on Docker Desktop (not tested). Stock Harbor's claude_code.py declares no allowed hosts, so under the tasks' [agent] no-network setting the CLI could not reach the API. Nobody has documented an end-to-end Harbor claude-code run of this dataset, and neither harness has been shown to work on macOS."
+    },
+    {
+     "fact": "3. Flipping [agent] and [verifier] network_mode to public is enough to run on Docker Desktop (#2593/#2527 open) and does not change grading results.",
+     "verdict": "unclear",
+     "source": "https://github.com/harbor-framework/harbor/issues/2593 ; https://github.com/harbor-framework/harbor/issues/2527 ; https://github.com/harbor-framework/harbor/pull/2594 ; https://github.com/harbor-framework/harbor/blob/main/docs-mintlify/tasks/network-policies.mdx ; https://github.com/harbor-framework/harbor/pull/2856 ; https://github.com/datacurve-ai/deep-swe/tree/main/tasks/bandit-incremental-cache-control/solution",
+     "correction": "The need to flip is confirmed. #2593 and #2527 are open, and PR #2594 (restore the static no-network fallback on macOS) is unmerged. A #2593 comment reports that Harbor 0.22 rejects no-network again even on Docker Desktop 4.87, while Harbor 0.20 with Docker Desktop 4.86 or later worked. The Harbor docs say [agent] and [verifier] phase overrides on docker need the nftables egress sidecar. No primary source supports 'does not change grading'. Public network also opens a leak: the agent can download solution.patch, tests/test.patch and the f2p/p2p node-id lists from GitHub. Disallowing WebFetch/WebSearch does not stop curl or git from Bash. Harbor PR #2856 notes that Claude Code's WebSearch runs on the provider side and bypasses the container network policy anyway."
+    },
+    {
+     "fact": "4. Sonnet 5.5 + Claude Code is not near ceiling on the chosen subset (Sonnet 5 via mini-swe-agent: 54%; Opus 5: 74%).",
+     "verdict": "wrong",
+     "source": "https://www-cdn.anthropic.com/870c8f525702625d2c62fc6dd04c857e3250bec1/Claude%20Sonnet%205.5%20System%20Card.pdf (sec 8.3, Table 8.1.A) ; https://deepswe.datacurve.ai/artifacts/v1.1/trials.json ; https://github.com/datacurve-ai/deep-swe/issues/101",
+     "correction": "The premise is stale. Anthropic's Sonnet 5.5 system card (dated Sept 28, 2026) reports 71.0% on DeepSWE v1.1, averaged over 5 trials at max effort. The harness is not stated. That is close to Opus 5's 74%, and Claude Code may score higher. A random 10-task pilot would leave about 3 failures per arm, which is too few. A hard subset can be picked: trials.json gives per-task pass rates across all configs, with 17 tasks under 30% and 44 under 50%. However, some of the hardest tasks are hard because they are broken (prometheus reference solution fails, #52; obsidian scoring bug, #75)."
+    },
+    {
+     "fact": "5. reward.json pass fractions are populated per task, so partial credit can be used as the primary metric.",
+     "verdict": "confirmed",
+     "source": "https://github.com/datacurve-ai/deep-swe/blob/main/tasks/bandit-incremental-cache-control/tests/grader.py ; tasks/*/tests/config.json (all 113) ; https://deepswe.datacurve.ai/artifacts/v1.1/trials.json ; https://arxiv.org/html/2607.07946",
+     "correction": "The populated part is confirmed. grader.py is byte-identical in all 113 tasks and writes reward, f2p_total, f2p_passed, p2p_total, p2p_passed, f2p, p2p and partial. All 442 published Sonnet 5 max trials have partial filled in. But 'partial' should not be the primary metric. It equals (f2p_passed + p2p_passed) / total, and p2p tests dominate, so a no-op patch scores a median partial of 0.84 across tasks (bandit: 275 p2p vs 88 f2p). Use the f2p fraction instead, which is 0 for a no-op by construction, gated on p2p. The paper says scoring is binary with 'no notion of distance to a solution'. If test.patch fails there is no reward.json (reward.txt is set to -1), and if the patch fails to apply every count is zero."
+    },
+    {
+     "fact": "6. Sonnet 5.5 wall-clock per task fits about 90 min (no published duration; Sonnet 5 averaged 268 steps).",
+     "verdict": "wrong",
+     "source": "https://deepswe.datacurve.ai/artifacts/v1.1/leaderboard-live.json ; https://deepswe.datacurve.ai/artifacts/v1.1/trials.json ; https://github.com/datacurve-ai/deep-swe/issues/67",
+     "correction": "Durations are published. For Sonnet 5 max, leaderboard-live.json gives mean 4804 s and median 4345 s. In trials.json, Sonnet 5 max agent time is p50 72 min, p75 87, p90 129, with 22% of trials over 90 min and 19/442 hitting the 3 h agent_timeout. Sonnet 5 xhigh is p50 37 min (1% over 90 min), and high is p50 26 min. These ran natively on amd64 on Modal; on the Mac, emulated containers will be slower. Runs fit 90 min only at high or xhigh effort, not max. There is no Sonnet 5.5 data."
+    },
+    {
+     "fact": "Extra: solutions have been public on GitHub since about 2026-07.",
+     "verdict": "wrong",
+     "source": "https://github.com/datacurve-ai/deep-swe/commits/main/tasks/bandit-incremental-cache-control/solution/solution.patch",
+     "correction": "solution.patch (33,953 bytes) arrived in the first commit, 'Publish DeepSWE task corpus' (150ef9af), on 2026-05-20. tests/test.patch, grader.py and config.json with the node IDs are also public."
+    },
+    {
+     "fact": "Extra: leaderboard Sonnet 5 [max] 54%\u00b14%, $26.40, 268 steps; Opus 5 [max] 74%\u00b14%; updated 2026-09-22; mini-swe-agent; no Sonnet 5.5 row.",
+     "verdict": "confirmed",
+     "source": "https://deepswe.datacurve.ai/ ; https://deepswe.datacurve.ai/artifacts/v1.1/leaderboard-live.json",
+     "correction": "generated_at is 2026-09-22 and all 70 configs list harness mini-swe-agent. Sonnet 5 max: pass@4 is 79% and median peak context is 410k tokens."
+    },
+    {
+     "fact": "Extra: 113 tasks, 91 repos; 2 CPU / 8 GB; 3 h agent timeout; paper makes no human-time estimate.",
+     "verdict": "confirmed",
+     "source": "https://github.com/datacurve-ai/deep-swe/tree/main/tasks ; https://arxiv.org/html/2607.07946 ; https://github.com/datacurve-ai/deep-swe/issues/81",
+     "correction": "Both the agent and verifier containers get 2 CPU and 8 GB. The agent timeout_sec of 10800 dates from a 2026-08-26 commit. The paper states 9000 s and older configs used 5400 s, which is unresolved (#81). The paper says 'we make no estimate of the wall-clock human time a task would take.' The task mix is 34 Go, 34 Python, 35 TypeScript, 5 JavaScript and 5 Rust."
+    }
+   ],
+   "dealbreakers": [
+    "arm64: none of the agent or verifier images are arm64. All 113 tests/Dockerfile build the grader FROM amd64-only images, so a native setup means rebuilding two images per task, rewriting each verifier FROM line, and re-running the reference solution and a no-op patch on the Mac. Known blockers: cliffy downloads an x86_64 deno binary, drizzle's lockfile points at a tarball that returns 404 (#51), and unpinned dependencies drift on rebuild (#30). The alternative is emulating every run, which Docker documents as slow, and #48 reports QEMU segfaults. The arm64 feature request #48 has been open since 2026-07-01 with no reply.",
+    "The grader can be gamed and gives false passes, which corrupts the 'false done' metric. #105 (open) shows patches that only edit test infrastructure (conftest.py report hooks, TestMain, a jest setup file) getting reward 1 with no feature implemented. #107 (open) shows a crashed vitest worker graded as all tests passing, and 20 other vitest tasks are exposed the same way. A gate-driven horizon arm may be more likely to touch tests. Every model.patch must be scanned for test-infra edits, and the vitest tasks patched or excluded.",
+    "Leakage under the forced public network: solution.patch, the hidden test.patch and the f2p/p2p node IDs have been public on GitHub since 2026-05-20, before Sonnet 5.5 shipped. Docker Desktop + Harbor cannot enforce no-network or an allowlist, so Bash curl or git can fetch them. Claude Code's WebSearch bypasses container network policy anyway (Harbor PR #2856).",
+    "Little headroom: Sonnet 5.5 scores 71.0% (system card). A random 10-task pilot gives about 3 failures per arm, so a hard subset must be chosen from trials.json, excluding broken tasks (prometheus #52, obsidian #75, drizzle #51, langchain #17).",
+    "Throughput and usage: with 8 GB containers on a 16 GB Mac, only one trial runs at a time. Sonnet 5 max runs had a median of 72 min and averaged 214k output tokens ($26 API-equivalent) per task. The 20-run pilot is about a day of continuous running, and 100 runs is 5 or more days, likely hitting subscription limits unless effort is capped at high or xhigh."
+   ],
+   "overall": "I would not use DeepSWE as-is on this Mac. The tasks themselves are good (original, multi-file and long, with hidden program-based grading), but four of the six claims fail or can't be confirmed from primary sources.\n\n1. **Architecture.** Every task image is amd64-only, and so is the verifier image built from each task's tests/Dockerfile. A native rebuild has never been shown to work, and three tasks have concrete build problems.\n2. **Network.** Both runners are blocked on network handling in different ways. Stock Harbor cannot enforce no-network or an allowlist on Docker Desktop, so the network has to be public. That makes the public solutions and hidden tests reachable from the container. Pier's code forwards CLAUDE_CODE_OAUTH_TOKEN and uses a proxy allowlist that might work on Docker Desktop, but nobody has tested it on macOS.\n3. **Headroom.** The ranker's headroom estimate is stale. Sonnet 5.5 scores 71%, not around 54%.\n4. **Time.** The 90-minute budget fails at max effort: 22% of Sonnet 5 max runs went over 90 minutes, with a median of 72.\n5. **Grading.** Open bugs let test-infrastructure edits and crashed vitest workers score as passes, so the 'false done' measurement can be wrong.\n\nTwo further confounds:\n- Only committed work is graded (git diff base..HEAD). If horizon's checkpoints make commits, it could win simply because the baseline forgot to commit.\n- Harbor has no way to pause and resume a trial, so the forced-interruption test would need custom tooling.\n\nIf you pursue it anyway:\n- Try Pier with the OAuth token and its proxy allowlist before Harbor with public network.\n- Pick about 10 hard tasks from trials.json (Python and Go first, no vitest, none of the known-broken ones).\n- Rebuild both images natively, point each tests/Dockerfile at the local build, and require the reference solution to score 1 and a no-op patch to score 0 on the Mac before any agent runs.\n- Score with the f2p fraction gated on p2p, not the 'partial' field.\n- Scan every model.patch for test-infrastructure edits.\n- Run at xhigh effort or below.\n- Block GitHub at the host firewall if you can."
+  },
+  {
+   "name": "Long-Horizon-Terminal-Bench (LHTB), github.com/zli12321/LHTB, with Harbor (stock 0.24.0 or the bundled 0.7.0-based fork) and -a claude-code",
+   "facts": [
+    {
+     "fact": "Claim 1: the chosen tasks pass `-a oracle` with reward about 1 under amd64 emulation on the M4, and the emulation slowdown still leaves the 90-min agent budget usable.",
+     "verdict": "unclear",
+     "source": "https://github.com/zli12321/LHTB/issues/7 (maintainer oracle sweep, Daytona, 2026-07-31); https://github.com/zli12321/LHTB/issues/8; https://github.com/zli12321/LHTB/pull/27",
+     "correction": "There is no published M4 or emulated oracle validation beyond a 3-task smoke test. PR #27 (merged 2026-10-02) reports that langchain-version-migration, document-table-layout-reconstruction and great-expectations-audit each scored 1.0 on Apple Silicon, using the bundled Harbor. The full oracle sweep ran on Daytona, not on Apple Silicon, and the oracle is not ~1 on about 16 of 46 tasks. It scored 0.0 on 2048, sokoban, snake_maze_campaign, super-mario, sudoku-recovery, duckdb-optimizer-closure and apex-openroad-ibex-signoff, all placeholder or broken reference solutions. It scored 0.06 on nbody, 0.02 on robotics-slam and 0.40 on tabular-covshift, and 0.8 to 0.92 on poc-exploit, spot-scheduler, grammar-fuzz, generals and chess-mate. nrel-pysam errored, and vector-db-iterative-build has no listed oracle score. The pilot must be restricted to tasks with oracle 1.0, and each one must be re-validated on the M4. Nobody has measured the emulation slowdown on a 90-minute agent run."
+    },
+    {
+     "fact": "Every LHTB image is amd64-only.",
+     "verdict": "confirmed",
+     "source": "Docker Hub registry API, e.g. https://hub.docker.com/v2/repositories/zli12321/lhtb-2048/tags/20260615 (queried for all 47 docker_image tags in tasks/*/task.toml); https://github.com/zli12321/LHTB/blob/main/configs/examples/oracle_smoke.yaml",
+     "correction": "All 47 referenced tags expose only linux/amd64 (the other manifest entries are attestations). The README understates this as 'Many'. Most environment Dockerfiles start FROM multi-arch python:3.11-slim or ubuntu, so a native arm64 rebuild with force_build is conceivable, but it is untested and would no longer be comparable with the published runs."
+    },
+    {
+     "fact": "Rosetta must be enabled in Docker Desktop.",
+     "verdict": "confirmed",
+     "source": "https://www.docker.com/blog/docker-desktop-4-25/",
+     "correction": "Rosetta for Linux is GA and is enabled by default on macOS 14.1 and later. Separately, the Claude Code linux-x64 binary has had an AVX2 requirement (https://github.com/anthropics/claude-code/issues/5864, closed as not planned). No primary source confirms that Rosetta-for-Linux runs it inside an amd64 container."
+    },
+    {
+     "fact": "Claim 2: stock Harbor `-a claude-code` with OAuth loads LHTB task directories single-shot, and the separate grading environment still isolates the verifier from the agent.",
+     "verdict": "unclear",
+     "source": "https://github.com/harbor-framework/harbor/blob/main/src/harbor/agents/installed/claude_code.py; https://github.com/harbor-framework/harbor/blob/main/docs-mintlify/agents/pre-integrated-agents.mdx; https://github.com/zli12321/LHTB/blob/main/README.md (Option A); https://github.com/harbor-framework/harbor/blob/main/src/harbor/trial/single_step.py",
+     "correction": "OAuth is supported in code: CLAUDE_CODE_OAUTH_TOKEN, plus CLAUDE_FORCE_OAUTH=1 when an API key is also present. claude-code is a documented Harbor agent that supports skills injection, disable_web_search, and IS_SANDBOX=1 for root. The LHTB README says stock Harbor runs the tasks single-shot. Nobody has published a claude-code run on LHTB. Only 3 of 47 tasks have a separate grading environment (langchain-version-migration, nbody-accel-iterative, genetic-convergence-testing). The other 44 use a shared verifier in the agent's own container after the agent stops, and stock Harbor does not freeze or kill agent background processes before verifying. Most importantly, Claude Code runs inside the task container, so the network blockers listed under dealbreakers apply to 24 of 47 tasks."
+    },
+    {
+     "fact": "Claim 3: single-shot Sonnet 5.5 mean reward on the pilot tasks is clearly above 0, and published Claude numbers (Sonnet 5: 0.497) came from the fork's verifier-feedback loop, so single-shot will be lower.",
+     "verdict": "unclear",
+     "source": "https://huggingface.co/datasets/IntelligenceLab/LHTB-leaderboard (data/per_task.jsonl, data/leaderboard.jsonl); https://github.com/zli12321/LHTB/blob/main/README.md; https://github.com/zli12321/LHTB/blob/main/harbor/src/harbor/trial/trial.py",
+     "correction": "No single-shot or Claude Code results exist. The Terminus-2 Sonnet 5 per-task data covers the ~20 tasks that Claude Code could run (public network, oracle 1.0, 1-8 h). With the loop, it averages about 0.46 on them, but scores 0.00 to 0.12 on climate, document-table, materials, opensees, scientific-figure and microscopy. On the 16 tasks that ran without the loop, Sonnet 5 averaged 0.366, against 0.568 on the 30 that used it. A score above 0 is therefore plausible but not demonstrated. Three caveats apply to the published numbers. They predate the task fixes (issues #2, #8, #10), the verifier isolation, and the binary-feedback default (README). The bundled fork's default continue mode passes the scalar reward or failure text back to the agent (_read_verifier_feedback), not a binary rejection. And the README says one audited 46-task sweep had 14 of 17 perfect scores obtained by reading the grader."
+    },
+    {
+     "fact": "Claim 4: a uniform 90-min cap can be enforced despite differing task.toml timeouts, via per-task configs or edited copies, because Harbor exposes only multipliers.",
+     "verdict": "confirmed",
+     "source": "https://github.com/harbor-framework/harbor/blob/main/src/harbor/models/trial/config.py (AgentConfig.override_timeout_sec / max_timeout_sec); https://github.com/harbor-framework/harbor/blob/main/src/harbor/trial/trial.py (_compute_agent_timeout_sec); https://github.com/zli12321/LHTB/blob/main/configs/examples/full_benchmark.yaml",
+     "correction": "The conclusion is right but the premise is wrong. Harbor is not limited to multipliers: the job YAML's agents block takes override_timeout_sec and max_timeout_sec. LHTB's own example configs already set `override_timeout_sec: 5400`, so no per-task edits are needed. Agent timeouts in task.toml do range from 3,600 to 28,800 s. Verifier timeouts also vary (120 to 5,400 s), so they may need verifier override or max settings under emulation."
+    },
+    {
+     "fact": "Claim 5: Git LFS assets pull completely, and no grader needs an API key.",
+     "verdict": "confirmed",
+     "source": "https://github.com/zli12321/LHTB/blob/main/.gitattributes; GitHub tree API for zli12321/LHTB; https://media.githubusercontent.com/media/zli12321/LHTB/main/tasks/super-mario/solution/reference_play.mp4; all 182 files under tasks/*/tests",
+     "correction": "The only LFS objects are 5 reference-play videos and GIFs under solution/ for 2048, sokoban and super-mario. They are not needed for agent runs, and the 68 MB super-mario mp4 resolves via the LFS media endpoint. The README's mention of 'APEX world zips' is stale: there are no zip files in the tree. Grepping every grader file for openai, anthropic, api_key, litellm, gemini, openrouter, claude or gpt- found nothing. The only verifier env var is chess-mate's hard-coded internal RESULT_TOKEN. Some test.sh scripts pip-install at verify time from PyPI or mirrors.tencent.com, guarded with `|| true`."
+    },
+    {
+     "fact": "LHTB has 46 tasks with a standard 90-minute budget.",
+     "verdict": "confirmed",
+     "source": "https://github.com/zli12321/LHTB/blob/main/README.md; https://github.com/zli12321/LHTB/tree/main/tasks",
+     "correction": "The repo now holds 47 task directories. genetic-convergence-testing was added after the paper and is not in full_benchmark.yaml or on the leaderboard."
+    },
+    {
+     "fact": "The paper reports an average of 85.3 min and 9.9M tokens per run.",
+     "verdict": "confirmed",
+     "source": "https://arxiv.org/abs/2607.08964; https://arxiv.org/html/2607.08964v2",
+     "correction": "Those figures are in the abstract, which covers 15 models. The v2 body says 17 models, 9.8M tokens, 239 episodes and 88.9 min, at $3.6 to $26 per task. The paper contains no Claude models and does not describe continue-until-timeout. The Claude numbers appear only in the README and the HF dataset."
+    },
+    {
+     "fact": "Expert estimates put 39 of 47 tasks in the 1-8 h band.",
+     "verdict": "confirmed",
+     "source": "tasks/*/task.toml [metadata] expert_time_estimate_min, https://github.com/zli12321/LHTB/tree/main/tasks",
+     "correction": "The count is 39 of 47 when the band is 60-480 min inclusive. These are author-entered metadata, not METR-style measured human baselines, and the paper reports no human time baseline."
+    },
+    {
+     "fact": "Claude baselines from the README's July 2026 snapshot: Sonnet 5 at 0.497 mean reward with 8/46 solved and $60.37 per task; Opus 4.8 at 0.492; Sonnet 4.6 at 0.373.",
+     "verdict": "confirmed",
+     "source": "https://github.com/zli12321/LHTB/blob/main/README.md; https://huggingface.co/datasets/IntelligenceLab/LHTB-leaderboard",
+     "correction": "These runs used the Terminus-2 harness, not Claude Code, with 1 trial per task. 34 of 46 Sonnet 5 trials ended in AgentTimeoutError."
+    },
+    {
+     "fact": "The fork's continue-until-timeout mode reruns the agent with only a binary rejection, so it can serve as a perfect-gate ceiling.",
+     "verdict": "wrong",
+     "source": "https://github.com/zli12321/LHTB/blob/main/harbor/src/harbor/trial/trial.py (_read_verifier_feedback, _format_same_conversation_rejection, HB_CONTINUE_MODE); https://github.com/zli12321/LHTB/pull/28 (open)",
+     "correction": "The mode is set on only 30 of the 46 benchmark tasks (31 of the 47 directories). In the bundled fork's source, the default mode re-prompts with 'Verifier reward: X' or migration failure details. Binary-only rejection requires HB_CONTINUE_MODE=same_conversation, which needs resume_after_verifier_rejection(), and the fork's claude_code agent does not implement it. PR #28, which closes separate-verifier log exposure and makes binary feedback the default, is still open. Only the 0.20.x drop-in module is documented as binary by default. With Claude Code, the planned ceiling reference does not work as described."
+    },
+    {
+     "fact": "Stock Harbor ignores continue_until_timeout and runs those tasks single-shot.",
+     "verdict": "confirmed",
+     "source": "https://github.com/zli12321/LHTB/blob/main/harbor/README.md; https://github.com/harbor-framework/harbor/blob/main/src/harbor/models/task/config.py (no such field; pydantic default extra=ignore)",
+     "correction": ""
+    },
+    {
+     "fact": "Harbor PR #2794 (open) reports the arm64 egress sidecar breaking under DOCKER_DEFAULT_PLATFORM=linux/amd64, and this only matters for non-public network tasks.",
+     "verdict": "wrong",
+     "source": "https://github.com/harbor-framework/harbor/pull/2794; https://github.com/harbor-framework/harbor/blob/main/src/harbor/environments/docker/docker.py (_requires_egress_control, capabilities); https://github.com/harbor-framework/harbor/blob/main/src/harbor/trial/network_policy.py",
+     "correction": "The PR is open and unmerged. It says that when the sidecar's platform mismatches, 'the rollout never starts'. In stock Harbor 0.24.0, any non-public policy needs the sidecar, including the no-network policy that allow_internet=false maps to. That covers 23 of 47 tasks, about half the benchmark, not an edge case."
+    },
+    {
+     "fact": "The quickstart uses OPENAI_API_KEY or OPENROUTER_API_KEY for Terminus-2, and Claude Code through stock Harbor is undocumented.",
+     "verdict": "confirmed",
+     "source": "https://github.com/zli12321/LHTB/blob/main/README.md; https://github.com/harbor-framework/harbor/blob/main/docs-mintlify/agents/pre-integrated-agents.mdx",
+     "correction": "The first half holds. The second half is partly wrong: Harbor documents `-a claude-code -m anthropic/claude-sonnet-5`. What is undocumented is LHTB combined with claude-code."
+    },
+    {
+     "fact": "LHTB is licensed Apache-2.0.",
+     "verdict": "confirmed",
+     "source": "https://raw.githubusercontent.com/zli12321/LHTB/main/LICENSE",
+     "correction": ""
+    },
+    {
+     "fact": "Most tasks need 2 CPU and 4 GB.",
+     "verdict": "confirmed",
+     "source": "tasks/*/task.toml",
+     "correction": "5 tasks need 4 CPU and 8 GB: apex-openroad, duckdb, nbody, riscv and vector-db. Claude Code itself runs inside the container and counts against the container's memory limit."
+    }
+   ],
+   "dealbreakers": [
+    "Claude Code can't run on half the benchmark without changing the network setup. Harbor installs Claude Code inside the task container, so the container needs internet access both to install it (apt, downloads.claude.ai) and to reach api.anthropic.com. 23 of 47 tasks set allow_internet=false. chess-mate puts the agent container on an internal-only Docker network, which makes 24 tasks. In the LHTB fork, no-network means network_mode: none for the whole trial. In stock Harbor 0.24.0, no-network or allowlist mode requires the egress-control sidecar, which open Harbor PR #2794 says fails to start on Apple Silicon with DOCKER_DEFAULT_PLATFORM=linux/amd64. Every LHTB image is amd64-only. Workarounds, none of them verified: patch PR #2794 locally and add --allow-environment-host entries for the install and API hosts; or edit task copies to public network, which changes the benchmark. Sources: tasks/*/task.toml, tasks/chess-mate/environment/docker-compose.yaml, harbor/src/harbor/environments/docker/docker.py, https://github.com/harbor-framework/harbor/pull/2794.",
+    "The tasks Claude Code can run are a skewed, partly defective subset. The ~20 tasks with public network, oracle 1.0 and a 1-8 h estimate all use continue_until_timeout, and most belong to the *-audit/*-regression family. For that family, graders were shown to require schemas, encodings and constants that the instructions don't state. The maintainers acknowledged this as a defect in issue #2 (still open), and issue #26 (open, 2026-09-20) reports it persisting in climate-netcdf and opensees. Even with the loop, Sonnet 5 scored 0.00 to 0.12 on 6 of these tasks. At n=10 these floor effects would hide any difference that horizon's self-written gate could make.",
+    "On public-network tasks the agent could fetch the answers. The full tests/ and solution/ directories are public on GitHub (since July 2026, before Sonnet 5.5). Claude Code with internet access could fetch them. disable_web_search blocks only WebSearch and WebFetch, not curl from Bash. Blocking egress properly needs the same sidecar that PR #2794 breaks, so every trajectory would have to be audited for contamination. That threatens the validity of hidden-test scoring.",
+    "Note on cost (not a hard blocker): Sonnet 5 averaged $60.37 per task API-equivalent at 90 minutes under Terminus-2. The planned 30-50 tasks x 2 arms comes to roughly $3.6k-$6k API-equivalent, which is likely to hit subscription usage limits."
+   ],
+   "overall": "LHTB looks right on paper but does not fit this setup. The main problem is that Harbor runs Claude Code inside the task container, which needs internet access, and on an M4 with emulated images that can't be provided for half the tasks.\n\n**What holds up (from primary sources):**\n- Hidden tests and dense partial-credit graders.\n- Apache-2.0 licence.\n- No grader uses an LLM API key.\n- LFS is a non-issue: only reference videos under solution/.\n- 39 of 47 tasks fall in the 1-8 h band, though these are author estimates.\n- A uniform 90-minute cap is a single line of config (`override_timeout_sec: 5400`), already used by LHTB's own example configs. The ranker's \"only multipliers\" premise is wrong.\n- Harbor's claude-code agent supports OAuth via CLAUDE_CODE_OAUTH_TOKEN and can inject skills.\n\n**What breaks:**\n- **Network:** 24 of 47 tasks deny the agent container internet access. Claude Code cannot install or reach api.anthropic.com there. In stock Harbor 0.24.0 the sidecar that enforces those policies fails on Apple Silicon with amd64 images (open PR #2794). Every one of the 47 images is amd64-only.\n- **Runnable subset:** the ~20 tasks left are all continue-until-timeout tasks, mostly audit/regression tasks with acknowledged, partly unfixed grader-spec defects (issues #2 and #26). The hidden tests and solutions are public on GitHub, so public-network runs need contamination audits.\n- **Oracle:** the Daytona sweep scored below about 0.95, errored, or was missing on roughly 17 of the 47 tasks. Only 3 tasks have been validated on Apple Silicon.\n- **Published baselines:** they come from Terminus-2, older task versions, pre-hardening verifiers (one audited sweep had 14 of 17 perfect scores from reading the grader), and a fork mode that passes scalar reward or failure text back to the agent. They are not a usable reference.\n- **Ceiling arm:** the \"binary perfect-gate ceiling\" plan does not work with Claude Code. The fork's binary-only mode needs a resume hook that its claude_code agent lacks.\n- **Interruption/resume:** there is no native support; it would need custom multi-step wrappers.\n\n**If you still want to use it:** limit the pilot to roughly 8-10 public-network tasks with oracle 1.0, avoiding the schema-ambiguous audits (e.g. alp, foldseek, unison, su2, gdal, dicom, matpower, modflow, spice, great-expectations). Then:\n- run `-a oracle` on each one locally first;\n- set `disable_web_search=true` and audit trajectories for github.com/zli12321 fetches;\n- use `override_timeout_sec: 5400`;\n- expect to patch Harbor (PR #2794) before trying any no-network task.\n\nThat is a narrow, fragile pilot, not the benchmark's headline 46 tasks. Ranked against alternatives, I would class LHTB as conditional or not recommended for this setup."
+  }
+ ],
+ "raw_count": 75
+}
