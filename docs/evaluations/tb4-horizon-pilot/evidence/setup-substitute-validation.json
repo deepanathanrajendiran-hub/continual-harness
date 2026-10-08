@@ -1,0 +1,18 @@
+{
+  "task": "layout-config-recreation",
+  "category": "Media",
+  "estimate_h": 2.0,
+  "ok": true,
+  "failures": [],
+  "checks": {
+    "oracle": 1.0,
+    "nop": 0.0,
+    "ledger": 1.0
+  },
+  "workdir": "/app",
+  "user": "root",
+  "agent_image_id": "sha256:681e2d45fb91a8ef26ddf92217e58d4a261e7b4352ba4aeaff6b24ed7bbb6057",
+  "verifier_image_id": "sha256:26f84d868a96c0ee45fd348bd46e3fb72aa904a418352244108a91b3471301bf",
+  "python": "3.12.3",
+  "copy_digest": "02660f09b15265496b1785069181cd74cfb976e5d4fec6b0544c5111f76f957d"
+}

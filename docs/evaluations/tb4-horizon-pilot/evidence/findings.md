@@ -16,3 +16,12 @@
 - The Horizon mechanics worked up to the refusal: skill loaded, a goal started with budget 200 turns / 100 minutes, and the ledger was collected with `docker cp`.
 - The scorer marks the trial invalid (`exception AgentSafetyRefusalError`, `result is_error`, `run ended on an API error`), as the protocol requires. 0 leftover containers; 0 files under `jobs/`, `records/`, `ledgers/` or `logs/` contain the token.
 - Implication for the measured phase: refusals count as invalid, so a pair that refuses twice is excluded, which counts against condition 1 (at least 9 valid pairs). The drawn set includes Security and Science tasks, where such false positives are more likely.
+
+## 2026-10-08 12:11 — second Horizon setup attempt refused; setup task replaced (user decision)
+
+- The rerun of `setup__interleaved-vigenere__horizon__a1` (attempt kept in `$RUNS/setup-discarded-1/` and `-2/`) was refused the same way after 17 s, before any Horizon call: a classifier stop, one continuation, then `model_refusal_no_fallback` (`api_refusal_category: "bio"`).
+- In both Horizon attempts the flag fired on the reply right after the agent computed the plaintext-to-ciphertext shift sequence. The control trial computed the identical sequence (`[1, 1, 19, 14, 24, ...]`) in its first minute and ran 18 minutes without a flag. The arms differ in context only by the Horizon skill text and the Horizon sentence, so the classifier may respond to that context on this task; two attempts are too few to say.
+- The user chose to replace the setup task. Rule, fixed before choosing: among validated tasks that were not drawn and are outside the Security and Science categories, take the shortest expert estimate, ties broken alphabetically. That is `layout-config-recreation` (Media, 2.0 h).
+- Its images had been removed after the draw (Task 15 Step 2), so it was rebuilt and re-validated on its own with `validate.validate_task` (oracle 1.0, nop 0.0, ledger 1.0; `evidence/setup-substitute-validation.json`). `validation.json` keeps the original run unchanged.
+- Only the setup row (order 0) of `manifest.csv` changed. The ten measured tasks, their order and first arms are unchanged, and `evidence/draw.json` keeps the seeded draw as produced. The interleaved-vigenere setup trials are kept in `$RUNS/setup-discarded-2/`.
+- Measured trials keep the protocol rule: a safety refusal makes a trial invalid, the pair reruns once, and a second invalid pair is excluded.
