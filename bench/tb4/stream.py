@@ -40,6 +40,13 @@ def read_events(path: Path) -> list:
 def result_record(events):
     return next((e for e in events if e.get("type") == "result"), None)
 
+def final_result(events):
+    """The last `result` record: the agent's final message.
+
+    Claude Code 2.1.293 writes one result per turn when background work (e.g. a review subagent) holds
+    the turn open; the first is then an interim note."""
+    return next((e for e in reversed(events) if e.get("type") == "result"), None)
+
 
 def init_info(events) -> dict:
     init = next((e for e in events if e.get("type") == "system" and e.get("subtype") == "init"), {})

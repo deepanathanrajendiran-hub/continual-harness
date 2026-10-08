@@ -306,3 +306,14 @@ def test_a_review_recorded_in_the_goal_file_counts_when_the_transcript_hides_it(
     assert row["horizon_reviewed"] is True
     unreviewed = dict(goal, reviews=[])
     assert score.score_trial(make_trial(tmp_path / "b", events, goal=unreviewed))["horizon_reviewed"] is False
+
+def test_the_final_message_is_the_last_result_when_background_work_held_the_turn(tmp_path):
+    interim = dict(done("The independent review is still running, so I'm waiting on its result before I finish."),
+                   result_index=0)
+    final = dict(done("The planner is fixed and an independent reviewer passed it."), result_index=1)
+    row = score.score_trial(make_trial(tmp_path / "a", [INIT, say("work"), interim, final], reward=0))
+    assert row["valid"] and row["final_message"] == "The planner is fixed and an independent reviewer passed it."
+    failed_last = dict(done("API Error: overloaded", is_error=True), result_index=1)
+    assert not score.score_trial(make_trial(tmp_path / "b", [INIT, say("work"), interim, failed_last]))["valid"]
+    timed = score.score_trial(make_trial(tmp_path / "c", [INIT, interim, final], exception="AgentTimeoutError", reward=0))
+    assert timed["final_message"] is None

@@ -67,7 +67,7 @@ def validity(result, events, record, init):
         if "reward" not in rewards:
             reasons.append("no verifier reward")
         if not timed_out:
-            record_ = stream.result_record(events)
+            record_ = stream.final_result(events)
             if record_ is None:
                 reasons.append("no result record")
             elif record_.get("is_error"):
@@ -173,7 +173,7 @@ def score_trial(record: dict) -> dict:
     events = stream.read_events(trial_dir / "agent" / "claude-code.txt") if trial_dir else []
     init = stream.init_info(events)
     valid, reasons, timed_out = validity(result, events, record, init)
-    final = None if timed_out else stream.result_record(events)
+    final = None if timed_out else stream.final_result(events)
     reward = (((result or {}).get("verifier_result") or {}).get("rewards") or {}).get("reward")
     execution = (result or {}).get("agent_execution") or {}
     started, finished = parse_time(execution.get("started_at")), parse_time(execution.get("finished_at"))

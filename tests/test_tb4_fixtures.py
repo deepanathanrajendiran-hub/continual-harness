@@ -16,3 +16,11 @@ def test_real_setup_trials_score_as_observed(name, arm):
     assert row["skill_loaded"] is (arm == "horizon")
     assert row["horizon_started"] is (arm == "horizon")
     assert row["image_ids"] == json.loads((ROOT / name / "record.json").read_text())["image_ids_expected"]
+
+def test_the_real_horizon_trial_reports_its_last_result_record():
+    events_path = ROOT / "setup-horizon" / "trial" / "agent" / "claude-code.txt"
+    results = [json.loads(line) for line in events_path.read_text().splitlines() if '"type": "result"' in line
+               or '"type":"result"' in line]
+    assert len(results) == 3
+    row = score.score_trial(fixtures.load_fixture(ROOT / "setup-horizon"))
+    assert row["final_message"] == results[-1]["result"]

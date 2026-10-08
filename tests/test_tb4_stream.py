@@ -170,3 +170,10 @@ def test_a_task_s_own_harness_script_is_not_a_horizon_call():
         assert stream.horizon_calls([use("t1", command), res("t1", "ok")]) == [], command
     literal = "python3 /logs/agent/sessions/skills/horizon/scripts/harness.py --runtime claude --project /app status"
     assert len(stream.horizon_calls([use("t1", literal), res("t1", "{}")])) == 1
+
+def test_final_result_is_the_last_result_record():
+    interim = {"type": "result", "result_index": 0, "is_error": False, "result": "Still waiting on the review."}
+    final = {"type": "result", "result_index": 1, "is_error": False, "result": "Done; the review passed."}
+    assert stream.final_result([say("w"), interim, final])["result"] == "Done; the review passed."
+    assert stream.final_result([say("w")]) is None
+    assert stream.result_record([interim, final])["result"] == "Still waiting on the review."
