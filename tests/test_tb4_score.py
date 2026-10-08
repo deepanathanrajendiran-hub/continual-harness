@@ -295,3 +295,14 @@ def test_integrity_flags_cover_the_old_repository_and_clone_paths(tmp_path):
         assert score.integrity_flags([use("t1", command)]) == ["benchmark-source"], command
     for command in ("pytest -q /app/tests", "ls /app/src/tasks", "git clone https://github.com/psf/requests"):
         assert score.integrity_flags([use("t1", command)]) == [], command
+
+def test_a_review_recorded_in_the_goal_file_counts_when_the_transcript_hides_it(tmp_path):
+    piped = START + ' | python3 -c "import json,sys; d=json.load(sys.stdin); print(d[\'status\'])"'
+    review = ('python3 "$HARNESS" --runtime claude --project /app review fix --result pass '
+              '| python3 -c "import json,sys; print(json.load(sys.stdin)[\'status\'])"')
+    events = [INIT, use("t1", piped), res("t1", "active"), use("t2", review), res("t2", "active"), done()]
+    goal = dict(SUMMARY, status="complete", reviews=[{"result": "pass", "criterion": "r"}])
+    row = score.score_trial(make_trial(tmp_path, events, goal=goal))
+    assert row["horizon_reviewed"] is True
+    unreviewed = dict(goal, reviews=[])
+    assert score.score_trial(make_trial(tmp_path / "b", events, goal=unreviewed))["horizon_reviewed"] is False

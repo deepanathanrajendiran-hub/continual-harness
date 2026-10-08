@@ -140,7 +140,9 @@ def horizon_fields(calls, goal, agent_started, agent_finished) -> dict:
         "horizon_end": _end_reason(goal, summaries, errors, agent_finished) if started else "no goal",
         "horizon_gate": ((goal or start_summary or {}).get("gate") or {}).get("value"),
         "horizon_calls": len(calls),
-        "horizon_reviewed": any("review" in c["subcommands"] and c["summaries"] for c in calls),
+        # the collected goal file is authoritative; agents often pipe CLI output through their own formatter
+        "horizon_reviewed": bool((goal or {}).get("reviews"))
+                            or any("review" in c["subcommands"] and c["summaries"] for c in calls),
     }
 
 
