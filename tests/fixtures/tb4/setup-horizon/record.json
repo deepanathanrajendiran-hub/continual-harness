@@ -1,0 +1,54 @@
+{
+  "agent_image_id": "sha256:681e2d45fb91a8ef26ddf92217e58d4a261e7b4352ba4aeaff6b24ed7bbb6057",
+  "agent_ran": true,
+  "arm": "horizon",
+  "attempt": 1,
+  "container_images": {
+    "agent": "sha256:681e2d45fb91a8ef26ddf92217e58d4a261e7b4352ba4aeaff6b24ed7bbb6057",
+    "verifier": "sha256:26f84d868a96c0ee45fd348bd46e3fb72aa904a418352244108a91b3471301bf"
+  },
+  "finished_at": 1791485895.763556,
+  "freeze_commit": "pre-freeze",
+  "harbor_exit": 0,
+  "image_ids_expected": {
+    "agent": "sha256:681e2d45fb91a8ef26ddf92217e58d4a261e7b4352ba4aeaff6b24ed7bbb6057",
+    "verifier": "sha256:26f84d868a96c0ee45fd348bd46e3fb72aa904a418352244108a91b3471301bf"
+  },
+  "job_name": "setup__layout-config-recreation__horizon__a1",
+  "ledger": {
+    "candidates": [
+      "/app/.claude/harness"
+    ],
+    "copied": {
+      "/app/.claude/harness": "ledgers/0"
+    }
+  },
+  "phase": "setup",
+  "protocol_deviations": [],
+  "started_at": 1791480599.793536,
+  "task": "layout-config-recreation",
+  "trial_dir": "trial",
+  "trial_rate_limit": {
+    "five_hour": 0.21,
+    "five_hour_resets_at": 1791489600,
+    "limit_resets_at": 1791489600,
+    "limit_type": "five_hour",
+    "limit_utilization": null,
+    "seven_day": 0.36,
+    "seven_day_resets_at": 1791522000,
+    "status": "allowed"
+  },
+  "usage_before": {
+    "five_hour": 0.12,
+    "five_hour_resets_at": 1791489600,
+    "limit_resets_at": 1791489600,
+    "limit_type": "five_hour",
+    "limit_utilization": null,
+    "seven_day": 0.35,
+    "seven_day_resets_at": 1791522000,
+    "status": "allowed"
+  },
+  "usage_limit": false,
+  "verifier_image_id": "sha256:26f84d868a96c0ee45fd348bd46e3fb72aa904a418352244108a91b3471301bf",
+  "workdir": "/app"
+}

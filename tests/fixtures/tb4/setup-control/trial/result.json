@@ -1,0 +1,138 @@
+{
+    "id": "211f4092-0384-4768-901c-fcb0ff92ee5c",
+    "task_name": "terminal-bench/layout-config-recreation",
+    "trial_name": "layout-config-recreation__tQVUHXF",
+    "trial_uri": "file:///Users/deeps/Documents/tb4-horizon-runs/jobs/setup__layout-config-recreation__control__a1/layout-config-recreation__tQVUHXF",
+    "task_id": {
+        "path": "/Users/deeps/Documents/tb4-horizon-runs/copies/layout-config-recreation"
+    },
+    "source": null,
+    "task_checksum": "87bd9d640cd96c0485600255fc4c59a333e153fae3f0ab93e1bf7089d9687974",
+    "config": {
+        "task": {
+            "path": "/Users/deeps/Documents/tb4-horizon-runs/copies/layout-config-recreation",
+            "git_url": null,
+            "git_commit_id": null,
+            "name": null,
+            "ref": null,
+            "overwrite": false,
+            "download_dir": null,
+            "source": null
+        },
+        "trial_name": "layout-config-recreation__tQVUHXF",
+        "trials_dir": "/Users/deeps/Documents/tb4-horizon-runs/jobs/setup__layout-config-recreation__control__a1",
+        "install_only": false,
+        "timeout_multiplier": 1.0,
+        "agent_timeout_multiplier": 0.25,
+        "verifier_timeout_multiplier": null,
+        "agent_setup_timeout_multiplier": 2.0,
+        "environment_build_timeout_multiplier": null,
+        "agent": {
+            "name": "claude-code",
+            "import_path": null,
+            "model_name": "anthropic/claude-sonnet-5-5",
+            "n_concurrent": null,
+            "concurrency_group": null,
+            "skills": [],
+            "override_timeout_sec": null,
+            "override_setup_timeout_sec": null,
+            "max_timeout_sec": null,
+            "resume_trajectory": false,
+            "load_trajectory": null,
+            "extra_allowed_hosts": [],
+            "kwargs": {
+                "version": "2.1.293",
+                "disable_web_search": true,
+                "reasoning_effort": "high"
+            },
+            "env": {
+                "CLAUDE_CODE_OAUTH_TOKEN": "${CLAUDE_CODE_OAUTH_TOKEN}",
+                "CLAUDE_CODE_MAX_OUTPUT_TOKENS": "128000"
+            },
+            "mcp_servers": []
+        },
+        "user_agent": null,
+        "environment": {
+            "type": "docker",
+            "import_path": null,
+            "force_build": false,
+            "delete": true,
+            "stream": false,
+            "cpu_enforcement_policy": "auto",
+            "memory_enforcement_policy": "auto",
+            "override_cpus": null,
+            "override_memory_mb": null,
+            "override_storage_mb": null,
+            "override_gpus": null,
+            "override_tpu": null,
+            "mounts": null,
+            "extra_docker_compose": [],
+            "kwargs": {
+                "keep_containers": true
+            },
+            "extra_allowed_hosts": []
+        },
+        "verifier": {
+            "override_timeout_sec": null,
+            "max_timeout_sec": null,
+            "disable": false
+        },
+        "artifacts": [],
+        "extra_instruction_paths": [
+            "/Users/deeps/Documents/NEW STUFF/fun /.superpowers/worktrees/tb4-horizon/docs/evaluations/tb4-horizon-pilot/prompts/control.md"
+        ],
+        "extra_instructions": [],
+        "job_id": "43dea9ec-44eb-4d07-96fa-81ed18d3fd3b",
+        "source_trial": null
+    },
+    "agent_info": {
+        "name": "claude-code",
+        "version": "2.1.293",
+        "model_info": {
+            "name": "claude-sonnet-5-5",
+            "provider": "anthropic"
+        }
+    },
+    "agent_result": {
+        "n_input_tokens": 6701283,
+        "n_cache_tokens": 6587177,
+        "n_output_tokens": 57592,
+        "cost_usd": 2.3494554,
+        "model_usage": {
+            "claude-sonnet-5-5": {
+                "n_input_tokens": 6701283,
+                "n_cache_tokens": 6587177,
+                "n_output_tokens": 57592,
+                "cost_usd": 1.5198217
+            }
+        },
+        "rollout_details": null,
+        "metadata": null
+    },
+    "verifier_result": {
+        "rewards": {
+            "reward": 0.0
+        }
+    },
+    "verifier_environment_mode": "separate",
+    "exception_info": null,
+    "started_at": "2026-10-08T16:26:15.890216Z",
+    "finished_at": "2026-10-08T17:29:54.918217Z",
+    "environment_setup": {
+        "started_at": "2026-10-08T16:26:15.916140Z",
+        "finished_at": "2026-10-08T16:26:16.946782Z"
+    },
+    "agent_setup": {
+        "started_at": "2026-10-08T16:26:16.946856Z",
+        "finished_at": "2026-10-08T16:27:02.056358Z"
+    },
+    "agent_execution": {
+        "started_at": "2026-10-08T16:27:02.057991Z",
+        "finished_at": "2026-10-08T17:29:44.439668Z"
+    },
+    "verifier": {
+        "started_at": "2026-10-08T17:29:48.929388Z",
+        "finished_at": "2026-10-08T17:29:54.918175Z"
+    },
+    "step_results": null
+}

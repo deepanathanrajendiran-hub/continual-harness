@@ -104,7 +104,7 @@ class Trial:
 
 @dataclass(frozen=True)
 class Pace:
-    first: float = 0.5         # five-hour utilization allowed before a pair's first trial
+    first: float = 0.65        # five-hour utilization allowed before a pair's first trial
     second: float = 0.8        # ... before the pair's second trial
     weekly: float = 0.9        # seven-day utilization ceiling
     weekly_step: float = 0.05  # seven-day utilization one trial uses (calibrated in Task 16)
