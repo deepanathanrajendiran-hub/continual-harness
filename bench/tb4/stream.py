@@ -6,10 +6,15 @@ from pathlib import Path
 SUBCOMMANDS = ("doctor", "status", "start", "check", "review", "complete", "abandon", "reopen",
                "recall", "step-begin", "step-attach", "step-finish", "step-recover")
 _SUB = re.compile(
-    r"(?:harness\.py[\"']?|\$\{?HARNESS\}?[\"']?|--project[ \t]+(?:\"[^\"]*\"|'[^']*'|\S+)|--runtime[ \t]+\S+)"
+    r"(?:(?<![\w.-])harness\.py[\"']?|\$\{?HARNESS\}?[\"']?|--project[ \t]+(?:\"[^\"]*\"|'[^']*'|\S+)|--runtime[ \t]+\S+)"
     r"[ \t]+(" + "|".join(re.escape(s) for s in SUBCOMMANDS) + r")(?![\w-])")
 _API = re.compile(r"hit your usage limit|usage limit|rate.?limit|not logged in|invalid api key|"
                   r"authentication|oauth|api error|overloaded", re.I)
+# Only the bundled CLI takes --runtime claude (it is required) or lives under skills/horizon; a task's own
+# harness.py does neither, so it never counts as a Horizon call.
+_HORIZON = re.compile(r"--runtime[ \t=]+[\"']?claude\b|\$\{?HARNESS\b|skills/horizon/")
+_USAGE = re.compile(r"hit your [\w ]*limit|usage limit|usage_limit_reached", re.I)
+_USAGE_ERRORS = ("rate_limit", "billing_error")
 _PROJECT = re.compile(r"""(?:--project[ \t]+|\bPROJECT=)("[^"]*"|'[^']*'|[^\s;&|)]+)""")
 _DECODER = json.JSONDecoder()
 
@@ -49,7 +54,10 @@ def rate_limit_info(events):
             five, seven = windows.get("five_hour") or {}, windows.get("seven_day") or {}
             return {"status": info.get("status"), "five_hour": five.get("utilization"),
                     "five_hour_resets_at": five.get("resetsAt", info.get("resetsAt")),
-                    "seven_day": seven.get("utilization"), "seven_day_resets_at": seven.get("resetsAt")}
+                    "seven_day": seven.get("utilization"), "seven_day_resets_at": seven.get("resetsAt"),
+                    # the window the server says is limiting (e.g. seven_day_sonnet), which unifiedWindows omits
+                    "limit_type": info.get("rateLimitType"), "limit_utilization": info.get("utilization"),
+                    "limit_resets_at": info.get("resetsAt")}
     return None
 
 
@@ -112,7 +120,7 @@ def horizon_calls(events) -> list:
             continue
         command = str((block.get("input") or {}).get("command") or "")
         subcommands = _SUB.findall(command)
-        if not subcommands or not ("harness.py" in command or "HARNESS" in command or "--runtime" in command):
+        if not subcommands or not _HORIZON.search(command):
             continue
         text, is_error = results.get(block.get("id"), ("", None))
         objects = json_objects(text)
@@ -129,11 +137,17 @@ def horizon_calls(events) -> list:
 def _api_error_text(event):
     kind = event.get("type")
     if kind == "_raw":
-        return event["text"][:300] if _API.search(event["text"]) else None
+        return event["text"][:300] if _API.search(event["text"]) or _USAGE.search(event["text"]) else None
     if kind == "error":
         return json.dumps(event)[:300]
+    if kind == "assistant" and (event.get("error") or event.get("is_api_error_message")):
+        # 2.1.293 ends a turn on an API error with a synthetic main-session message carrying `error`
+        text = _text((event.get("message") or {}).get("content"))
+        return f"assistant error={event.get('error') or event.get('api_error')}: {text[:200]}"
     if kind == "result" and (event.get("is_error") or str(event.get("subtype", "")).startswith("error")):
-        return json.dumps(event)[:300]
+        # name the fields, not a json.dumps prefix: the error fields sit at the end of a 2.1.293 result line
+        return (f"result {event.get('subtype')} status={event.get('api_error_status')} "
+                f"api_error={event.get('api_error')}: {str(event.get('result') or '')[:200]}")
     if kind == "rate_limit_event":
         status = str((event.get("rate_limit_info") or {}).get("status") or "")
         return None if not status or status.startswith("allowed") else f"rate_limit_event status={status}"
@@ -143,7 +157,10 @@ def _api_error_text(event):
 
 
 def terminal_api_error(events):
-    """The last API/usage/auth error, unless the main agent spoke again after it (a retry)."""
+    """The last API/usage/auth error, unless the main agent spoke again after it (a retry).
+
+    Only a clean main-session assistant event counts as speaking again; the synthetic API-error
+    message Claude Code writes when a turn ends on an error is itself an error."""
     last = None
     for index, event in enumerate(events):
         text = _api_error_text(event)
@@ -152,9 +169,32 @@ def terminal_api_error(events):
     if last is None:
         return None
     index, text = last
-    if any(e.get("type") == "assistant" and e.get("parent_tool_use_id") is None for e in events[index + 1:]):
+    if any(e.get("type") == "assistant" and e.get("parent_tool_use_id") is None and not _api_error_text(e)
+           for e in events[index + 1:]):
         return None
     return text
+
+def usage_limit_evidence(events):
+    """Why this stream shows a subscription usage or rate limit stop, or None.
+
+    Claude Code 2.1.293 words the stop "You've hit your session limit" (or weekly/Sonnet limit), which
+    Harbor's patterns miss, so the structured fields are read directly."""
+    for event in events:
+        kind = event.get("type")
+        if kind == "rate_limit_event":
+            status = str((event.get("rate_limit_info") or {}).get("status") or "")
+            if status and not status.startswith("allowed"):
+                return f"rate_limit_event status={status}"
+        elif kind == "assistant" and (event.get("error") in _USAGE_ERRORS
+                                      or event.get("api_error") == "usage_limit_reached"):
+            return f"assistant error={event.get('error') or event.get('api_error')}"
+        elif kind == "result" and (event.get("api_error_status") == 429
+                                   or event.get("api_error") == "usage_limit_reached"
+                                   or (event.get("is_error") and _USAGE.search(str(event.get("result") or "")))):
+            return f"result status={event.get('api_error_status')}: {str(event.get('result') or '')[:200]}"
+        elif kind == "_raw" and _USAGE.search(event["text"]):
+            return event["text"][:200]
+    return None
 
 
 def ledger_candidates(events, workdir: str) -> list:

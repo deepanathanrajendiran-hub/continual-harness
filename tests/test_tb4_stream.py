@@ -45,7 +45,8 @@ def test_result_record_is_the_first_result():
 def test_rate_limit_info_reads_the_last_event():
     info = stream.rate_limit_info([limit(five=0.1), limit(five=0.7, seven=0.3)])
     assert info == {"status": "allowed", "five_hour": 0.7, "five_hour_resets_at": 1000,
-                    "seven_day": 0.3, "seven_day_resets_at": 9000}
+                    "seven_day": 0.3, "seven_day_resets_at": 9000,
+                    "limit_type": None, "limit_utilization": None, "limit_resets_at": None}
     assert stream.rate_limit_info([say("x")]) is None
 
 
@@ -117,3 +118,55 @@ def test_ledger_candidates_order_and_dedupe():
               use("t3", 'python3 "$HARNESS" --runtime claude --project "$P" status'), res("t3", "{}")]
     assert stream.ledger_candidates(events, "/workspace") == ["/workspace/.claude/harness"]
     assert stream.ledger_candidates([], "/app/") == ["/app/.claude/harness"]
+
+def synthetic_limit(text="You've hit your session limit · resets 4pm"):
+    """Claude Code 2.1.293's main-session API-error message after a rejected usage window."""
+    return {"type": "assistant", "parent_tool_use_id": None, "error": "rate_limit",
+            "message": {"model": "<synthetic>", "content": [{"type": "text", "text": text}]}}
+
+
+def limit_result(text="You've hit your session limit · resets 4pm"):
+    """A 2.1.293 error result: usage fields first, the error fields near the end of the line."""
+    usage = {f"field_{i}": "x" * 40 for i in range(30)}
+    return {"type": "result", "duration_api_ms": 6358, "stop_reason": "end_turn", "usage": usage,
+            "subtype": "success", "is_error": True, "api_error_status": 429, "result": text}
+
+
+def test_a_synthetic_limit_message_is_not_a_recovery():
+    events = [say("working"), limit(status="rejected"), synthetic_limit()]
+    assert "rate_limit" in stream.terminal_api_error(events)
+
+
+def test_an_error_result_names_its_status_and_text():
+    text = stream.terminal_api_error([say("working"), limit_result()])
+    assert "429" in text and "session limit" in text
+
+
+def test_usage_limit_evidence_reads_2_1_293_shapes():
+    assert stream.usage_limit_evidence([say("w"), limit(status="rejected")])
+    assert stream.usage_limit_evidence([say("w"), synthetic_limit()])
+    assert stream.usage_limit_evidence([say("w"), limit_result()])
+    assert stream.usage_limit_evidence([{"type": "_raw", "text": "You've hit your weekly limit · resets Mon"}])
+    clean = [say("w"), limit(), {"type": "result", "is_error": False, "result": "done"}]
+    assert stream.usage_limit_evidence(clean) is None
+    other = [say("w"), limit(), {"type": "result", "is_error": True, "subtype": "error_during_execution",
+                                 "result": "tool crashed"}]
+    assert stream.usage_limit_evidence(other) is None
+
+
+def test_rate_limit_info_keeps_the_limiting_window():
+    event = {"type": "rate_limit_event", "rate_limit_info": {
+        "status": "allowed_warning", "rateLimitType": "seven_day_sonnet", "utilization": 0.97, "resetsAt": 7000,
+        "unifiedWindows": {"five_hour": {"utilization": 0.1, "resetsAt": 1000},
+                           "seven_day": {"utilization": 0.3, "resetsAt": 9000}}}}
+    info = stream.rate_limit_info([event])
+    assert (info["limit_type"], info["limit_utilization"], info["limit_resets_at"]) == ("seven_day_sonnet", 0.97, 7000)
+    assert info["five_hour_resets_at"] == 1000
+
+
+def test_a_task_s_own_harness_script_is_not_a_horizon_call():
+    for command in ("python3 test_harness.py check", "python3 harness.py start --port 8000",
+                    "cd /app && ./bench_harness.py status", "python3 /app/harness.py review --all"):
+        assert stream.horizon_calls([use("t1", command), res("t1", "ok")]) == [], command
+    literal = "python3 /logs/agent/sessions/skills/horizon/scripts/harness.py --runtime claude --project /app status"
+    assert len(stream.horizon_calls([use("t1", literal), res("t1", "{}")])) == 1

@@ -22,8 +22,9 @@ FROZEN_PATHS = ("bench", "docs/evaluations/tb4-horizon-pilot/prompts",
                 "docs/evaluations/tb4-horizon-pilot/manifest.csv",
                 "docs/evaluations/tb4-horizon-pilot/evidence/draw.json")
 RESULTS = "docs/evaluations/tb4-horizon-pilot/results.jsonl"
-USAGE_EXCEPTIONS = ("ApiUsageLimitError", "ApiRateLimitError")
-_USAGE_TEXT = re.compile(r"usage limit|rate.?limit|status=rejected", re.I)
+# Harbor's ApiRateLimitError is not evidence: its generic rate.?limit pattern matches the rate_limit_event
+# line in every stream-json transcript. Quota stops are read from the stream (stream.usage_limit_evidence).
+USAGE_EXCEPTIONS = ("ApiUsageLimitError",)
 _TRIAL_PROJECT = re.compile(r"__[a-z0-9]{7}__(?:env|verifier__trial)$")
 
 
@@ -190,15 +191,23 @@ def probe_usage(token: str, run=subprocess.run):
 def wait_seconds(info, now: float, five_limit: float, weekly_limit) -> int:
     if not info:
         return 0
+
+    def until(reset):
+        return max(60, int((reset or now + 3600) - now) + 60)
+
     five_limit = max(five_limit, 0.05)  # a fresh window always admits a trial
     status = str(info.get("status") or "allowed")
     five, seven = info.get("five_hour"), info.get("seven_day")
-    if not status.startswith("allowed") or (five is not None and five >= five_limit):
-        reset = info.get("five_hour_resets_at") or now + 3600
-        return max(60, int(reset - now) + 60)
+    limit_type, limit_used = str(info.get("limit_type") or ""), info.get("limit_utilization")
+    if not status.startswith("allowed"):  # wait for the window that is actually limiting
+        return until(info.get("limit_resets_at") or info.get("five_hour_resets_at"))
+    if five is not None and five >= five_limit:
+        return until(info.get("five_hour_resets_at"))
     if weekly_limit is not None and seven is not None and seven >= weekly_limit:
-        reset = info.get("seven_day_resets_at") or now + 3600
-        return max(60, int(reset - now) + 60)
+        return until(info.get("seven_day_resets_at"))
+    if (weekly_limit is not None and limit_type.startswith("seven_day") and limit_used is not None
+            and limit_used >= weekly_limit):  # e.g. seven_day_sonnet, which unifiedWindows omits
+        return until(info.get("limit_resets_at"))
     return 0
 
 
@@ -360,8 +369,7 @@ def run_trial(trial: Trial, paths: Paths, token: str, freeze: str, *, run=subpro
         containers = compose_containers(result["trial_name"], run)
         events = stream.read_events(trial_dir / "agent" / "claude-code.txt")
         exception = (result.get("exception_info") or {}).get("exception_type")
-        api_error = stream.terminal_api_error(events) or ""
-        record["usage_limit"] = exception in USAGE_EXCEPTIONS or bool(_USAGE_TEXT.search(api_error))
+        record["usage_limit"] = exception in USAGE_EXCEPTIONS or stream.usage_limit_evidence(events) is not None
         record["trial_rate_limit"] = stream.rate_limit_info(events)
         record["ledger"] = copy_ledger(containers, stream.ledger_candidates(events, trial.workdir),
                                        paths.ledgers / trial.job_name, run)

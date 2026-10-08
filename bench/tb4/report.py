@@ -6,7 +6,7 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-from bench.tb4 import config, score
+from bench.tb4 import config, draw, score
 
 
 def _median(values):
@@ -131,6 +131,8 @@ def render(summary: dict, decision_: dict, agreement=None) -> str:
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--results", type=Path, required=True)
+    parser.add_argument("--manifest", type=Path,
+                        default=config.REPO_ROOT / "docs/evaluations/tb4-horizon-pilot/manifest.csv")
     parser.add_argument("--agreement", type=Path)
     parser.add_argument("--out", type=Path, required=True)
     args = parser.parse_args(argv)
@@ -138,6 +140,12 @@ def main(argv=None) -> int:
     pending = {t: s for t, (s, _) in score.statuses(rows).items() if s in ("incomplete", "rerun")}
     if pending:
         print(json.dumps({"error": "pairs are not final; finish runs and reruns first", "pending": pending}))
+        return 2
+    measured = {r["task"] for r in draw.read_manifest(args.manifest) if r["first_arm"] != "setup"}
+    present = {r["task"] for r in rows}
+    if present != measured:
+        print(json.dumps({"error": "results do not cover exactly the manifest's measured tasks",
+                          "never_ran": sorted(measured - present), "not_in_manifest": sorted(present - measured)}))
         return 2
     agreement = json.loads(args.agreement.read_text()) if args.agreement else None
     args.out.write_text(render(summarize(rows), decision(rows), agreement))

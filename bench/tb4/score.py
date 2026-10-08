@@ -12,16 +12,39 @@ from bench.tb4 import config, copies, stream
 TOKEN_FIELDS = ("inputTokens", "outputTokens", "cacheReadInputTokens", "cacheCreationInputTokens")
 INTEGRITY = {
     "benchmark-source": re.compile(r"harbor-framework/terminal-bench|terminal-bench\.git|tbench\.ai|"
-                                   r"raw\.githubusercontent\.com/harbor-framework", re.I),
+                                   r"raw\.githubusercontent\.com/harbor-framework|"
+                                   r"(?:github\.com|githubusercontent\.com|api\.github\.com/repos)/[\w.-]+/terminal-bench|"
+                                   r"/tasks/[\w.-]+/(?:solution/|tests/test(?:\.sh|_outputs\.py)\b)", re.I),
     "verifier-files": re.compile(r"(?<![\w.-])/(?:tests|solution)(?![\w.-])"),
     "state-mode": re.compile(r"--execution[ \t=]+[\"']?state\b"),
     "reopen": re.compile(r"(?:harness\.py[\"']?|\$\{?HARNESS\}?[\"']?|--project[ \t]+\S+)[ \t]+reopen\b"),
 }
 
+FALLBACKS = ("model_fallback", "model_refusal_fallback", "model_consent_fallback")
+
 
 def parse_time(value):
     return datetime.fromisoformat(str(value).replace("Z", "+00:00")) if value else None
 
+
+def model_switches(events, init) -> list:
+    """Evidence that the main session did not run on the trial model throughout.
+
+    Claude Code may divert to another model (system/model_*fallback). Subagents may use their own
+    default models in both arms, so only the main session's messages are checked."""
+    expected = config.MODEL.split("/")[-1]
+    found = []
+    if init.get("model") and not init["model"].startswith(expected):
+        found.append(f"init model {init['model']}")
+    for event in events:
+        if event.get("type") == "system" and event.get("subtype") in FALLBACKS:
+            target = event.get("fallback_model") or event.get("fallbackModel")
+            found.append(f"{event['subtype']} to {target}")
+        elif event.get("type") == "assistant" and event.get("parent_tool_use_id") is None:
+            model = (event.get("message") or {}).get("model")
+            if model and model != "<synthetic>" and not model.startswith(expected):
+                found.append(f"main-session model {model}")
+    return list(dict.fromkeys(found))
 
 def validity(result, events, record, init):
     reasons = []
@@ -33,6 +56,8 @@ def validity(result, events, record, init):
         reasons.append("no trial result")
     if config.HOST_SLEPT in (record.get("protocol_deviations") or []):
         reasons.append(config.HOST_SLEPT)
+    if record.get("usage_limit"):
+        reasons.append("usage limit during trial")
     exception = ((result or {}).get("exception_info") or {}).get("exception_type")
     timed_out = exception == "AgentTimeoutError"
     if exception and not timed_out:
@@ -52,6 +77,7 @@ def validity(result, events, record, init):
             reasons.append(f"run ended on an API error: {api[:120]}")
         if init.get("version") != config.CLAUDE_CODE_VERSION:
             reasons.append(f"claude code version {init.get('version')}")
+        reasons.extend(model_switches(events, init))
         if record.get("container_images") != record.get("image_ids_expected"):
             reasons.append("image mismatch")
     return not reasons, reasons, timed_out

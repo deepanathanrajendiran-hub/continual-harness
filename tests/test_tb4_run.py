@@ -364,3 +364,50 @@ def test_require_freeze_accepts_descendants_with_unchanged_frozen_files():
                    dict(dirty=" M bench/tb4/run.py\n"), dict(results_tracked=True)):
         with pytest.raises(run.NotFrozen):
             run.require_freeze(run=git(**kwargs))
+
+class StreamHost(FakeHost):
+    """A FakeHost whose trial writes the given stream-json lines to agent/claude-code.txt."""
+
+    def __init__(self, events, **kwargs):
+        super().__init__(**kwargs)
+        self.stream = "".join(json.dumps(e) + "\n" for e in events)
+
+    def __call__(self, cmd, **kwargs):
+        out = super().__call__(cmd, **kwargs)
+        if cmd[:2] == ["harbor", "run"]:
+            trial_dir = Path(cmd[cmd.index("-o") + 1]) / cmd[cmd.index("--job-name") + 1] / self.trial_name
+            (trial_dir / "agent" / "claude-code.txt").write_text(self.stream)
+        return out
+
+
+ALLOWED = {"type": "rate_limit_event", "rate_limit_info": {"status": "allowed", "unifiedWindows": {
+    "five_hour": {"utilization": 0.31, "resetsAt": 5000}, "seven_day": {"utilization": 0.2, "resetsAt": 9000}}}}
+
+
+def test_claude_code_2_1_293_usage_stop_is_marked_without_a_harbor_usage_exception(tmp_path):
+    rejected = {"type": "rate_limit_event", "rate_limit_info": {"status": "rejected", "rateLimitType": "five_hour",
+                                                                "resetsAt": 5000}}
+    synthetic = {"type": "assistant", "parent_tool_use_id": None, "error": "rate_limit",
+                 "message": {"model": "<synthetic>", "content": [{"type": "text", "text": "You've hit your session limit"}]}}
+    result = {"type": "result", "duration_api_ms": 1, "usage": {"pad": "x" * 400}, "subtype": "success",
+              "is_error": True, "api_error_status": 429, "result": "You've hit your session limit · resets 4pm"}
+    host = StreamHost([ALLOWED, rejected, synthetic, result], exception="NonZeroAgentExitCodeError")
+    record = run.run_trial(TRIAL, run.Paths(tmp_path).ensure(), "t", "f", run=host)
+    assert record["usage_limit"] is True
+
+
+def test_a_generic_rate_limit_exception_alone_is_not_a_usage_limit(tmp_path):
+    crashed = {"type": "result", "subtype": "error_during_execution", "is_error": True, "result": "tool crashed"}
+    host = StreamHost([ALLOWED, crashed], exception="ApiRateLimitError")
+    record = run.run_trial(TRIAL, run.Paths(tmp_path).ensure(), "t", "f", run=host)
+    assert record["usage_limit"] is False
+
+
+def test_wait_seconds_follows_the_limiting_window():
+    weekly_rejected = {"status": "rejected", "five_hour": 0.1, "five_hour_resets_at": 1000,
+                       "limit_type": "seven_day", "limit_utilization": 1.0, "limit_resets_at": 9000}
+    assert run.wait_seconds(weekly_rejected, 100, 0.5, 0.9) == 8960
+    sonnet_warning = {"status": "allowed_warning", "five_hour": 0.1, "five_hour_resets_at": 1000, "seven_day": 0.3,
+                      "limit_type": "seven_day_sonnet", "limit_utilization": 0.95, "limit_resets_at": 7000}
+    assert run.wait_seconds(sonnet_warning, 100, 0.5, 0.9) == 6960
+    assert run.wait_seconds(sonnet_warning, 100, 0.8, None) == 0

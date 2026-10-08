@@ -95,3 +95,23 @@ def test_render_states_the_decision_and_limits():
     text = report.render(report.summarize(rows), report.decision(rows), {"n": 20, "agree": 19, "rate": 0.95})
     assert "Proceed to stage 2: **no**" in text and "Condition 2" in text and "| t0 |" in text
     assert "not comparable" in text and "0.95" in text
+
+def write_manifest(path, tasks):
+    lines = ["order,task,category,estimate_h,first_arm,workdir,agent_image_id,verifier_image_id,copy_digest",
+             "0,setup-task,ML,2.0,setup,/app,a,v,d"]
+    lines += [f"{i + 1},{t},ML,2.0,control,/app,a,v,d" for i, t in enumerate(tasks)]
+    path.write_text("\n".join(lines) + "\n")
+
+
+def test_cli_refuses_a_pilot_where_a_measured_task_never_ran(tmp_path):
+    manifest = tmp_path / "manifest.csv"
+    write_manifest(manifest, [f"t{i}" for i in range(10)])
+    rows = [r for r in pilot() if r["task"] != "t9"]
+    results = tmp_path / "results.jsonl"
+    results.write_text("".join(json.dumps(r) + "\n" for r in rows))
+    out = tmp_path / "report.md"
+    assert report.main(["--results", str(results), "--manifest", str(manifest), "--out", str(out)]) == 2
+    assert not out.exists()
+    results.write_text("".join(json.dumps(r) + "\n" for r in pilot()))
+    assert report.main(["--results", str(results), "--manifest", str(manifest), "--out", str(out)]) == 0
+    assert out.exists()
