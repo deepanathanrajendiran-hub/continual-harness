@@ -1,0 +1,542 @@
+{
+  "tasks": [
+    {
+      "task": "atrx-vep-crispr",
+      "category": "Science",
+      "estimate_h": 7.0,
+      "ok": true,
+      "failures": [],
+      "checks": {
+        "oracle": 1.0,
+        "nop": 0.0,
+        "ledger": 1.0
+      },
+      "workdir": "/app",
+      "user": "root",
+      "agent_image_id": "sha256:60fc5896850f93831ddc2255f7011a21a1b54cca4ea4842e34ff2f9d621cbf58",
+      "verifier_image_id": "sha256:18f5591d69c9c8298bf4bd7149609bd2f6cde38bab512b1efc95ba393078359c",
+      "python": "3.11.17",
+      "copy_digest": "99da13b358c94883843c912588de12edfdc54d3c59d83e2496bf610c7c8990ac"
+    },
+    {
+      "task": "biped-contact-dynamics",
+      "category": "Science",
+      "estimate_h": 5.0,
+      "ok": true,
+      "failures": [],
+      "checks": {
+        "oracle": 1.0,
+        "nop": 0.0,
+        "ledger": 1.0
+      },
+      "workdir": "/app",
+      "user": "root",
+      "agent_image_id": "sha256:c09e9f8d0ea77591f97d57fda9b4cc3db1a1812a03fca15d67baa7f62fc6dc7b",
+      "verifier_image_id": "sha256:1a7756ab0a5bf2b2f6962101f17cdbfdeded2051e1e45d58b81fef078bf3cfe7",
+      "python": "3.12.3",
+      "copy_digest": "d15003fbac3b04b08db3ab5832195663f3695cfd5690a8c05263f5bc01654c95"
+    },
+    {
+      "task": "cad-model",
+      "category": "Hardware",
+      "estimate_h": 2.0,
+      "ok": false,
+      "failures": [
+        "build failed: Command '['docker', 'build', '--platform', 'linux/arm64', '-t', 'tb4-local/cad-model-verifier:v4.0.0', '/Users/deeps/Documents/tb4-horizon-runs/tb4/tasks/cad-model/tests']' returned non-zero exit status 1."
+      ],
+      "checks": {}
+    },
+    {
+      "task": "cargo-flight-dispatch",
+      "category": "Operations",
+      "estimate_h": 2.5,
+      "ok": true,
+      "failures": [],
+      "checks": {
+        "oracle": 1.0,
+        "nop": 0.0,
+        "ledger": 1.0
+      },
+      "workdir": "/app",
+      "user": "root",
+      "agent_image_id": "sha256:c25adcbc587abe325fc84649f2d6b708b47d7c00a0fbad4ca47eee8302e8636f",
+      "verifier_image_id": "sha256:dd1965b411d311e4529237677d9815038e834147e67a425ddd1bfbcce8e6843b",
+      "python": "3.13.16",
+      "copy_digest": "a7a562e7afd8375ced1c494f044a4c5ca5e55c7f0618e58cc41e8028f0549914"
+    },
+    {
+      "task": "embedding-drift-monitor",
+      "category": "ML",
+      "estimate_h": 5.0,
+      "ok": true,
+      "failures": [],
+      "checks": {
+        "oracle": 1.0,
+        "nop": 0.0,
+        "ledger": 1.0
+      },
+      "workdir": "/app",
+      "user": "root",
+      "agent_image_id": "sha256:5d84da9138932035f158fdf21a253e2b1a4950e669cf4f90e662b0773aab7aac",
+      "verifier_image_id": "sha256:46a038455aedc82092261bf74964e77c986dcd7f1405c69214d4c7c385ab7c26",
+      "python": "3.12.3",
+      "copy_digest": "007c7f270dd655946e64f8a264a2ce5c8bf7591417b639f93dd1bab6cac3ac85"
+    },
+    {
+      "task": "fin-saccr-rwa",
+      "category": "Operations",
+      "estimate_h": 8.0,
+      "ok": true,
+      "failures": [],
+      "checks": {
+        "oracle": 1.0,
+        "nop": 0.0,
+        "ledger": 1.0
+      },
+      "workdir": "/app",
+      "user": "root",
+      "agent_image_id": "sha256:3981eb994430ccda7195e98314b4e27b696a59e17701d5456fef2ef96b366885",
+      "verifier_image_id": "sha256:5acef118f511610f81939c4ca48f11e24d4e1539c6e838b3dc43ab7ca4451f85",
+      "python": "3.11.15",
+      "copy_digest": "8ebca19c92df75e4625c418298d88db8845d34dcb283dea8786bb4fcf5ae3882"
+    },
+    {
+      "task": "formal-crypto",
+      "category": "Security",
+      "estimate_h": 3.0,
+      "ok": true,
+      "failures": [],
+      "checks": {
+        "oracle": 1.0,
+        "nop": 0.0,
+        "ledger": 1.0
+      },
+      "workdir": "/app",
+      "user": "root",
+      "agent_image_id": "sha256:b38c68c7cfb72f8f39449089a53596116a3589b703b6e1229b61836179827fb6",
+      "verifier_image_id": "sha256:0011d52f055509009e77c30887acb32490fd57d327ca483cebc3147f513f64aa",
+      "python": "3.11.17",
+      "copy_digest": "2060e365bd797b522df1f1ee69bd8872527723bda5d5bb90afdad34a314ea248"
+    },
+    {
+      "task": "freecad-impeller",
+      "category": "Hardware",
+      "estimate_h": 2.0,
+      "ok": false,
+      "failures": [
+        "build failed: Command '['docker', 'build', '--platform', 'linux/arm64', '-t', 'tb4-local/freecad-impeller-verifier:v4.0.0', '/Users/deeps/Documents/tb4-horizon-runs/tb4/tasks/freecad-impeller/tests']' returned non-zero exit status 1."
+      ],
+      "checks": {}
+    },
+    {
+      "task": "freecad-spring-clip",
+      "category": "Hardware",
+      "estimate_h": 2.0,
+      "ok": false,
+      "failures": [
+        "build failed: Command '['docker', 'build', '--platform', 'linux/arm64', '-t', 'tb4-local/freecad-spring-clip-verifier:v4.0.0', '/Users/deeps/Documents/tb4-horizon-runs/tb4/tasks/freecad-spring-clip/tests']' returned non-zero exit status 1."
+      ],
+      "checks": {}
+    },
+    {
+      "task": "glycan-ms2-elucidation",
+      "category": "Science",
+      "estimate_h": 5.0,
+      "ok": true,
+      "failures": [],
+      "checks": {
+        "oracle": 1.0,
+        "nop": 0.0,
+        "ledger": 1.0
+      },
+      "workdir": "/app",
+      "user": "root",
+      "agent_image_id": "sha256:c7002814c541922a84cfc0ac6e0f54ddc83e8c5ff453b6794397b40102ffaa1e",
+      "verifier_image_id": "sha256:becc2912dfe02b01a0f55c54777d6611d84429e81d50630c8db0b9008baae8d3",
+      "python": "3.12.3",
+      "copy_digest": "5fa0f8cf54c175973b76ace06e8ce41e6e580dd0c87339ceb9e199d59a86d6be"
+    },
+    {
+      "task": "interleaved-vigenere",
+      "category": "Security",
+      "estimate_h": 2.0,
+      "ok": true,
+      "failures": [],
+      "checks": {
+        "oracle": 1.0,
+        "nop": 0.0,
+        "ledger": 1.0
+      },
+      "workdir": "/app",
+      "user": "root",
+      "agent_image_id": "sha256:83c51bea9ae583c21040a7b4711bfac481021cc7d47f18074d05e4e9634308ec",
+      "verifier_image_id": "sha256:d861caadcd832a6a4143bd0a1e62aa3808c718e5cf0960313609b2e980f076ef",
+      "python": "3.13.16",
+      "copy_digest": "5f1e25d78c84753b0de008156177811d6b664bad49c65ac047654df883029da5"
+    },
+    {
+      "task": "layout-config-recreation",
+      "category": "Media",
+      "estimate_h": 2.0,
+      "ok": true,
+      "failures": [],
+      "checks": {
+        "oracle": 1.0,
+        "nop": 0.0,
+        "ledger": 1.0
+      },
+      "workdir": "/app",
+      "user": "root",
+      "agent_image_id": "sha256:2ebf14390755813a50e0b2a0300ea70f9e9fb58df8d1122f24874aa2c5de9cc7",
+      "verifier_image_id": "sha256:14dbff19c3747098c9586af1bb79bf576961bcfe26b379cfb38894a36418f23a",
+      "python": "3.12.3",
+      "copy_digest": "02660f09b15265496b1785069181cd74cfb976e5d4fec6b0544c5111f76f957d"
+    },
+    {
+      "task": "layout-config-recreation2",
+      "category": "Media",
+      "estimate_h": 2.0,
+      "ok": true,
+      "failures": [],
+      "checks": {
+        "oracle": 1.0,
+        "nop": 0.0,
+        "ledger": 1.0
+      },
+      "workdir": "/app",
+      "user": "root",
+      "agent_image_id": "sha256:392329fcfbe045a18882d519972af7203193afa7adfafb0dc840b3c3e9f63337",
+      "verifier_image_id": "sha256:a229f01a1ef4a8c7cdfa0803ffd3d6f69ff7360b35a5dacd18342bcb667f57f8",
+      "python": "3.11.17",
+      "copy_digest": "319068de7f3903a327269e7006655997b84e854c13c9d277610b1013ea8eab97"
+    },
+    {
+      "task": "mp-checkpoint-consolidation",
+      "category": "ML",
+      "estimate_h": 6.0,
+      "ok": true,
+      "failures": [],
+      "checks": {
+        "oracle": 1.0,
+        "nop": 0.0,
+        "ledger": 1.0
+      },
+      "workdir": "/app",
+      "user": "root",
+      "agent_image_id": "sha256:bc0045b3d4240e2d0792da82b67434ad801ed2ce146854a523f5118b0bf6d8bb",
+      "verifier_image_id": "sha256:89603d885b6bae66e26e07027d799b155cbf5dd7f2a7899483601da29d0c3605",
+      "python": "3.11.17",
+      "copy_digest": "ecad8a963331e597da24e7535e5297557a69910ce34df050676a774d5ab63592"
+    },
+    {
+      "task": "mvcc-lsm-compaction",
+      "category": "Software",
+      "estimate_h": 4.0,
+      "ok": true,
+      "failures": [],
+      "checks": {
+        "oracle": 1.0,
+        "nop": 0.0,
+        "ledger": 1.0
+      },
+      "workdir": "/app",
+      "user": "root",
+      "agent_image_id": "sha256:9cc21b6e51811a0aceb5dfb6729ae76353ac4024eaf27767a899037d51e2a8a2",
+      "verifier_image_id": "sha256:0d646038a6f078f470bed5e635aca30eece7f8160c55de79f5adcd55a664e442",
+      "python": "3.12.3",
+      "copy_digest": "fde7d3685972ca430443dc62b7605175237708e3cb8be219d2f398e3aae4c3f9"
+    },
+    {
+      "task": "pretrain-shard-corruption",
+      "category": "ML",
+      "estimate_h": 2.0,
+      "ok": true,
+      "failures": [],
+      "checks": {
+        "oracle": 1.0,
+        "nop": 0.0,
+        "ledger": 1.0
+      },
+      "workdir": "/app",
+      "user": "root",
+      "agent_image_id": "sha256:53caae76bf1a418a6efdf17f612a2b22b692f46a55115149a2729e1ccae3560d",
+      "verifier_image_id": "sha256:8d455884504badffb8d4a995e26b43d2a1488cc0af11814856a706652b7ea9cd",
+      "python": "3.11.17",
+      "copy_digest": "dc235e29fc9a62f8278536a629375025f1aaf380bdf4f11e74a69970efd66e88"
+    },
+    {
+      "task": "production-planning",
+      "category": "Operations",
+      "estimate_h": 4.0,
+      "ok": true,
+      "failures": [],
+      "checks": {
+        "oracle": 1.0,
+        "nop": 0.0,
+        "ledger": 1.0
+      },
+      "workdir": "/app",
+      "user": "root",
+      "agent_image_id": "sha256:47ebeb69bffc288611062bc88faad32de817e2cb0906f6c195e86a68ad6d28dd",
+      "verifier_image_id": "sha256:99de29de99e76b264f8323172d85026de172a688b8ab2cee6c11b32139e1b519",
+      "python": "3.13.16",
+      "copy_digest": "e98d35e669c46ba1bb0c732983bba144e49913cafd1d5ae88dd34148b2a0e752"
+    },
+    {
+      "task": "protein-autointerp-disulfide",
+      "category": "Science",
+      "estimate_h": 2.0,
+      "ok": true,
+      "failures": [],
+      "checks": {
+        "oracle": 1.0,
+        "nop": 0.0,
+        "ledger": 1.0
+      },
+      "workdir": "/app",
+      "user": "root",
+      "agent_image_id": "sha256:3a13e45969e33ed03ae8ba82b5c26952ba6ca40353a7f38495be7a0ad592fe74",
+      "verifier_image_id": "sha256:0639b4d62a8da627b0d6d6a48ceb359d51bfd11a803854f631208f250d3b7ebf",
+      "python": "3.12.15",
+      "copy_digest": "e8aed9a971675c44b56a9b7b86c5894677ece36067bc029e70a8f1dbd235e6ff"
+    },
+    {
+      "task": "react-lead-form",
+      "category": "Software",
+      "estimate_h": 5.0,
+      "ok": false,
+      "failures": [
+        "python3 >= 3.10 missing"
+      ],
+      "checks": {},
+      "workdir": "/app",
+      "user": "root",
+      "agent_image_id": "sha256:130cedae3e72c041d273c4bcc97726ce071c4ccd22374f7bbb8409c65dbc4791",
+      "verifier_image_id": "sha256:a661e9a06f8cb4864e3ea3ab02c04c5de5a3f478f081223cbe6ee21046e0f713",
+      "python": "sh: 1: python3: not found"
+    },
+    {
+      "task": "risk-scorer-replay",
+      "category": "ML",
+      "estimate_h": 4.0,
+      "ok": false,
+      "failures": [
+        "ledger reward 0.0, expected 1.0"
+      ],
+      "checks": {
+        "oracle": 1.0,
+        "nop": 0.0,
+        "ledger": 0.0
+      },
+      "workdir": "/app",
+      "user": "nobody",
+      "agent_image_id": "sha256:2807218b32153294eea00778271dbd36b6eaede8e5a4c3948c70ade593674b9e",
+      "verifier_image_id": "sha256:ea43d8c5019e92955ac2365b72177834acef2e1f38daff90ed27a52572d666a6",
+      "python": "3.12.15",
+      "copy_digest": "7e399c9130a972bb986a0646875bd34c85cf8011659944c801312beaf7959ec6"
+    },
+    {
+      "task": "roy-polymorph-cn",
+      "category": "Science",
+      "estimate_h": 3.0,
+      "ok": true,
+      "failures": [],
+      "checks": {
+        "oracle": 1.0,
+        "nop": 0.0,
+        "ledger": 1.0
+      },
+      "workdir": "/app",
+      "user": "root",
+      "agent_image_id": "sha256:b348b0cb42e33e9b37f38c4532c98be47e77623e00919d4c428f4e6b4f1ce8e0",
+      "verifier_image_id": "sha256:ae0901e4153dcb3c48bb7b8515143b7275de10d27eafa97a6a53c41a768293c4",
+      "python": "3.11.14",
+      "copy_digest": "2aa02b6bd4188b9568b53731421403be4ddb46e3861df95c8f64d434e0711a12"
+    },
+    {
+      "task": "satb-audio-transcription",
+      "category": "Media",
+      "estimate_h": 8.0,
+      "ok": true,
+      "failures": [],
+      "checks": {
+        "oracle": 1.0,
+        "nop": 0.0,
+        "ledger": 1.0
+      },
+      "workdir": "/app",
+      "user": "root",
+      "agent_image_id": "sha256:ad653593893914ce835333d415521debcfeeb75ea5391bb0322fb4e1eeb8ccb6",
+      "verifier_image_id": "sha256:106299c7c9d21297b2854fa71daa749fa8ee2b32fd4b7759f90cebe1bd3c6491",
+      "python": "3.12.3",
+      "copy_digest": "43540d6bd8da2dd052132c5f9c618fd31d36900d8d68acb09537bda00a6c8501"
+    },
+    {
+      "task": "session-window-debug",
+      "category": "Software",
+      "estimate_h": 8.0,
+      "ok": true,
+      "failures": [],
+      "checks": {
+        "oracle": 1.0,
+        "nop": 0.0,
+        "ledger": 1.0
+      },
+      "workdir": "/app",
+      "user": "root",
+      "agent_image_id": "sha256:11972179f438aed1b49a441298eac2e1191418f32a673b6ef2a4a5bc36ff8cd1",
+      "verifier_image_id": "sha256:cab7ed9a70abb45dfef2879ef01ae3d77d46797650a97544e2a65f0f25c966f3",
+      "python": "3.12.15",
+      "copy_digest": "1c018bcb546bac98a4cb3b4207f537abf0a0897ea762a9685a06111f722549f0"
+    },
+    {
+      "task": "sglang-qwen-burst",
+      "category": "ML",
+      "estimate_h": 2.0,
+      "ok": true,
+      "failures": [],
+      "checks": {
+        "oracle": 1.0,
+        "nop": 0.0,
+        "ledger": 1.0
+      },
+      "workdir": "/app/sglang",
+      "user": "root",
+      "agent_image_id": "sha256:188a8398d7a9162779353c53238af40e738010e4b6d753acb3bdff650e8f95a9",
+      "verifier_image_id": "sha256:fdb13991f29115b799ff4f6980c8e009b6472caa342ce481bc7d053b9ea10188",
+      "python": "3.12.15",
+      "copy_digest": "b23aa4d7b8106b2d54035c118198cf0325b96d1572d69850e58b885a7937fdd0"
+    },
+    {
+      "task": "shadow-relay",
+      "category": "Security",
+      "estimate_h": 3.0,
+      "ok": true,
+      "failures": [],
+      "checks": {
+        "oracle": 1.0,
+        "nop": 0.0,
+        "ledger": 1.0
+      },
+      "workdir": "/app",
+      "user": "root",
+      "agent_image_id": "sha256:b7dec5e5eee34a94d05ba0562c93fd5b547bdccf3c1d404143c1fd7c7395ca15",
+      "verifier_image_id": "sha256:7c64614fd768dab5dac96d091c980e22fcd1cee8a60d1a79092f422cec30ca78",
+      "python": "3.13.13",
+      "copy_digest": "e45c2cd59a865679e0db4993923437afd2125b2e5c3519a1f598511e477d4cde"
+    },
+    {
+      "task": "sound-change-cascade",
+      "category": "Science",
+      "estimate_h": 4.0,
+      "ok": true,
+      "failures": [],
+      "checks": {
+        "oracle": 1.0,
+        "nop": 0.0,
+        "ledger": 1.0
+      },
+      "workdir": "/app",
+      "user": "root",
+      "agent_image_id": "sha256:4791eba6f55d4a49af84ccbb98269cd158a314fc05e02bcf87ad7146910c5dd9",
+      "verifier_image_id": "sha256:a1929db66cc829297310a3c502dd8e20f0c0808f4fe8579ad61ddc446a16813d",
+      "python": "3.12.15",
+      "copy_digest": "4d3e760c7091cced9325de22002395b6749fc11bfe2d81f4ebab8df999c4a4a8"
+    },
+    {
+      "task": "vba-userform-port",
+      "category": "Software",
+      "estimate_h": 4.0,
+      "ok": true,
+      "failures": [],
+      "checks": {
+        "oracle": 1.0,
+        "nop": 0.0,
+        "ledger": 1.0
+      },
+      "workdir": "/workspace",
+      "user": "root",
+      "agent_image_id": "sha256:d526d028afaf2d58421b6d1145c368bb383427764e0e9e7794abb483f679f43e",
+      "verifier_image_id": "sha256:fb2107101a61b9e8e8291ce94e9afe5122c2ebd7cd4e8a4f72c8e2c9649c5a55",
+      "python": "3.12.15",
+      "copy_digest": "ad422361e434eea82f9b6042714e7fb56470e2402e142012fd44025625afc9b9"
+    },
+    {
+      "task": "vf2-speedup-networkx",
+      "category": "Software",
+      "estimate_h": 4.0,
+      "ok": true,
+      "failures": [],
+      "checks": {
+        "oracle": 1.0,
+        "nop": 0.0,
+        "ledger": 1.0
+      },
+      "workdir": "/app",
+      "user": "root",
+      "agent_image_id": "sha256:62e5cd1274be385588b003192d9e0c982e17df08ff96cbde045356b665ddff23",
+      "verifier_image_id": "sha256:a85396d7f54b66c583146ceac466f26c867ae9ffbe2e1a51295619e2c708ad34",
+      "python": "3.12.3",
+      "copy_digest": "2904f331e2fe40fb31259739d35fb2b569656e0ab5560e63454634c5e99ba7c9"
+    },
+    {
+      "task": "vllm-deepseek-streaming",
+      "category": "ML",
+      "estimate_h": 2.0,
+      "ok": true,
+      "failures": [],
+      "checks": {
+        "oracle": 1.0,
+        "nop": 0.0,
+        "ledger": 1.0
+      },
+      "workdir": "/app/vllm",
+      "user": "root",
+      "agent_image_id": "sha256:1d1157520a3032e6919349d183f75f4a653f473c1b1f03e5b1f019585c6a2a56",
+      "verifier_image_id": "sha256:3e711e53ade9bfac99ddd665ac26d215683bbadc8e0308da672e78af5a566f02",
+      "python": "3.12.13",
+      "copy_digest": "6655d782c57eed9cfbcce24e17f118be83a03fbd8247629bf5115ac674f548f2"
+    },
+    {
+      "task": "vpp-loss-divergence",
+      "category": "ML",
+      "estimate_h": 2.0,
+      "ok": true,
+      "failures": [],
+      "checks": {
+        "oracle": 1.0,
+        "nop": 0.0,
+        "ledger": 1.0
+      },
+      "workdir": "/app",
+      "user": "root",
+      "agent_image_id": "sha256:ca8d1188c93b78ea64af02a58dd3a52d8c212f6e144872d2c48ae3b7f30f4e14",
+      "verifier_image_id": "sha256:db64c3ae165df73507b8ab676b351470c3747b65e84bae7082f9edc56170e886",
+      "python": "3.11.15",
+      "copy_digest": "ab1a24831c86250fd2c897b414e0656204ed01871f99dc522eb12885a8d9e023"
+    },
+    {
+      "task": "wal-recovery-ordering",
+      "category": "Software",
+      "estimate_h": 6.0,
+      "ok": true,
+      "failures": [],
+      "checks": {
+        "oracle": 1.0,
+        "nop": 0.0,
+        "ledger": 1.0
+      },
+      "workdir": "/app",
+      "user": "root",
+      "agent_image_id": "sha256:73a1ddd9493429d5172548a34ba66963fd449aa4c2bc6452afa674f480d21634",
+      "verifier_image_id": "sha256:0683bfdd2e0cf838eae390623f08877cf3e78f9a71b8ec5436f99314e426cbd3",
+      "python": "3.13.13",
+      "copy_digest": "f4e456a3458aa12c1885fee7d5ca81ad3e08847cfba6fde50ec5ae8e5f6b5fa6"
+    }
+  ],
+  "summary": {
+    "candidates": 31,
+    "ok": 26,
+    "failed": 5
+  }
+}
