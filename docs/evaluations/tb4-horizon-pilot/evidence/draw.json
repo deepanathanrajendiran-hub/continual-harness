@@ -1,0 +1,57 @@
+{
+  "seed": 20261007,
+  "algorithm": "rng = random.Random(seed); setup = rng.choice(sorted names); categories = rng.sample(sorted categories of the rest); each category's tasks = rng.sample(sorted names); take tasks round-robin over categories until n; first arms = n//2 control + (n - n//2) horizon, rng.shuffle.",
+  "setup": "interleaved-vigenere",
+  "measured": [
+    {
+      "order": 1,
+      "task": "cargo-flight-dispatch",
+      "first_arm": "control"
+    },
+    {
+      "order": 2,
+      "task": "sglang-qwen-burst",
+      "first_arm": "horizon"
+    },
+    {
+      "order": 3,
+      "task": "session-window-debug",
+      "first_arm": "horizon"
+    },
+    {
+      "order": 4,
+      "task": "roy-polymorph-cn",
+      "first_arm": "control"
+    },
+    {
+      "order": 5,
+      "task": "formal-crypto",
+      "first_arm": "horizon"
+    },
+    {
+      "order": 6,
+      "task": "satb-audio-transcription",
+      "first_arm": "control"
+    },
+    {
+      "order": 7,
+      "task": "production-planning",
+      "first_arm": "horizon"
+    },
+    {
+      "order": 8,
+      "task": "embedding-drift-monitor",
+      "first_arm": "horizon"
+    },
+    {
+      "order": 9,
+      "task": "mvcc-lsm-compaction",
+      "first_arm": "control"
+    },
+    {
+      "order": 10,
+      "task": "protein-autointerp-disulfide",
+      "first_arm": "control"
+    }
+  ]
+}
