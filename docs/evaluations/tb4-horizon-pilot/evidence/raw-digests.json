@@ -1,0 +1,92 @@
+{
+  "cargo-flight-dispatch__control__a1": {
+    "log": "de9fe2206d87abc4c76e38c0596f8c0f421524a51f9db6d3d7422c3141efc803",
+    "trial_dir": "c07d28ea7c6c10d4dfd68cf63e6f17b5a6eba43e444722121bcfd341305b2c4f"
+  },
+  "cargo-flight-dispatch__horizon__a1": {
+    "ledger:/app/.claude/harness": "5941e38fcef1b54787f6930601fe0933bc36ac081ca674bce0738cc041259d22",
+    "log": "c9265a1289537a00446556712ee10865a6666fbb53252519d161ebcd03750eff",
+    "trial_dir": "4793137df391e096a777eaaa035d0b06aa92dbbcef891cc3b2fa97aaa195ef36"
+  },
+  "embedding-drift-monitor__control__a1": {
+    "log": "083a762765323fe7f4b6180dba90dff004f9eb8a7babdcf0f28a61a784a9dfe8",
+    "trial_dir": "d10c401e49f7aa9cd89b682e641d9aca06c92e18ab96f2983b9fdfad8315d03a"
+  },
+  "embedding-drift-monitor__horizon__a1": {
+    "ledger:/app/.claude/harness": "81c0c823ca871950e38eb4ce933853b733365eb80d3e259f7b0d1c47eb19648e",
+    "log": "c05d2264a5c74340e2497cb4b10af90b26f6f423fcfe4b7c98b1dfc25658ddcb",
+    "trial_dir": "0fabfd58527ad5d1b3be8c10b6f44a357b8a46337720ed62fe21c63b9eb97306"
+  },
+  "formal-crypto__control__a1": {
+    "log": "babd86bcda7ee205329a87fe3be752679117ab71f88060cbb620b4888e2be069",
+    "trial_dir": "180b5c71c44e382000fd07e30ba3999a6b3f1f732df1870435dd2ce42e498272"
+  },
+  "formal-crypto__horizon__a1": {
+    "ledger:/app/.claude/harness": "346661767364d9c376118707d404931c77c45de8070403febb9b3106545b3ae2",
+    "log": "7e266a7a22cff979de8cf9ba2d4e7d899269436953bc64d1d15d29ed240caa4f",
+    "trial_dir": "2722aec34c90c54e741371e46975ca0f40dea0ff3c8b8a04a35a48f27a8b10e0"
+  },
+  "mvcc-lsm-compaction__control__a1": {
+    "log": "97ae37cdc2832b117e5a919616f496667c697717a11c51f2e4bfea7fac60a6a6",
+    "trial_dir": "842ea361dcce1c674a83063f106a2e6576844254d04387706253eb207ef2afb1"
+  },
+  "mvcc-lsm-compaction__horizon__a1": {
+    "ledger:/app/.claude/harness": "941171765089478b9fdcd36b262f9aef2567ea0dd1eadfd5dad9ea87c9307eb0",
+    "log": "eb8aeeacda4676d69352f61a71ab62bb467fe0d9e22a9543ae959b3e1845b029",
+    "trial_dir": "fca9fae03be75ee533073576671b6c5ef77bf2660b6242802289f8dbac39072a"
+  },
+  "production-planning__control__a1": {
+    "log": "dca48b5bb7bb67a8142aba9be15f2f5bb08f595e547a5ed7ced2308e18581f8e",
+    "trial_dir": "038be965b7772af6021a8a0b35b5491f9ebddce3f18cd178baeeddf02b37062b"
+  },
+  "production-planning__horizon__a1": {
+    "ledger:/app/.claude/harness": "82502ed10d3fc0c0673798fe505f5648b1e2b197ee3a61986c6d826c59af07f9",
+    "log": "4e8b1520839c0cc09d2186964ea46c2ebab335191d78036114efa1c410c748e2",
+    "trial_dir": "625b599786c3519f07c4d9b2075177cf450aff8f0e6ff696ca15ce0177259a9a"
+  },
+  "protein-autointerp-disulfide__control__a1": {
+    "log": "fe077df74f2b45a0a026ea2fa75da0dd60f3203fc380be1add95c71495a98b35",
+    "trial_dir": "93f06a579bc4ba7c1972362c2c86e2b830f480fd545873a9f5fcc3de8b5e80f5"
+  },
+  "protein-autointerp-disulfide__horizon__a1": {
+    "ledger:/app/.claude/harness": "029df8722abada8ceefe63ec3386374669304c176f3de81247e5f9ae3fa4fc12",
+    "log": "f9208c08db48cd4745e292a7c074ad556826e888b8c07a3b25b85028c386ba61",
+    "trial_dir": "1e73bc30dc10bd05973189e833375d4a87cbc1b8f7e2a67c259bb056e0d94972"
+  },
+  "roy-polymorph-cn__control__a1": {
+    "log": "7495b236fa5dde15e28049e4cb7c6882a99fc7e7e42b07f0862b34b2c69095b7",
+    "trial_dir": "9c29295eccf8a8e230eba10287362362a4d4dadf06ec2e0765ed098976f95e2f"
+  },
+  "roy-polymorph-cn__horizon__a1": {
+    "ledger:/app/work/.claude/harness": "6317237c8ff37677a8d44be1fb5a96a0e5c96b602b346d0ed51a749e8de70d38",
+    "log": "ac9be2862eca07610e36b5ad912bf2e660fb855d69f8de8eeb920c9f26824227",
+    "trial_dir": "1a19ed407a5a95c56f8c37eff98fb7c57a4c44b3a3763d6ee445d3e88c887076"
+  },
+  "satb-audio-transcription__control__a1": {
+    "log": "45e4a7aed705132cfcf87837d998938ab9cb0917b707ab7bb4e581101b764087",
+    "trial_dir": "001cc7357f8932ba02ca2c417fcc0d9d182718ca4d3b9654b266dd7ea254320c"
+  },
+  "satb-audio-transcription__horizon__a1": {
+    "ledger:/app/.claude/harness": "18ffc8508eaf57c1a7aae907ce9395a740d796059f7c4295c0c94c3efb49d596",
+    "log": "034ebc8841d734db6d2575357814d4c63711b9610dd091b27c7d395dc6ca9111",
+    "trial_dir": "914242131119804cc347f42b7ca12d103ad5ff22e5637fdaae3dcac2bd2fe286"
+  },
+  "session-window-debug__control__a1": {
+    "log": "3afdef7023ac7ec310f28b1946cc631b64f136b66ebc6c00b8bb6ea2417458cf",
+    "trial_dir": "e3d2d0ccfe4b619c235e26b4e4916f818ec8c76d13a9cdfb7d05999c0034ce85"
+  },
+  "session-window-debug__horizon__a1": {
+    "ledger:/app/.claude/harness": "60dc07f901b09d8f8a3df10b972668c07253203a8dcdfc8c7ceda9e6143c4301",
+    "log": "816605189439370183e01f736c082c1d494e863e91b74d4d2c9cd6324f6d8e18",
+    "trial_dir": "0f32a69333ec72c1bbe09efe07ccd01167659986cead60b672ce8107ae7d491a"
+  },
+  "sglang-qwen-burst__control__a1": {
+    "log": "1c2504bb5017575666ae57a54749f9b9331ff2ddd5587961a91ce1932c743833",
+    "trial_dir": "d4395c21c718fd48364972daed4aa74ee5165c47450d4e5fc2f9d806141b23c1"
+  },
+  "sglang-qwen-burst__horizon__a1": {
+    "ledger:/app/sglang/.claude/harness": "ce26090439062fc15af66736b415b9301c6b161105ad2adfafeb9ca697284a21",
+    "log": "e0b9ea19284bffbd16389c2753d28fb724917e507b4afdef0666469140d65af5",
+    "trial_dir": "1086322b4bcf754b5f6789e9220df1ce9b2005e9bb6c55e1e0b65c07052c932a"
+  }
+}
