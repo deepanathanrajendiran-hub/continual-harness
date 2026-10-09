@@ -178,6 +178,7 @@ def test_final_result_is_the_last_result_record():
     assert stream.final_result([say("w")]) is None
     assert stream.result_record([interim, final])["result"] == "Still waiting on the review."
 
+
 def test_start_with_other_goals_counts_only_the_top_level_summary():
     started = dict(SUMMARY, other_goals=[{"slug": "old-goal", "status": "complete"}])
     calls = stream.horizon_calls([use("a", START), res("a", json.dumps(started, indent=2))])
