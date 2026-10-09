@@ -14,7 +14,9 @@ from bench.tb4 import run as runner
 
 ANALYSIS = "exact sign-flip permutation, two-sided, alpha 0.05"
 ALPHA = 0.05
-TOL = 1e-9  # signed sums that differ by less than this are ties (float noise, e.g. 0.2 + 0.1 - 0.1)
+# signed sums that differ by less than TOL are ties: the float noise comes from building d as h/R - c/R and from
+# the shifted statistic a - delta * b, not from sum()
+TOL = 1e-9
 GRID = tuple(k / 100 for k in range(-100, 101))  # shifts tried when inverting the test for the interval
 NOT_REACHED = "not reached"
 START_FLOOR = 0.9

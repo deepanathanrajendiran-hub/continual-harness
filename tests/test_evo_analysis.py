@@ -1,6 +1,7 @@
 import inspect
 import itertools
 import json
+from fractions import Fraction
 
 import pytest
 
@@ -35,12 +36,13 @@ def record(task, arm, *, phase="main", attempt=1, valid=True, reason=None):
             "attempt": attempt, "valid": valid, "invalid_reason": reason, "freeze": "abc123"}
 
 
-def naive_p(diffs, delta=0.0):
+def naive_p(diffs, delta=Fraction(0)):
+    """Two-sided sign-flip p of the diffs shifted by delta, by enumeration in exact Fractions: no tolerance."""
     shifted = [d - delta for d in diffs]
-    observed = abs(sum(shifted) / len(shifted))
-    means = [abs(sum(s * d for s, d in zip(signs, shifted)) / len(shifted))
-             for signs in itertools.product((1, -1), repeat=len(shifted))]
-    return sum(m >= observed - 1e-9 for m in means) / len(means)
+    observed = abs(sum(shifted))
+    sums = [abs(sum(s * d for s, d in zip(signs, shifted)))
+            for signs in itertools.product((1, -1), repeat=len(shifted))]
+    return Fraction(sum(total >= observed for total in sums), len(sums))
 
 
 def test_permutation_all_positive_gives_two_over_two_to_the_n():
@@ -51,16 +53,20 @@ def test_permutation_all_positive_gives_two_over_two_to_the_n():
 
 
 def test_permutation_counts_float_ties_with_the_observed_statistic():
-    # signed sums 0.2, 0.4, 0.0, 0.2, -0.2, 0.0, -0.4, -0.2: six reach |0.2|, two of them only up to float noise
-    assert analysis.permutation([0.2, 0.1, -0.1])["p"] == 6 / 8
+    # d is built as h/R - c/R, the way summarize builds it. Exactly, the signed sums are +-1/2 (four), +-7/6 (two) and
+    # +-1/6 (two), so six reach the observed |1/2|. In floats two of the four 1/2 sums land one ulp below it, so
+    # without the tolerance they are lost and p is 0.5 instead of 0.75
+    diffs = [0 / 2 - 1 / 2, 1 / 3 - 0 / 3, 2 / 3 - 3 / 3]
+    assert analysis.permutation(diffs)["p"] == 6 / 8
 
 
 def test_permutation_matches_a_naive_enumeration_and_its_interval_holds_the_mean():
-    diffs = [0.1, 0.3, -0.1, 0.2, 0.0, 0.4, 0.1, 0.2]
+    diffs = [Fraction(tenths, 10) for tenths in (1, 3, -1, 2, 0, 4, 1, 2)]
     result = analysis.permutation(diffs)
-    assert result["p"] == naive_p(diffs)
-    kept = [k / 100 for k in range(-100, 101) if naive_p(diffs, k / 100) >= 0.05]
-    assert result["ci95"] == (min(kept), max(kept))
+    assert Fraction(result["p"]) == naive_p(diffs)
+    steps = [Fraction(k, 100) for k in range(-100, 101)]
+    kept = [delta for delta in steps if naive_p(diffs, delta) >= Fraction(1, 20)]
+    assert result["ci95"] == (float(min(kept)), float(max(kept)))
     lo, hi = result["ci95"]
     assert -1 <= lo < result["mean"] < hi <= 1
 
