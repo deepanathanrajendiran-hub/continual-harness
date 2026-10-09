@@ -249,7 +249,7 @@ def test_ledger_copy_is_read_from_either_artifact_layout(tmp_path):
         (goals / "broken.json").write_text("{")
     assert list(score.ledger_goals(tmp_path / "a", "r1")) == ["fix"]
     assert list(score.ledger_goals(tmp_path / "b", "r1")) == ["fix"]
-    assert score.ledger_goals(tmp_path / "c", "r1") == {}
+    assert score.ledger_goals(tmp_path / "c", "r1") is None
 
 
 def test_audit_flags_cover_verifier_files_and_the_benchmark_source(tmp_path):
@@ -329,3 +329,55 @@ def test_a_round_row_carries_the_leftover_counts_of_its_own_round(tmp_path):
     rows = score.round_rows(record, runs=tmp_path)
     assert rows[0]["leftovers"] == {"killed": 1, "survivors": None, "tmp_entries": None}
     assert rows[1]["leftovers"] is None
+
+
+@pytest.mark.parametrize("exception", ["AgentTimeoutError", "NonZeroAgentExitCodeError", "VerifierTimeoutError"])
+def test_a_round_with_a_harbor_exception_scores_as_failed_whatever_the_verifier_gave(tmp_path, exception):
+    names = ["r1", "r2"]
+    record = make_job(tmp_path, names, [
+        {"events": [INIT, done()], "reward": 1, "exception": exception},
+        {"events": [INIT, done()], "reward": 1}])
+    failed, graded = score.round_rows(record, runs=tmp_path)
+    assert (failed["reward"], failed["passed"]) == (0.0, False)
+    # a step with no exception keeps the reward Harbor recorded
+    assert (graded["reward"], graded["passed"]) == (1.0, True)
+
+
+def test_a_round_without_a_ledger_copy_does_not_shift_earlier_goals_into_the_next_round(tmp_path):
+    finished = goal("first-request", "complete", turns=3)
+    record = make_job(tmp_path, ["r1", "r2", "r3"], [
+        {"events": [INIT, *start_call("t1", "first-request"),
+                    use("t2", HARNESS + "complete first-request"), res("t2", json.dumps(finished)), done()],
+         "goals": [finished]},
+        {"events": [INIT, done()]},
+        {"events": [INIT, use("t3", HARNESS + "status"), res("t3", json.dumps([finished])), done()],
+         "goals": [finished]},
+    ])
+    rows = score.round_rows(record, runs=tmp_path)
+    assert (rows[0]["goal_slugs"], rows[0]["horizon_started"], rows[0]["end_reason"]) == (
+        ["first-request"], True, "complete")
+    assert (rows[1]["goal_slugs"], rows[1]["horizon_started"], rows[1]["end_reason"]) == ([], False, "no goal")
+    # round 3 is compared with round 1's copy, the last one collected: nothing changed, so nothing is its own
+    assert (rows[2]["horizon_calls"], rows[2]["goal_slugs"], rows[2]["horizon_started"], rows[2]["end_reason"]) == (
+        1, [], False, "no goal")
+
+
+def test_a_ledger_copy_counts_as_collected_with_killed_txt_or_a_harness_folder(tmp_path):
+    (tmp_path / "a" / "logs" / "artifacts" / "r1").mkdir(parents=True)
+    (tmp_path / "a" / "logs" / "artifacts" / "r1" / "killed.txt").write_text("")
+    (tmp_path / "b" / "r1" / "harness").mkdir(parents=True)
+    (tmp_path / "c").mkdir()
+    assert score.ledger_goals(tmp_path / "a", "r1") == {}
+    assert score.ledger_goals(tmp_path / "b", "r1") == {}
+    assert score.ledger_goals(tmp_path / "c", "r1") is None
+
+
+def test_a_collected_copy_with_no_goals_still_compares_the_next_round_with_nothing(tmp_path):
+    finished = goal("first-request", "complete", turns=3)
+    record = make_job(tmp_path, ["r1", "r2"], [
+        {"events": [INIT, done()], "goals": []},
+        {"events": [INIT, done()], "goals": [finished]}])
+    rows = score.round_rows(record, runs=tmp_path)
+    assert (rows[0]["goal_slugs"], rows[0]["end_reason"]) == ([], "no goal")
+    assert (rows[1]["goal_slugs"], rows[1]["horizon_started"], rows[1]["end_reason"]) == (
+        ["first-request"], True, "complete")

@@ -36,16 +36,18 @@ def round_names(task_dir: Path) -> list:
     return [step["name"] for step in data.get("steps") or []]
 
 
-def ledger_goals(artifacts_dir: Path, round_name: str) -> dict:
-    """slug -> goal from the ledger copy the collect hook saved for this round; {} when none was saved.
+def ledger_goals(artifacts_dir: Path, round_name: str):
+    """slug -> goal from the ledger copy the collect hook saved for this round; None when no copy was collected.
 
+    A copy counts as collected when the round's audit folder holds killed.txt (the hook always writes it) or a
+    harness/ folder; a collected copy with no goals is {}.
     Docker bind-mounts /logs/artifacts at <step>/artifacts/logs/artifacts; the second layout also
     accepts an artifacts_dir that already points at the convention dir."""
     base = Path(artifacts_dir)
-    for harness in (base / "logs" / "artifacts" / round_name / "harness", base / round_name / "harness"):
-        if (harness / "goals").is_dir():
+    for out in (base / "logs" / "artifacts" / round_name, base / round_name):
+        if (out / "killed.txt").is_file() or (out / "harness").is_dir():
             goals = {}
-            for path in sorted((harness / "goals").glob("*.json")):
+            for path in sorted((out / "harness" / "goals").glob("*.json")):
                 try:
                     item = json.loads(path.read_text(errors="replace"))
                 except (OSError, json.JSONDecodeError):
@@ -53,7 +55,7 @@ def ledger_goals(artifacts_dir: Path, round_name: str) -> dict:
                 if isinstance(item, dict) and isinstance(item.get("slug"), str) and "status" in item:
                     goals[item["slug"]] = item
             return goals
-    return {}
+    return None
 
 
 def _reported(calls) -> tuple:
@@ -67,12 +69,14 @@ def _reported(calls) -> tuple:
     return status, last
 
 
-def goal_fields(previous: dict, current: dict, calls) -> dict:
+def goal_fields(previous: dict, current, calls) -> dict:
     """Goals this round created or changed, their status at the end of the round, and the end reason.
 
-    A goal belongs to a round when its ledger file is new or different from the previous round's copy.
+    A goal belongs to a round when its ledger file is new or different from the previous collected copy.
     The ledger copy is authoritative; the round's own start/check/... output fills in only slugs the
-    copy lacks (no copy collected). The goal started last decides the end reason."""
+    copy lacks. `current` is None when no copy was collected for the round: then the calls are the only
+    evidence. The goal started last decides the end reason."""
+    current = current or {}
     touched = {slug: item for slug, item in current.items() if previous.get(slug) != item}
     reported, last = _reported(calls)
     status = {slug: current[slug]["status"] if slug in current else value for slug, value in reported.items()}
@@ -137,16 +141,18 @@ def _base(record, name, index) -> dict:
 
 
 def step_values(step: dict, step_dir: Path, previous: dict) -> tuple:
-    """(row values, this round's ledger goals) for one step that ran."""
+    """(row values, this round's ledger goals or None when no copy was collected) for one step that ran."""
     events = stream.read_events(Path(step["agent_dir"]) / "claude-code.txt")
+    excepted = _exception_type(step.get("exception"))
     # TB4 rule: after a timeout, a result line written before the collect hook killed claude is not an answer
-    final = None if _exception_type(step.get("exception")) == TIMEOUT else stream.final_result(events)
+    final = None if excepted == TIMEOUT else stream.final_result(events)
     usage = (final or {}).get("modelUsage") or {}
     calls = stream.horizon_calls(events)
     current = ledger_goals(step["artifacts_dir"], step["name"])
     counts = steps.case_counts(step_dir)
     started, finished = parse_time(step.get("agent_started")), parse_time(step.get("agent_finished"))
-    reward = float(step["reward"]) if step.get("reward") is not None else 0.0
+    # a round with any Harbor exception is failed, whatever reward the verifier still recorded for it
+    reward = float(step["reward"]) if step.get("reward") is not None and excepted is None else 0.0
     values = {
         "reward": reward, "passed": reward >= 1.0,
         "cases_passed": counts[0] if counts else None, "cases_total": counts[1] if counts else None,
@@ -177,8 +183,10 @@ def round_rows(record: dict, *, runs: Path = config.RUNS) -> list:
     for index, name in enumerate(names, start=1):
         row = _base(record, name, index)
         if name in by_name:
-            values, previous = step_values(by_name[name], trial_dir / "steps" / name, previous)
+            values, current = step_values(by_name[name], trial_dir / "steps" / name, previous)
             row.update(values)
+            if current is not None:
+                previous = current
         rows.append(row)
     return rows
 
