@@ -229,3 +229,76 @@ def test_a_tarball_path_outside_the_build_context_is_never_touched(tmp_path):
         assert patch.replace_bundled_go(env, dockerfile, releases=boom, download=boom) == (dockerfile, [])
     assert host.read_bytes() == b"a host file"
     assert (tmp_path / "ctx" / "go1.21.0.linux-amd64.tar.gz").is_file()
+
+def _tree(root):
+    """Every entry under root as {relative path: ('link', target) | ('file', bytes) | ('dir',)}."""
+    import os
+
+    entries = {}
+    for path in sorted(root.rglob("*")):
+        if path.is_symlink():
+            entries[path.relative_to(root).as_posix()] = ("link", os.readlink(path))
+        elif path.is_file():
+            entries[path.relative_to(root).as_posix()] = ("file", path.read_bytes())
+        else:
+            entries[path.relative_to(root).as_posix()] = ("dir",)
+    return entries
+
+
+def _arm64_release(payload):
+    import hashlib
+
+    digest = hashlib.sha256(payload).hexdigest()
+    return [{"files": [{"filename": "go1.21.0.linux-arm64.tar.gz", "sha256": digest}]}]
+
+
+def test_a_symlinked_arm64_target_is_refused_and_never_written_through(tmp_path):
+    arm64 = b"arm64 toolchain"
+    fetched = []
+
+    def download(url, dest):
+        fetched.append(url)
+        dest.write_bytes(arm64)
+
+    env = tmp_path / "environment"
+    env.mkdir()
+    (env / "go1.21.0.linux-amd64.tar.gz").write_bytes(b"amd64 toolchain")
+    host = tmp_path / "host-file"
+    host.write_bytes(b"a host file")
+    (env / "go1.21.0.linux-arm64.tar.gz").symlink_to(host)
+    before = _tree(tmp_path)
+    dockerfile = "FROM ubuntu:22.04\nCOPY go1.21.0.linux-amd64.tar.gz /tmp/\n"
+    with pytest.raises(patch.UnknownArchPattern, match="^line 2: .*symlink.*COPY go1.21.0.linux-amd64.tar.gz /tmp/$"):
+        patch.replace_bundled_go(env, dockerfile, releases=lambda: _arm64_release(arm64), download=download)
+    assert fetched == [] and host.read_bytes() == b"a host file"
+    assert _tree(tmp_path) == before
+
+
+def test_a_symlinked_directory_on_the_way_to_the_tarball_is_refused(tmp_path):
+    arm64 = b"arm64 toolchain"
+    fetched = []
+
+    def download(url, dest):
+        fetched.append(url)
+        dest.write_bytes(arm64)
+
+    dockerfile = "FROM ubuntu:22.04\nCOPY vendor/go1.21.0.linux-amd64.tar.gz /tmp/\n"
+    # the outside directory holds a regular amd64 tarball, or an amd64 entry that links back inside the context
+    for layout in ("regular", "links-back-in"):
+        case = tmp_path / layout
+        env = case / "environment"
+        outside = case / "outside"
+        env.mkdir(parents=True)
+        outside.mkdir()
+        if layout == "regular":
+            (outside / "go1.21.0.linux-amd64.tar.gz").write_bytes(b"amd64 toolchain")
+        else:
+            (env / "inner").mkdir()
+            (env / "inner" / "go1.21.0.linux-amd64.tar.gz").write_bytes(b"amd64 toolchain")
+            (outside / "go1.21.0.linux-amd64.tar.gz").symlink_to(env / "inner" / "go1.21.0.linux-amd64.tar.gz")
+        (env / "vendor").symlink_to(outside, target_is_directory=True)
+        before = _tree(case)
+        with pytest.raises(patch.UnknownArchPattern, match="^line 2: .*symlink.*COPY vendor/go1.21.0.linux-amd64.tar.gz /tmp/$"):
+            patch.replace_bundled_go(env, dockerfile, releases=lambda: _arm64_release(arm64), download=download)
+        assert fetched == []
+        assert _tree(case) == before, layout

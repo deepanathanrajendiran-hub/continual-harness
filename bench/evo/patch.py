@@ -7,6 +7,7 @@ import shutil
 import sys
 import urllib.request
 from pathlib import Path
+import os
 
 PATCHED = ("RUN", "ADD", "ENV", "ARG")
 BUNDLING = ("COPY", "ADD")
@@ -97,10 +98,13 @@ def _fetch(url: str, dest=None):
 def replace_bundled_go(env_dir: Path, dockerfile: str, *, releases=None, download=None) -> tuple:
     """Swap each go<ver>.linux-amd64.tar.gz that a COPY or ADD takes from the build context for go.dev's
     linux-arm64 archive of the same version, checked against go.dev's published sha256, and rewrite that
-    instruction. Returns (dockerfile, artifacts); go.dev is contacted only when such a file exists."""
+    instruction. Returns (dockerfile, artifacts); go.dev is contacted only when such a file exists. A symlink
+    on the way to the file, or in place of the arm64 file, is refused: writing or deleting through it could
+    reach outside the build context."""
     releases = releases or (lambda: _fetch(GO_RELEASES_URL))
     download = download or _fetch
     env_dir = Path(env_dir)
+    context = env_dir.resolve()
     lines = dockerfile.splitlines(keepends=True)
     artifacts, published = [], None
     for keyword, members in _instructions(lines):
@@ -110,17 +114,27 @@ def replace_bundled_go(env_dir: Path, dockerfile: str, *, releases=None, downloa
             swapped = False
             for token in lines[index].split():
                 match = _GO_AMD64.fullmatch(Path(token).name)
+                if not match or "://" in token:
+                    continue
                 source = env_dir / token
-                # a COPY destination or a path outside the build context is never touched
-                inside = source.resolve().is_relative_to(env_dir.resolve())
-                if not match or "://" in token or not inside or not source.is_file():
+                lexical = Path(os.path.normpath(context / token))
+                # a COPY destination or a path that leaves the build context is never touched
+                if not lexical.is_relative_to(context) or not os.path.lexists(source):
+                    continue
+                if source.resolve() != lexical:
+                    raise UnknownArchPattern(f"line {index + 1}: {token} is, or sits behind, a symlink; refusing to "
+                                             f"follow a symlink out of the build context: {lines[index].strip()}")
+                if not source.is_file():
                     continue
                 name = f"go{match['ver']}.linux-arm64.tar.gz"
+                target = source.with_name(name)
+                if target.is_symlink():
+                    raise UnknownArchPattern(f"line {index + 1}: {name} already exists as a symlink; refusing to "
+                                             f"write through a symlink: {lines[index].strip()}")
                 if published is None:
                     published = {f.get("filename"): f.get("sha256") for r in releases() for f in r.get("files") or []}
                 if not published.get(name):
                     raise UnknownArchPattern(f"line {index + 1}: go.dev publishes no {name}: {lines[index].strip()}")
-                target = source.with_name(name)
                 download(f"https://go.dev/dl/{name}", target)
                 digest = hashlib.sha256(target.read_bytes()).hexdigest()
                 if digest != published[name]:
