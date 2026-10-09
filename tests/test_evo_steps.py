@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from bench.evo import steps
+from bench.evo import steps, validate
 
 # The CASE_SUMMARY line exactly as EvoCode's README (f8fcfaa, "Metrics") documents it:
 #   CASE_SUMMARY total_cases=… success_count=…
@@ -85,6 +85,21 @@ def test_a_step_without_a_verifier_result_falls_back_to_its_reward_file(tmp_path
                        files={"steps/round-1/verifier/reward.txt": "1\n"})
     (only,) = steps.read_trial(trial)["steps"]
     assert only["reward"] == 1.0 and only["agent_finished"] is None and only["agent_sec"] is None
+
+def test_a_step_with_a_recorded_exception_is_not_graded_from_its_reward_files(tmp_path):
+    # Harbor 0.24.0 leaves verifier_result None only when the verifier raised (for example VerifierTimeoutError after
+    # test.sh had already written reward.txt); that reward file must not grade the step.
+    trial = make_trial(tmp_path, [
+        step_result("round-1", 1.0),
+        step_result("round-2", None, "VerifierTimeoutError", agent=timing("2026-10-09T10:21:00Z", "2026-10-09T10:51:00Z"))],
+        files={"steps/round-2/verifier/reward.txt": "1\n"})
+    first, second = steps.read_trial(trial)["steps"]
+    assert first["reward"] == 1.0
+    assert (second["reward"], second["exception"]) == (None, "VerifierTimeoutError")
+    assert steps.step_reward(trial / "steps" / "round-2") == 1.0  # the file itself is still readable
+    rewards = [first["reward"], second["reward"]]
+    assert validate.failures({"rounds": 2, "oracle": rewards, "planted": [1.0, 1.0], "nop": [0.0, 0.0]}) == [
+        "oracle rewards [1.0, None], expected 1.0 on all 2 rounds"]
 
 
 def test_an_ungraded_step_has_no_reward(tmp_path):

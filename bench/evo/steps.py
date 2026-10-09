@@ -79,7 +79,12 @@ def _exception_type(record):
 
 
 def read_trial(trial_dir) -> dict:
-    """Every step Harbor ran, in order, from <trial_dir>/result.json and <trial_dir>/steps/<name>/."""
+    """Every step Harbor ran, in order, from <trial_dir>/result.json and <trial_dir>/steps/<name>/.
+
+    A step's reward is the one Harbor recorded in verifier_result. Only a step with no exception_info and no recorded
+    verifier_result falls back to its reward files: Harbor 0.24.0 leaves verifier_result None when the verifier raised
+    (for example VerifierTimeoutError after test.sh had already written reward.txt), and such a step is not graded.
+    """
     trial_dir = Path(trial_dir)
     result = json.loads((trial_dir / "result.json").read_text())
     out = []
@@ -89,7 +94,7 @@ def read_trial(trial_dir) -> dict:
             raise ValueError(f"unsafe step name in result.json: {name!r}")
         step_dir = trial_dir / "steps" / name
         reward = _finite(((step.get("verifier_result") or {}).get("rewards") or {}).get("reward"))
-        if reward is None:
+        if reward is None and not step.get("exception_info"):
             reward = step_reward(step_dir)
         execution = step.get("agent_execution") or {}
         started, finished = execution.get("started_at"), execution.get("finished_at")
