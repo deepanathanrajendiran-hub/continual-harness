@@ -259,6 +259,46 @@ def test_make_copy_refuses_and_leaves_nothing_behind(tmp_path):
         copies.make_copy(own_setup, tmp_path / "z" / "theme_demo", kind="agent", image_tag=TAG)
     assert not (tmp_path / "z" / "theme_demo").exists()
 
+def test_make_copy_refuses_symlinks_that_leave_the_task_so_it_never_writes_into_the_source(tmp_path):
+    def move_out(task, relative, name):
+        """Move one path of the task to tmp_path/<name>; the caller links the old path to it."""
+        out = tmp_path / name
+        (task / relative).rename(out)
+        return out
+
+    absolute_step = make_task(tmp_path / "absolute")
+    outside_step = move_out(absolute_step, "steps/round-1", "outside-step")
+    os.symlink(outside_step, absolute_step / "steps" / "round-1")
+
+    relative_step = make_task(tmp_path / "relative")
+    relative_outside = move_out(relative_step, "steps/round-1", "relative-outside-step")
+    os.symlink(os.path.relpath(relative_outside, relative_step / "steps"), relative_step / "steps" / "round-1")
+
+    toml_link = make_task(tmp_path / "toml")
+    (tmp_path / "outside-toml").mkdir()
+    outside_toml = move_out(toml_link, "task.toml", "outside-toml/task.toml")
+    os.symlink(outside_toml, toml_link / "task.toml")
+
+    cases = [(absolute_step, outside_step, "steps/round-1"),
+             (relative_step, relative_outside, "steps/round-1"),
+             (toml_link, outside_toml.parent, "task.toml")]
+    for number, (task, outside, offender) in enumerate(cases):
+        src_before, outside_before = tree_digest(task), tree_digest(outside)
+        dest = tmp_path / f"copy{number}" / "theme_demo"
+        with pytest.raises(ValueError, match=offender):
+            copies.make_copy(task, dest, kind="agent", image_tag=None)
+        assert tree_digest(task) == src_before
+        assert tree_digest(outside) == outside_before
+        assert not dest.exists()
+
+    inside = make_task(tmp_path / "inside")
+    os.symlink("instruction.md", inside / "steps" / "round-1" / "request.md")
+    os.symlink("../round-2", inside / "steps" / "round-1" / "next")
+    dest = tmp_path / "copy-inside" / "theme_demo"
+    copies.make_copy(inside, dest, kind="agent", image_tag=None)
+    assert os.readlink(dest / "steps" / "round-1" / "request.md") == "instruction.md"
+    assert os.readlink(dest / "steps" / "round-1" / "next") == "../round-2"
+
 
 # ---- SETUP_SH, run for real in a sandbox -----------------------------------------------------
 

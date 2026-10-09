@@ -18,6 +18,7 @@ hooks on a Mac sandbox; Harbor never sets them, so the defaults /tmp, /proc and 
 """
 import datetime
 import json
+import os
 import re
 import shlex
 import shutil
@@ -273,14 +274,33 @@ def _fill_copy(dest: Path, kind: str, image_tag: str | None) -> None:
             _remove(step_dir / "solution")
 
 
+def _refuse_symlinks_leaving(task_dir: Path) -> None:
+    """Raise ValueError naming the first symlink under task_dir that is absolute or, resolved lexically from its
+    own directory, leaves task_dir. Links are never followed and no file is opened."""
+    root = os.path.abspath(task_dir)
+    for parent, dirnames, filenames in os.walk(task_dir, followlinks=False):
+        for name in sorted(dirnames + filenames):
+            path = os.path.join(parent, name)
+            if not os.path.islink(path):
+                continue
+            target = os.readlink(path)
+            landing = os.path.normpath(os.path.join(os.path.abspath(parent), target))
+            if os.path.isabs(target) or os.path.commonpath([root, landing]) != root:
+                where = os.path.relpath(path, task_dir)
+                raise ValueError(f"{where}: a symlink that leaves the task directory is not supported by the copies")
+
+
 def make_copy(src_task_dir: Path, dest_dir: Path, *, kind: str, image_tag: str | None) -> str:
     """Copy a task, then patch, hook, time and pin the copy; agent copies lose every solution. The source
-    is only read. Returns the copy's tree digest; on any error the partial copy is removed."""
+    is only read: a task holding an absolute symlink, or one that leaves the task directory, is refused
+    with ValueError before anything is copied, because the copy's edits would follow the link back into
+    the source. Returns the copy's tree digest; on any error the partial copy is removed."""
     if kind not in KINDS:
         raise ValueError(f"kind must be one of {KINDS}, not {kind!r}")
     src_task_dir, dest_dir = Path(src_task_dir), Path(dest_dir)
     if dest_dir.exists():
         raise FileExistsError(dest_dir)
+    _refuse_symlinks_leaving(src_task_dir)
     shutil.copytree(src_task_dir, dest_dir, symlinks=True)
     try:
         _fill_copy(dest_dir, kind, image_tag)
