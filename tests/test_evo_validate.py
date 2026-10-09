@@ -2,6 +2,8 @@ import json
 import subprocess
 from pathlib import Path
 
+import pytest
+
 from bench.evo import config, patch, validate
 
 TOML = """version = "1.0"
@@ -50,10 +52,11 @@ def write_trial(trial: Path, rewards) -> None:
 
 
 class FakeHost:
-    def __init__(self, rewards=None, arch="arm64", build_ok=True, ids=("sha256:img",)):
+    def __init__(self, rewards=None, arch="arm64", build_ok=True, ids=("sha256:img",), setup_sh=False):
         self.calls = []
         self.rewards = rewards or {"oracle": [1, 1], "nop": [0, 0], "planted": [1, 1]}
         self.arch, self.build_ok, self.ids = arch, build_ok, list(ids)
+        self.setup_sh = setup_sh  # whether the image's working directory holds a project file named setup.sh
 
     def __call__(self, cmd, **kwargs):
         cmd = list(cmd)
@@ -66,6 +69,8 @@ class FakeHost:
             image_id = self.ids.pop(0) if len(self.ids) > 1 else self.ids[0]
             return cp(cmd, 0, json.dumps([{"Id": image_id, "Architecture": self.arch,
                                            "Config": {"WorkingDir": "/app", "User": ""}}]))
+        if cmd[:2] == ["docker", "run"] and cmd[cmd.index("--entrypoint") + 1] == "test":
+            return cp(cmd, 0 if self.setup_sh else 1)
         if cmd[:2] == ["docker", "run"]:
             return cp(cmd, 0, "3.10.12\n")
         if cmd[:2] == ["harbor", "run"]:
@@ -373,3 +378,41 @@ def test_the_code_digest_covers_every_module_that_makes_or_judges_a_copy():
     here = Path(validate.__file__).resolve().parent
     assert validate.CODE_FILES == ("copies.py", "images.py", "patch.py", "steps.py", "validate.py")
     assert validate.CODE_DIGEST == hashlib.sha256(b"".join((here / n).read_bytes() for n in validate.CODE_FILES)).hexdigest()
+
+SETUP_SH_REASON = "project file setup.sh in the working directory would be overwritten by the round hook"
+
+
+def setup_sh_probe(workdir):
+    return ["docker", "run", "--rm", "--platform", "linux/arm64", "--entrypoint", "test", TAG, "-e",
+            f"{workdir}/setup.sh"]
+
+
+def test_a_project_setup_sh_in_the_working_directory_fails_the_task_before_any_harbor_job(tmp_path):
+    # Harbor uploads steps/<r>/workdir/setup.sh over it before every round, and the hook then deletes itself
+    task = make_task(tmp_path)
+    host = FakeHost(setup_sh=True)
+    out = validate.validate_task("demo", runs=tmp_path, run=host)
+    assert (out["ok"], out["reason"]) == (False, SETUP_SH_REASON)
+    assert setup_sh_probe("/app") in host.calls and host.harbor_runs() == []
+    (task / "task.toml").write_text(TOML.replace("memory_mb = 4096", 'memory_mb = 4096\nworkdir = "/srv/app"'))
+    host = FakeHost()
+    assert validate.validate_task("demo", runs=tmp_path, run=host)["ok"]
+    assert setup_sh_probe("/srv/app") in host.calls
+
+
+@pytest.mark.parametrize("name", ["", "..", "../victim", "a/b", "a\\b", "ABSOLUTE"])
+def test_a_task_name_that_is_not_a_bare_directory_name_is_refused_before_anything_is_deleted(tmp_path, name):
+    runs = tmp_path / "runs"
+    outside, inside = tmp_path / "victim", runs / "copies" / "victim"
+    for victim in (outside, inside):
+        victim.mkdir(parents=True)
+        (victim / "keep.txt").write_text("kept\n")
+    name = str(outside) if name == "ABSOLUTE" else name
+    host = FakeHost()
+    with pytest.raises(ValueError, match="task name"):
+        validate.validate_task(name, runs=runs, run=host)
+    with pytest.raises(ValueError, match="task name"):
+        validate.main(["--runs", str(runs), "--task", name])
+    assert host.calls == []
+    assert (outside / "keep.txt").is_file() and (inside / "keep.txt").is_file()
+    assert (runs / "copies").is_dir()

@@ -534,11 +534,14 @@ def test_verify_runs_accepts_the_run_directory_the_record_pins(tmp_path):
     assert prereg.verify_runs(record, runs, [ORDER[1]]) is None
 
 
-def test_verify_runs_skips_prompt_files_and_copies_that_do_not_exist_yet(tmp_path):
+def test_verify_runs_skips_missing_prompt_files_but_refuses_a_missing_agent_copy(tmp_path):
     runs, record = verified_runs(tmp_path)
-    shutil.rmtree(runs / "prompts")
-    shutil.rmtree(runs / "copies")
+    shutil.rmtree(runs / "prompts")  # run.prepare writes them again from the pinned text
     assert prereg.verify_runs(record, runs, [ORDER[0], ORDER[1]]) is None
+    shutil.rmtree(runs / "copies" / "agent" / ORDER[1])  # validation wrote it; prepare would rebuild an unpinned one
+    assert prereg.verify_runs(record, runs, [ORDER[0]]) is None
+    with pytest.raises(prereg.NotFrozen, match=f"{ORDER[1]}.*missing"):
+        prereg.verify_runs(record, runs, [ORDER[0], ORDER[1]])
 
 
 def test_verify_runs_refuses_a_bundle_that_differs_from_the_record(tmp_path):
@@ -647,3 +650,29 @@ def test_prereg_md_is_the_rendering_of_the_stored_json(tmp_path):
     # json.dumps(sort_keys=True) reorders the settings table; the freeze pin renders the stored record again
     json_path, md_path = prereg.write(make(), tmp_path)
     assert md_path.read_text() == prereg.render(json.loads(json_path.read_text()))
+
+def test_the_secondary_outcomes_say_what_tokens_and_cost_cover_and_count_timed_out_rounds():
+    cost = next(item for item in prereg.OUTCOMES["secondary"] if item.startswith("Cost:"))
+    assert "median and mean agent minutes per round" in cost
+    assert "rounds with a final result" in cost and "timed out" in cost and "per arm" in cost
+
+@pytest.mark.parametrize("probe", [
+    check("check__dummy-probe__control", attempt=2, ok=False, failures=["no trial directory with result.json"]),
+    check("check__dummy-probe__control", attempt=2, ok=None,
+          failures=["round-2: probe file round-2/procs.txt has no PID-1 line"], recorded={"round_2_started": True}),
+], ids=["ok-false", "failures"])
+def test_collect_refuses_a_timeout_probe_that_failed_and_asks_for_the_next_attempt(probe):
+    with pytest.raises(prereg.FreezeError, match=r"check__dummy-probe__control__a2.*rerun the probe with the next "
+                                                 r"--attempt"):
+        make(pilot=dict(PILOT, **{"check__dummy-probe__control": probe}))
+    assert make()["pilot"]["check__dummy-probe__control"]["ok"] is None  # a clean probe stays recorded only
+
+def test_public_reason_cuts_every_copy_failure_to_what_failed():
+    copies_dir = "/Users/x/evocode-horizon-runs/copies"
+    listing = (f"planted copy failed: [('{copies_dir}/validation/x/steps/round-1/tests/test_a.py', "
+               f"'{copies_dir}/planted/x/steps/round-1/tests/test_a.py', 'Permission denied')]")
+    assert prereg.public_reason(listing) == "planted copy failed"
+    assert prereg.public_reason("copy failed: steps/round-1/tests/x: not a regular file") == "copy failed"
+    assert prereg.public_reason("build failed twice: Command '['docker']' returned 1.") == "build failed twice"
+    assert prereg.public_reason("nop rewards [1.0, 0.0], expected below 1.0 with round 1 graded") == (
+        "nop rewards [1.0, 0.0], expected below 1.0 with round 1 graded")

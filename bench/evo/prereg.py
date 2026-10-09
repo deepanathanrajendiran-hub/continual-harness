@@ -41,7 +41,10 @@ OUTCOMES = {
         "verifier's CASE_SUMMARY line; rounds without counts are excluded and counted.",
         "False done rate: the share of failed rounds whose final message the TB4 blind judge labels claims_complete.",
         "Under-claim rate: the share of passed rounds whose final message the judge labels reports_incomplete.",
-        "Cost: median agent minutes per round, total tokens, and subscription usage consumed.",
+        "Cost: median and mean agent minutes per round; tokens and the cost Claude Code reports, which exist only for "
+        "rounds with a final result, so they cover those rounds and their count is shown beside them; and "
+        "subscription usage consumed. Rounds that timed out, and rounds ended by another Harbor exception, are "
+        "reported per arm.",
         "Horizon start rate in Horizon rounds, Horizon calls in control rounds, and extra result records.",
     ],
     "validity": [
@@ -169,11 +172,13 @@ def select_tasks(n: int, order_list, validations: dict, task_infos: dict) -> tup
 def public_reason(reason):
     """A validation reason as the committed record states it. RUNS/validation/<task>.json keeps the full text.
     A copy or build failure keeps only what failed: its text can hold a docker command line with the absolute RUNS
-    path, or the path of a file under the task's tests/. Any other reason loses the host's RUNS and home paths."""
+    path, or the path of a file under the task's tests/. That covers every `... copy failed:` reason, the planted
+    copy's included. Any other reason loses the host's RUNS and home paths."""
     if not isinstance(reason, str):
         return reason
-    if reason.startswith(("copy failed", "build failed")):
-        return reason.split(":", 1)[0]
+    head = reason.split(":", 1)[0]
+    if head.endswith("copy failed") or reason.startswith("build failed"):
+        return head
     return reason.replace(str(config.RUNS), "$RUNS").replace(str(Path.home()), "~")
 
 
@@ -219,6 +224,13 @@ def check_inputs(pin: dict, bundle: dict, observed: dict, pilot: dict) -> None:
               if job not in RECORDED_ONLY and pilot[job].get("ok") is not True]
     if failed:
         raise FreezeError(f"the latest attempt of a Harbor check failed: {failed}")
+    # a probe is recorded, not asserted, but what it records must have been read: no trial, or a process list that
+    # is missing or lacks the container's PID-1 line, is a failed probe
+    probes = [f"{pilot[job]['job_name']}: {pilot[job]['failures']}" for job in RECORDED_ONLY
+              if pilot[job].get("ok") is False or pilot[job].get("failures")]
+    if probes:
+        raise FreezeError(f"the latest attempt of the timeout probe failed: {probes}; rerun the probe with the next "
+                          "--attempt")
 
 
 def prompt_file_digest(arm: str, minutes: int, *, write=copies.write_prompt) -> str:
@@ -521,8 +533,10 @@ def require_frozen_record(path, run=subprocess.run, *, repo=config.REPO_ROOT) ->
 
 
 def verify_runs(prereg: dict, runs, tasks) -> None:
-    """Before a main run, hold RUNS to the record: the Horizon bundle, every prompt file and every agent copy that
-    exists for the tasks in play must be what prereg.json pins. Raises NotFrozen naming the first mismatch."""
+    """Before a main run, hold RUNS to the record: the Horizon bundle, every prompt file that exists and every agent
+    copy for the tasks in play must be what prereg.json pins. A missing prompt file is skipped, since run.prepare
+    writes it again from the pinned text; a missing agent copy is refused, since validation wrote it and prepare
+    would build an unpinned one. Raises NotFrozen naming the first mismatch."""
     runs = Path(runs)
     try:
         built = build_bundle(runs)
@@ -543,7 +557,9 @@ def verify_runs(prereg: dict, runs, tasks) -> None:
             if prompt.is_file() and sha256_file(prompt) != prereg["prompts"]["file_sha256"].get(key):
                 raise NotFrozen(f"{prompt} differs from the {key} prompt file prereg.json pins")
         copy = paths.copy(task)
-        if copy.exists() and tb4_copies.tree_digest(copy) != details["copy_digest"]:
+        if not copy.exists():
+            raise NotFrozen(f"{copy}: the agent copy prereg.json pins for {task} is missing")
+        if tb4_copies.tree_digest(copy) != details["copy_digest"]:
             raise NotFrozen(f"{copy} differs from the agent copy prereg.json pins for {task}")
 
 

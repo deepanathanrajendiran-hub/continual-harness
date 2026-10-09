@@ -687,3 +687,81 @@ def test_main_verifies_the_run_directory_against_the_record_after_the_image_pins
     with pytest.raises(Unfrozen):
         frozen_main(paths, prereg, monkeypatch, verify_runs=verify_runs)
     assert calls[-1][2] == [TASK, RESERVE[0]]
+
+# Harbor 0.24.0 raises these three from claude's terminal is_error result line, the line the stream's API-error
+# rule reads
+MODEL_ERROR_LINES = {
+    "AgentSafetyRefusalError": {
+        "type": "result", "subtype": "success", "is_error": True,
+        "result": "API Error: Claude Code is unable to respond to this request, which appears to violate our Usage "
+                  "Policy (https://www.anthropic.com/legal/aup). Please double press esc to edit your last message "
+                  "or start a new session for Claude Code to assist with a different task."},
+    "ContextWindowExceededError": {
+        "type": "result", "subtype": "success", "is_error": True, "api_error_status": 400,
+        "result": 'API Error: 400 {"type":"error","error":{"type":"invalid_request_error","message":"prompt is too '
+                  'long: 210000 tokens > 200000 maximum"}}'},
+    "OutputTokenExceededError": {
+        "type": "result", "subtype": "success", "is_error": True,
+        "result": "API Error: Claude's response exceeded the 128000 output token maximum. To configure this behavior, "
+                  "set the CLAUDE_CODE_MAX_OUTPUT_TOKENS environment variable."},
+}
+
+
+@pytest.mark.parametrize("exception", sorted(MODEL_ERROR_LINES))
+def test_a_model_outcome_harbor_read_from_the_terminal_error_line_keeps_the_job_valid(tmp_path, exception):
+    events = (ALLOWED, INIT, SPOKE, MODEL_ERROR_LINES[exception])
+    typed = started(tmp_path, "round-2", *events, exception=exception)
+    assert run.classify({"steps": [started(tmp_path, "round-1", *CLEAN), typed], "trial_exception": None},
+                        False) is None
+    # the same line on a step Harbor recorded no exception for is still an API error
+    plain = started(tmp_path, "round-3", *events)
+    assert run.classify({"steps": [plain], "trial_exception": None}, False) == "api_error"
+
+
+@pytest.mark.parametrize("exception", run.MODEL_OUTCOMES)
+def test_usage_limit_evidence_in_the_stream_beats_a_model_outcome_type(tmp_path, exception):
+    limited = started(tmp_path, "round-1", ALLOWED, INIT, SPOKE, REJECTED, DONE, exception=exception)
+    assert run.classify({"steps": [limited], "trial_exception": None}, False) == "usage_limit"
+
+@pytest.mark.parametrize("info", [None, {}, {"status": "allowed", "five_hour": None, "seven_day": 0.2},
+                                  {"status": "allowed", "five_hour": 0.1, "seven_day": None}],
+                         ids=["no-info", "empty", "no-five-hour", "no-seven-day"])
+@pytest.mark.parametrize("phase", run.PHASES)
+def test_a_usage_probe_without_rate_limit_data_starts_no_job_and_spends_no_attempt(tmp_path, info, phase):
+    paths, host = ready(tmp_path), FakeHost()
+    trial = dataclasses.replace(TRIAL, phase=phase)
+    with pytest.raises(run.InfrastructureFailure, match="usage probe returned no rate-limit data"):
+        go(paths, host, trial=trial, probe=lambda: info)
+    assert not ran_harbor(host) and not (paths.jobs / trial.job_name).exists()
+    assert not (paths.records / f"{trial.job_name}.json").exists()
+
+def test_a_dry_drop_goes_to_findings_and_a_dry_relaunch_runs_the_walkthrough_again(tmp_path, monkeypatch):
+    walk = config.WALKTHROUGH
+    first, second = order.arm_order(walk, config.SEED)
+    calls = fake_runs(monkeypatch, {(first, 1): "api_error", (first, 2): "api_error"})
+    paths = run.Paths(tmp_path).ensure()
+
+    def dry(attempt):
+        return run.run_phase("dry", [walk], attempt=attempt, paths=paths, token="t", freeze="pre-freeze",
+                             probe=lambda: HEADROOM, infos={walk: dict(INFO, task=walk)}, log=lambda message: None)
+
+    with pytest.raises(run.TaskDropped):
+        dry(1)
+    # the pre-freeze log, never the post-freeze deviations.md that the report copies
+    assert (tmp_path / "findings.md").read_text() == (
+        f"- dry {walk}: dropped after two invalid runs of the {first} arm (a1: api_error; a2: api_error)\n")
+    assert not (tmp_path / "deviations.md").exists()
+    calls.clear()
+    assert dry(3)["dropped"] == []
+    assert calls == [(walk, first, 3), (walk, second, 3)]
+
+
+def test_a_main_drop_still_goes_to_deviations_and_is_skipped_on_relaunch(tmp_path, monkeypatch):
+    first, _ = order.arm_order(TASK, config.SEED)
+    calls = fake_runs(monkeypatch, {(first, 1): "infrastructure", (first, 2): "infrastructure"})
+    with pytest.raises(run.TaskDropped):
+        phase(tmp_path)
+    assert run.dropped_tasks(run.Paths(tmp_path), "main") == [TASK]
+    assert not (tmp_path / "findings.md").exists()
+    calls.clear()
+    assert phase(tmp_path)["dropped"] == [TASK] and calls == []

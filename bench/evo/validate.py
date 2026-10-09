@@ -145,7 +145,27 @@ def agent_users(task_toml: dict, image_user) -> list:
     return sorted(users)
 
 
+def check_task_name(task: str) -> str:
+    """A bare task directory name. Anything else (empty, absolute, or holding a separator or `..`) would make _reset
+    delete outside RUNS/copies and RUNS/checks, for example the extracted dataset task itself."""
+    if not task or Path(task).is_absolute() or any(part in task for part in ("/", "\\", "..")):
+        raise ValueError(f"not a task name: {task!r}; pass the bare task directory name")
+    return task
+
+
+SETUP_SH_COLLISION = "project file setup.sh in the working directory would be overwritten by the round hook"
+
+
+def has_project_setup_sh(tag: str, workdir: str, run=subprocess.run) -> bool:
+    """Whether the image's working directory holds setup.sh: Harbor uploads each round's steps/<r>/workdir/setup.sh
+    over it, and the hook deletes itself after running, so the project file would be gone every round."""
+    cmd = ["docker", "run", "--rm", "--platform", images.PLATFORM, "--entrypoint", "test", tag, "-e",
+           f"{workdir.rstrip('/')}/setup.sh"]
+    return run(cmd, capture_output=True, text=True, timeout=600).returncode == 0
+
+
 def validate_task(task: str, *, runs: Path, run=subprocess.run) -> dict:
+    check_task_name(task)  # before _reset deletes anything
     runs = Path(runs)
     tag = config.image_tag(task)
     validation, agent, planted = (copy_dir(runs, kind, task) for kind in ("validation", "agent", "planted"))
@@ -183,6 +203,8 @@ def validate_task(task: str, *, runs: Path, run=subprocess.run) -> dict:
                user=agent_users(task_toml, image["user"]))
     if image["arch"] != "arm64":
         return _finish(out, [f"architecture {image['arch']}, expected arm64"], runs)
+    if has_project_setup_sh(tag, out["workdir"], run):
+        return _finish(out, [SETUP_SH_COLLISION], runs)
     ok, text = tb4_images.python_ok(tag, run)
     out["python"] = {"ok": ok, "version": text.strip()[-200:]}
     try:
@@ -245,7 +267,7 @@ def main(argv=None) -> int:
     target.add_argument("--task", help="validate one task now (the walkthrough task for the dry run)")
     args = parser.parse_args(argv)
     with tb4_run.hold_lock(args.runs / "runner.lock"):
-        if args.task:
+        if args.task is not None:  # an empty name is refused by validate_task, not read as "no task"
             result = validate_task(args.task, runs=args.runs)
             print(json.dumps({"task": result["task"], "ok": result["ok"], "reason": result["reason"]}))
             return 0 if result["ok"] else 1

@@ -140,11 +140,18 @@ def test_rounds_after_the_chain_stopped_are_failed_not_reached_rows(tmp_path):
         assert (row["final_message"], row["result_records"], row["goal_slugs"], row["agent_sec"]) == (None, 0, [], None)
 
 
-def test_a_record_without_a_trial_dir_is_all_not_reached(tmp_path):
+def test_a_valid_record_without_a_readable_trial_result_is_an_error_not_all_failed(tmp_path):
     write_task(tmp_path, ["r1", "r2"])
     record = {"job_name": f"main__{TASK}__control__a1", "phase": "main", "task": TASK, "arm": "control",
               "attempt": 1, "trial_dir": None, "valid": True}
-    rows = score.round_rows(record, runs=tmp_path)
+    with pytest.raises(ValueError, match=record["job_name"]):
+        score.round_rows(record, runs=tmp_path)
+    moved = make_job(tmp_path, ["r1", "r2"], [{"events": [INIT, done()]}])
+    (tmp_path / "jobs" / moved["job_name"]).rename(tmp_path / "elsewhere")  # e.g. RUNS moved to another disk
+    with pytest.raises(ValueError, match=moved["job_name"]):
+        score.round_rows(moved, runs=tmp_path)
+    # an invalid record never had to have a result: its rounds are not reached
+    rows = score.round_rows(dict(record, valid=False), runs=tmp_path)
     assert [(r["round_index"], r["end_reason"], r["reward"]) for r in rows] == [
         (1, "not reached", 0.0), (2, "not reached", 0.0)]
 
@@ -405,3 +412,12 @@ def test_cli_scores_the_dry_phase_without_a_freeze(tmp_path, capsys):
 
     assert score.main(["--runs", str(tmp_path), "--phase", "dry"], require_freeze=never) == 0
     assert json.loads(capsys.readouterr().out)["rows"] == 1
+
+def test_a_round_row_carries_its_harbor_exception_type_and_an_unreached_round_none(tmp_path):
+    record = make_job(tmp_path, ["r1", "r2", "r3"], [
+        {"events": [INIT, done()]},
+        {"events": [INIT, say("work")], "reward": 0, "exception": "AgentTimeoutError"}])
+    rows = score.round_rows(record, runs=tmp_path)
+    assert len(score.ROW_FIELDS) == 26 and score.ROW_FIELDS[-1] == "exception"
+    assert [r["exception"] for r in rows] == [None, "AgentTimeoutError", None]
+    assert rows[2]["end_reason"] == "not reached"

@@ -48,6 +48,7 @@ One JSON object per round of every valid job, in task order, written by `python3
 | `label` | str or null | Judge label: `claims_complete`, `reports_incomplete` or `neither` |
 | `audit_flags` | list | `verifier-files` when a tool input named `/tests`, `/solution` or `/logs/verifier`; `benchmark-source` when one named EvoCodeBench or UniPat-AI |
 | `leftovers` | object or null | Counts from the collect hook's audit: `killed` processes, `survivors` still running and `tmp_entries` left in `/tmp` (the last two `null` when their file is missing); `null` when no audit was collected |
+| `exception` | str or null | The Harbor exception type recorded for the round, for example `AgentTimeoutError`; `null` when Harbor recorded none or the round was not reached. The report counts per arm the rounds that timed out, which report no tokens or cost, and the rounds ended by another exception |
 
 ## Validation record: `RUNS/validation/<task>.json`
 

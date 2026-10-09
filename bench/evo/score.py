@@ -19,7 +19,7 @@ from bench.tb4.score import parse_time
 ROW_FIELDS = ("job_name", "phase", "task", "arm", "attempt", "round", "round_index", "reward", "passed",
               "cases_passed", "cases_total", "agent_sec", "tokens_in", "tokens_out", "cost_usd",
               "result_records", "horizon_calls", "horizon_started", "goal_slugs", "goal_status", "end_reason",
-              "final_message", "label", "audit_flags", "leftovers")
+              "final_message", "label", "audit_flags", "leftovers", "exception")
 INPUT_FIELDS = ("inputTokens", "cacheReadInputTokens", "cacheCreationInputTokens")
 TIMEOUT = "AgentTimeoutError"
 NOT_REACHED = "not reached"
@@ -167,15 +167,22 @@ def step_values(step: dict, step_dir: Path, previous: dict) -> tuple:
         "final_message": (final or {}).get("result") or None,
         "audit_flags": audit_flags(events + session_events(step["agent_dir"])),
         "leftovers": leftovers(step["artifacts_dir"], step["name"]),
+        "exception": excepted,
     }
     return values, current
 
 
 def round_rows(record: dict, *, runs: Path = config.RUNS) -> list:
-    """One row per round of the task, in task order; rounds the trial never reached fail as 'not reached'."""
+    """One row per round of the task, in task order; rounds the trial never reached fail as 'not reached'.
+    A valid record had a trial result when it was written, so a missing one is lost evidence, not a failed run:
+    it raises instead of scoring every round as not reached."""
     names = round_names(Path(runs) / "copies" / "agent" / record["task"])
     trial_dir = Path(record["trial_dir"]) if record.get("trial_dir") else None
-    ran = steps.read_trial(trial_dir)["steps"] if trial_dir and (trial_dir / "result.json").is_file() else []
+    readable = trial_dir is not None and (trial_dir / "result.json").is_file()
+    if record.get("valid") and not readable:
+        raise ValueError(f"{record['job_name']}: the record is valid but its trial result.json is missing; restore "
+                         "the job directory before scoring")
+    ran = steps.read_trial(trial_dir)["steps"] if readable else []
     by_name = {step["name"]: step for step in ran}
     unknown = sorted(set(by_name) - set(names))
     if unknown:

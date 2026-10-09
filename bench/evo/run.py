@@ -80,6 +80,9 @@ class Paths:
     def deviations(self): return self.root / "deviations.md"
 
     @property
+    def findings(self): return self.root / "findings.md"  # the pre-freeze log; deviations.md is the post-freeze one
+
+    @property
     def lock(self): return self.root / "runner.lock"
 
     def copy(self, task: str) -> Path:
@@ -189,7 +192,10 @@ def classify(read, slept: bool):
     """Why a finished job is invalid ("interrupted", "usage_limit", "api_error", "infrastructure",
     "host_slept"), or None when it is valid. `read` is steps.read_trial output, or None without a result.
     Harbor puts every agent-phase exception on the started step, so its type decides: usage and API types
-    invalidate the run, MODEL_OUTCOMES do not, and any other type is infrastructure (docker exec, container)."""
+    invalidate the run, MODEL_OUTCOMES do not, and any other type is infrastructure (docker exec, container).
+    Usage-limit evidence in any started step's stream comes first: a usage stop is never a model outcome. The
+    stream's API-error rule reads only steps whose type is not a model outcome, because Harbor raises a refusal or
+    a context or output-token overflow from the same terminal error line that rule reads."""
     if read is None:
         return "infrastructure"
     trial_exception = _exception_type(read.get("trial_exception"))
@@ -200,7 +206,8 @@ def classify(read, slept: bool):
     types = [_exception_type(s.get("exception")) for s, _ in started]
     if any(t in USAGE_EXCEPTIONS for t in types) or any(stream.usage_limit_evidence(e) for e in events):
         return "usage_limit"
-    if any(t in API_EXCEPTIONS for t in types) or any(stream.terminal_api_error(e) for e in events):
+    if any(t in API_EXCEPTIONS for t in types) or any(
+            stream.terminal_api_error(e) for t, e in zip(types, events) if t not in MODEL_OUTCOMES):
         return "api_error"
     if (trial_exception or not started
             or any(t and t not in MODEL_OUTCOMES for t in types)
@@ -303,6 +310,9 @@ def run_trial(trial: EvoTrial, paths: Paths, token: str, freeze: str, *, run=sub
     record["image_id"] = expected
     five_limit, weekly_limit = headroom_limits(info or task_infos(paths)[trial.task])
     record["usage_before"] = wait_for_headroom(probe, five_limit, weekly_limit, sleep=sleep, now=now, log=log)
+    usage = record["usage_before"] or {}
+    if usage.get("five_hour") is None or usage.get("seven_day") is None:  # pacing would fail open: start nothing
+        raise InfrastructureFailure("usage probe returned no rate-limit data")
     slept_before = sleep_marker(run)
     record["started"] = now()
     with open(paths.logs / f"{trial.job_name}.log", "w") as out:
@@ -336,10 +346,11 @@ def dropped_tasks(paths: Paths, phase: str) -> list:
 
 
 def note_drop(paths: Paths, phase: str, task: str, arm: str, attempts: list) -> str:
-    """Append the drop line; `attempts` is [(attempt number, invalid_reason), ...]."""
+    """Append the drop line; `attempts` is [(attempt number, invalid_reason), ...]. A main drop goes to
+    deviations.md, which the report copies; a dry drop happens before the freeze, so it goes to findings.md."""
     detail = "; ".join(f"a{number}: {reason}" for number, reason in attempts)
     line = f"{_drop_prefix(phase, task)} after two invalid runs of the {arm} arm ({detail})\n"
-    with open(paths.deviations, "a") as handle:
+    with open(paths.deviations if phase == "main" else paths.findings, "a") as handle:
         handle.write(line)
     return line
 
@@ -356,7 +367,8 @@ def valid_record(paths: Paths, phase: str, task: str, arm: str):
 def run_phase(phase: str, tasks, *, attempt: int = 1, paths: Paths, token: str, freeze: str, probe, infos=None,
               run=subprocess.run, now=time.time, sleep=time.sleep, log=print) -> dict:
     """Run each task's arms in its seeded order; retry an invalid run once; two invalid runs drop the task.
-    An arm that already has a valid record, of any attempt, is not run again: one scored attempt per arm."""
+    An arm that already has a valid record, of any attempt, is not run again: one scored attempt per arm.
+    Only a main drop is skipped on a relaunch; a dry relaunch with a higher --attempt runs the walkthrough again."""
     if phase not in PHASES:
         raise ValueError(f"phase must be one of {PHASES}")
     infos = task_infos(paths) if infos is None else infos
@@ -365,7 +377,7 @@ def run_phase(phase: str, tasks, *, attempt: int = 1, paths: Paths, token: str, 
         raise MissingInput(f"{missing} not in {paths.tasks}; run python3 -m bench.evo.dataset fetch first")
     records, dropped = [], []
     for task in tasks:
-        if task in dropped_tasks(paths, phase):
+        if phase == "main" and task in dropped_tasks(paths, phase):
             log(f"{task}: dropped earlier in phase {phase}; skipping")
             dropped.append(task)
             continue

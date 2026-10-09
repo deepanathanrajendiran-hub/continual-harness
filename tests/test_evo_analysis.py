@@ -157,7 +157,7 @@ def test_run_status_and_problems_block_an_unfinished_study():
 
 def test_summarize_pairs_valid_tasks_and_reports_validity():
     rows, records = study()
-    s = analysis.summarize(rows, records, TASKS, ROUNDS)
+    s = analysis.summarize(rows, records, TASKS, ROUNDS, preregistered=3)
     assert [t["status"] for t in s["tasks"]] == ["valid", "valid", "dropped"]
     assert s["tasks"][0]["passed"] == {"control": 1, "horizon": 2}
     assert s["tasks"][2]["d"] is None and s["tasks"][2]["passed"] == {"control": 1, "horizon": None}
@@ -174,14 +174,15 @@ def test_summarize_pairs_valid_tasks_and_reports_validity():
 
 def test_render_shows_every_task_and_never_quotes_messages():
     rows, records = study()
-    text = analysis.render(analysis.summarize(rows, records, TASKS, ROUNDS), "- t3 dropped after two invalid runs\n")
+    summary = analysis.summarize(rows, records, TASKS, ROUNDS, preregistered=3)
+    text = analysis.render(summary, "- t3 dropped after two invalid runs\n")
     for task in TASKS:
         assert f"| {task} |" in text
     assert "1/3 (0.33)" in text and "2/3 (0.67)" in text and "+0.33" in text and "-0.50" in text
     assert "first look" in text and "| dropped |" in text and "- t3 dropped after two invalid runs" in text
     assert "## Limits" in text and "CC-BY-NC-4.0" in text and analysis.ANALYSIS in text
     assert not any(r["final_message"] in text for r in rows if r["final_message"])
-    assert "None recorded." in analysis.render(analysis.summarize(rows, records, TASKS, ROUNDS))
+    assert "None recorded." in analysis.render(summary)
 
 
 def test_label_rows_labels_main_messages_blind_and_defaults_to_the_tb4_judge(tmp_path):
@@ -289,14 +290,16 @@ def test_report_cli_plans_the_reserve_a_drop_brought_in_and_shows_the_dropped_ta
     assert printed["statuses"] == {"t1": "valid", "t2": "valid", "t3": "dropped", "t4": "valid"}
     assert printed["primary"]["n"] == 3
     text = out.read_text()
-    assert "3 of 4 planned tasks" in text and "| t4 |" in text and "| t5 |" not in text
+    # N is the frozen record's task count; the reserve is stated apart from it
+    assert "3 tasks were analysed (N = 3 pre-registered; 1 dropped task was replaced by a reserve)" in text
+    assert "| t4 |" in text and "| t5 |" not in text
     assert "| t3 | 2 | 1/2 (0.50) | n/a | n/a | dropped |" in text
 
 
 def test_a_task_the_runner_dropped_is_never_paired():
     rows, records = study()
     assert analysis.run_status(records, TASKS, dropped=["t1"]) == {"t1": "dropped", "t2": "valid", "t3": "dropped"}
-    s = analysis.summarize(rows, records, TASKS, ROUNDS, dropped=["t1"])
+    s = analysis.summarize(rows, records, TASKS, ROUNDS, dropped=["t1"], preregistered=3)
     assert [t["status"] for t in s["tasks"]] == ["dropped", "valid", "dropped"] and s["tasks"][0]["d"] is None
     assert s["primary"]["n"] == 1 and s["validity"]["dropped"] == ["t1", "t3"]
     assert analysis.problems(rows, records, TASKS, dropped=["t1"]) == {}
@@ -316,17 +319,18 @@ def test_usage_consumed_sums_valid_jobs_and_counts_reset_straddlers():
         r["usage_before"] = {"seven_day": 0.10, "seven_day_resets_at": 100}
         r["usage_after"] = {"seven_day": 0.15, "seven_day_resets_at": 100}
     records[1]["usage_after"] = {"seven_day": 0.01, "seven_day_resets_at": 200}  # t1 horizon spans a reset
-    use = analysis.summarize(rows, records, TASKS, ROUNDS)["usage"]
+    summary = analysis.summarize(rows, records, TASKS, ROUNDS, preregistered=3)
+    use = summary["usage"]
     assert use["control"]["jobs"] == 2 and use["control"]["seven_day"] == pytest.approx(0.10)
     assert (use["horizon"]["jobs"], use["horizon"]["straddled"]) == (1, 1)
-    assert "Seven-day usage consumed" in analysis.render(analysis.summarize(rows, records, TASKS, ROUNDS))
+    assert "Seven-day usage consumed" in analysis.render(summary)
 
 def test_the_leftover_audit_counts_rounds_by_what_the_hook_found():
     rows, records = study()
     rows[0]["leftovers"] = {"killed": 1, "survivors": 0, "tmp_entries": 0}
     rows[1]["leftovers"] = {"killed": 0, "survivors": 1, "tmp_entries": 1}
     rows[3]["leftovers"] = {"killed": 0, "survivors": 0, "tmp_entries": 2}
-    summary = analysis.summarize(rows, records, TASKS, ROUNDS)
+    summary = analysis.summarize(rows, records, TASKS, ROUNDS, preregistered=3)
     left = summary["validity"]["leftovers"]
     assert (left["audited"], left["killed"], left["survivors"], left["tmp"]) == (3, 1, 1, 2)
     assert "rounds audited 3 of" in analysis.render(summary)
@@ -335,8 +339,9 @@ class Unfrozen(RuntimeError):
     """Raised by a fake freeze check."""
 
 
-# the freeze checks `label` and `report` make first, answered as a clean freeze whose record is the prereg file
-FROZEN = {"require_freeze": lambda git: "abc",
+# the freeze checks `label` and `report` make first, answered as a clean freeze at the commit the records name
+# (record() writes freeze "abc123") whose record is the prereg file
+FROZEN = {"require_freeze": lambda git: "abc123",
           "require_frozen_record": lambda path, git: json.loads(path.read_text())}
 
 
@@ -382,8 +387,106 @@ def test_report_cli_needs_the_freeze_and_plans_from_the_frozen_record(tmp_path, 
         raise Unfrozen("prereg.json differs from the tagged one")
 
     with pytest.raises(Unfrozen):
-        analysis.main(args, require_freeze=lambda git: "abc", require_frozen_record=refuse_record)
+        analysis.main(args, require_freeze=lambda git: "abc123", require_frozen_record=refuse_record)
     assert not out.exists()
-    assert analysis.main(args, require_freeze=lambda git: "abc", require_frozen_record=record) == 0
+    assert analysis.main(args, require_freeze=lambda git: "abc123", require_frozen_record=record) == 0
     assert asked == [prereg]
     assert set(json.loads(capsys.readouterr().out)["statuses"]) == set(TASKS)  # the record's tasks, not the file's
+
+def coverage_rows():
+    """Control: two rounds with a final result. Horizon: one timed out, one ended by a verifier timeout, one with a
+    final result but no cost, one never reached."""
+    no_result = dict(tokens_in=None, tokens_out=None, cost_usd=None, final_message=None, label=None)
+    rows = [row("a", "control", 1, True), row("a", "control", 2, False, agent_sec=1200.0)]
+    rows += [row("a", "horizon", 1, False, exception="AgentTimeoutError", agent_sec=1800.0, **no_result),
+             row("a", "horizon", 2, False, exception="VerifierTimeoutError", agent_sec=900.0, **no_result),
+             row("a", "horizon", 3, True, agent_sec=300.0, cost_usd=None),
+             missing("a", "horizon", 4)]
+    return rows
+
+
+def test_secondary_counts_timed_out_rounds_and_what_tokens_and_cost_cover():
+    s = analysis.secondary(coverage_rows())
+    c, h = s["control"], s["horizon"]
+    assert (h["timed_out"], h["exception_rounds"], h["token_rounds"], h["cost_rounds"], h["reached"]) == (1, 2, 1, 0, 3)
+    assert (c["timed_out"], c["exception_rounds"], c["token_rounds"], c["cost_rounds"], c["reached"]) == (0, 0, 2, 2, 2)
+    assert (h["agent_minutes_median"], h["agent_minutes_mean"]) == (15.0, 50.0 / 3)
+    assert (c["agent_minutes_median"], c["agent_minutes_mean"]) == (15.0, 15.0)
+
+
+def test_render_shows_timed_out_rounds_and_the_coverage_of_every_token_and_cost_row():
+    secondary = analysis.secondary(coverage_rows())
+    rows = {name: (cell(secondary["control"]), cell(secondary["horizon"])) for name, cell in analysis.SECONDARY}
+    assert rows["Rounds timed out"] == ("0", "1")
+    assert rows["Rounds ended by another Harbor exception"] == ("0", "1")
+    assert rows["Agent minutes per round: median (mean)"] == ("15.0 (15.0)", "15.0 (16.7)")
+    assert rows["Tokens per round (mean, input + output)"] == (
+        "1,100 (2 of 2 rounds with a final result)", "1,100 (1 of 3 rounds with a final result)")
+    assert rows["Total tokens"] == ("2,200 (2 of 2 rounds with a final result)",
+                                    "1,100 (1 of 3 rounds with a final result)")
+    assert rows["Cost reported by Claude Code (USD)"] == ("1.00 (2 of 2 rounds with a final result)",
+                                                          "n/a (0 of 3 rounds with a final result)")
+
+def with_reserve():
+    """study(), plus the runner's drop of t3 and the reserve t4 it brought in, run in full."""
+    rows, records = study()
+    records += [record("t4", "control"), record("t4", "horizon")]
+    rows += [row("t4", "control", 1, False), row("t4", "control", 2, False),
+             row("t4", "horizon", 1, True), row("t4", "horizon", 2, False)]
+    return rows, records
+
+
+def test_the_report_states_the_analysed_count_the_preregistered_n_and_the_reserves_used():
+    rows, records = with_reserve()
+    summary = analysis.summarize(rows, records, TASKS + ["t4"], {**ROUNDS, "t4": 2}, dropped=["t3"], preregistered=3)
+    text = analysis.render(summary)
+    assert "3 tasks were analysed (N = 3 pre-registered; 1 dropped task was replaced by a reserve)" in text
+    assert "planned" not in text.split("## Primary result")[0]
+    rows, records = study()  # t3 dropped with no reserve brought in
+    text = analysis.render(analysis.summarize(rows, records, TASKS, ROUNDS, preregistered=3))
+    assert "2 tasks were analysed (N = 3 pre-registered; 0 dropped tasks were replaced by reserves)" in text
+
+
+def report_args(tmp_path, runs, prereg_tasks):
+    prereg = tmp_path / "prereg.json"
+    prereg.write_text(json.dumps({"tasks": prereg_tasks}))
+    out = tmp_path / "docs" / "report.md"
+    return ["report", "--runs", str(runs), "--prereg", str(prereg), "--out", str(out)], out
+
+
+def test_report_cli_refuses_runs_made_under_another_freeze_commit(tmp_path, monkeypatch, capsys):
+    rows, records = study()
+    records[0]["freeze"] = "0ld5ha"  # a run made before the tag moved
+    runs = write_runs(tmp_path, rows, records)
+    monkeypatch.setattr(analysis.dataset, "list_tasks",
+                        lambda root: [{"task": t, "rounds": n} for t, n in ROUNDS.items()])
+    args, out = report_args(tmp_path, runs, TASKS)
+    assert analysis.main(args, **FROZEN) == 2
+    printed = json.loads(capsys.readouterr().out)
+    assert "freeze" in printed["error"] and printed["freeze"] == "abc123"
+    assert printed["records"] == {records[0]["job_name"]: "0ld5ha"}
+    assert not out.exists()
+
+
+def test_report_cli_writes_deviations_without_host_paths(tmp_path, monkeypatch):
+    rows, records = study()
+    deviations = (f"- 2026-10-12: Step 14: InfrastructureFailure: see {tmp_path / 'runs'}/logs/x.log\n"
+                  f"- 2026-10-13: Step 16: ran cd \"{config.REPO_ROOT}\" && python3 -m bench.evo.score\n"
+                  f"- 2026-10-14: Step 17: the token cache in {analysis.Path.home()}/.cache was cleared\n")
+    runs = write_runs(tmp_path, rows, records, deviations=deviations)
+    monkeypatch.setattr(analysis.dataset, "list_tasks",
+                        lambda root: [{"task": t, "rounds": n} for t, n in ROUNDS.items()])
+    args, out = report_args(tmp_path, runs, TASKS)
+    assert analysis.main(args, **FROZEN) == 0
+    text = out.read_text()
+    assert "see $RUNS/logs/x.log" in text and 'ran cd "$WT" && python3' in text and "in ~/.cache was" in text
+    for private in (str(runs), str(config.REPO_ROOT), str(analysis.Path.home())):
+        assert private not in text
+
+
+def test_the_limits_state_what_the_setup_hook_empties():
+    rows, records = study()
+    text = analysis.render(analysis.summarize(rows, records, TASKS, ROUNDS, preregistered=3))
+    limits = text.split("## Limits")[1].split("## Credit")[0]
+    assert "/tmp and ~/.claude/projects, not the rest of ~/.claude" in limits
+    assert "Horizon ledger and skills" in limits and "$HOME" in limits

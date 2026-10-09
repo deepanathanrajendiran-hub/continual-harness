@@ -33,6 +33,8 @@ LIMITS = (
     "(theme_d11_w2_*) is excluded for that reason.",
     "The judge reads only the final message, but Horizon messages can reveal the arm.",
     "One operator ran the study.",
+    "The between-round setup hook empties /tmp and ~/.claude/projects, not the rest of ~/.claude, which holds the "
+    "Horizon ledger and skills when the working directory is $HOME. The design said the hook empties ~/.claude.",
 )
 
 
@@ -127,7 +129,9 @@ def permutation(diffs) -> dict:
 
 
 def secondary(rows) -> dict:
-    """Per-arm secondary outcomes over the given rows (one row per round)."""
+    """Per-arm secondary outcomes over the given rows (one row per round). Tokens and cost exist only for rounds
+    with a final result, so their counts are kept beside them, with the rounds that timed out or ended on another
+    Harbor exception."""
     out = {}
     for arm in config.ARMS:
         mine = [r for r in rows if r["arm"] == arm]
@@ -150,8 +154,11 @@ def secondary(rows) -> dict:
             "under_claim": under_claim, "labeled_passed": len(passed),
             "under_claim_rate": _ratio(under_claim, len(passed)),
             "agent_minutes_median": statistics.median(minutes) if minutes else None,
+            "agent_minutes_mean": _mean(minutes),
             "tokens_total": sum(tokens) if tokens else None, "tokens_per_round": _mean(tokens),
-            "token_rounds": len(tokens), "cost_usd_total": sum(costs) if costs else None,
+            "token_rounds": len(tokens), "cost_usd_total": sum(costs) if costs else None, "cost_rounds": len(costs),
+            "timed_out": sum(r.get("exception") == "AgentTimeoutError" for r in mine),
+            "exception_rounds": sum(bool(r.get("exception")) for r in mine),
             "horizon_started": started, "horizon_start_rate": _ratio(started, len(reached)),
             "horizon_calls": sum(r.get("horizon_calls") or 0 for r in mine),
             "extra_result_records": sum((r.get("result_records") or 0) > 1 for r in mine),
@@ -252,7 +259,8 @@ def usage_consumed(records, tasks) -> dict:
     return out
 
 
-def summarize(rows, records, tasks, rounds_by_task, dropped=()) -> dict:
+def summarize(rows, records, tasks, rounds_by_task, dropped=(), *, preregistered: int) -> dict:
+    """`tasks` is the pre-registered list plus the reserves brought in for drops; `preregistered` is the frozen N."""
     statuses = run_status(records, tasks, dropped)
     kept = final_rows(rows, records)
     counts = passed_rounds(kept)
@@ -262,7 +270,7 @@ def summarize(rows, records, tasks, rounds_by_task, dropped=()) -> dict:
                  "passed": {arm: counts.get((t, arm)) for arm in config.ARMS}, "score": scores[t],
                  "d": scores[t]["horizon"] - scores[t]["control"] if t in paired else None} for t in tasks]
     paired_rows = [r for r in kept if r["task"] in paired]
-    return {"planned": len(tasks), "tasks": per_task,
+    return {"preregistered": preregistered, "reserves_used": len(tasks) - preregistered, "tasks": per_task,
             "primary": permutation([t["d"] for t in per_task if t["d"] is not None]),
             "secondary": secondary(paired_rows), "validity": validity(records, statuses, paired_rows),
             "usage": usage_consumed(records, paired)}
@@ -284,19 +292,33 @@ def _met(ok: bool, detail: str = "") -> str:
     return "met" if ok else f"not met{': ' + detail if detail else ''}"
 
 
+def _covered(text: str, count: int, reached: int) -> str:
+    """A token or cost figure with the rounds it covers: only a round with a final result reports them."""
+    return f"{text} ({count} of {reached} rounds with a final result)"
+
+
+def _count(n: int, one: str, many: str) -> str:
+    return f"{n} {one if n == 1 else many}"
+
+
 SECONDARY = (
     ("Rounds (reached)", lambda a: f"{a['rounds']} ({a['reached']})"),
     ("Rounds passed", lambda a: str(a["passed"])),
+    ("Rounds timed out", lambda a: str(a["timed_out"])),
+    ("Rounds ended by another Harbor exception", lambda a: str(a["exception_rounds"] - a["timed_out"])),
     ("Case score (mean per-round share of cases passed)", lambda a: _num(a["case_score"])),
     ("Rounds with case counts / without", lambda a: f"{a['case_rounds']} / {a['case_missing']}"),
     ('False "done" rate (failed rounds labeled claims_complete)',
      lambda a: _rate(a["false_done"], a["labeled_failed"], a["false_done_rate"])),
     ("Under-claim rate (passed rounds labeled reports_incomplete)",
      lambda a: _rate(a["under_claim"], a["labeled_passed"], a["under_claim_rate"])),
-    ("Median agent minutes per round", lambda a: _num(a["agent_minutes_median"], ".1f")),
-    ("Tokens per round (mean, input + output)", lambda a: _num(a["tokens_per_round"], ",.0f")),
-    ("Total tokens", lambda a: _num(a["tokens_total"], ",")),
-    ("Cost reported by Claude Code (USD)", lambda a: _num(a["cost_usd_total"])),
+    ("Agent minutes per round: median (mean)",
+     lambda a: f"{_num(a['agent_minutes_median'], '.1f')} ({_num(a['agent_minutes_mean'], '.1f')})"),
+    ("Tokens per round (mean, input + output)",
+     lambda a: _covered(_num(a["tokens_per_round"], ",.0f"), a["token_rounds"], a["reached"])),
+    ("Total tokens", lambda a: _covered(_num(a["tokens_total"], ","), a["token_rounds"], a["reached"])),
+    ("Cost reported by Claude Code (USD)",
+     lambda a: _covered(_num(a["cost_usd_total"]), a["cost_rounds"], a["reached"])),
     ("Horizon start rate (rounds reached)",
      lambda a: _rate(a["horizon_started"], a["reached"], a["horizon_start_rate"])),
     ("Horizon CLI calls", lambda a: str(a["horizon_calls"])),
@@ -311,10 +333,13 @@ def render(summary: dict, deviations: str = "") -> str:
     start = sec["horizon"]["horizon_start_rate"]
     audit = ("not checked: the rows carry no audit flags" if val["audit"] is None
              else _met(not val["audit"], "; ".join(val["audit"])))
+    reserves = _count(summary["reserves_used"], "dropped task was replaced by a reserve",
+                      "dropped tasks were replaced by reserves")
     lines = [
         "# EvoCode-Bench first look: Horizon v2 against plain Claude Code", "",
-        f"This is a first look, not a definitive comparison: {p['n']} of {summary['planned']} planned tasks were "
-        "analysed, with one attempt per arm. Every task's result is shown.", "",
+        f"This is a first look, not a definitive comparison: {_count(p['n'], 'task was', 'tasks were')} analysed "
+        f"(N = {summary['preregistered']} pre-registered; {reserves}), with one attempt per arm. Every task's result "
+        "is shown.", "",
         f"Setup: {config.MODEL} at effort {config.EFFORT}, Claude Code {config.CLAUDE_CODE_VERSION}, Harbor "
         f"{config.HARBOR_VERSION}, a fresh session every round. Both arms get the same time-budget paragraph; the "
         "Horizon arm also gets the Horizon v2 skill and one sentence asking it to use the skill.", "",
@@ -384,6 +409,20 @@ def timing(rows) -> dict:
             "rounds": {arm: len(values) for arm, values in minutes.items()}, "n": n}
 
 
+def public_deviations(text: str, runs: Path) -> str:
+    """deviations.md as the committed report quotes it: the run directory, the worktree and the home directory become
+    $RUNS, $WT and ~ (the rule prereg.public_reason applies to the committed record). The first two usually sit under
+    the home directory, so they are replaced before it."""
+    for path, name in ((Path(runs), "$RUNS"), (config.REPO_ROOT, "$WT"), (Path.home(), "~")):
+        if path.is_absolute():
+            text = text.replace(str(path), name)
+    return text
+
+
+def mixed_freezes(records, freeze: str) -> dict:
+    """{job name: freeze commit} of every record made under another commit than the one the report checks against."""
+    return {r["job_name"]: r.get("freeze") for r in records if r.get("freeze") != freeze}
+
 def main(argv=None, *, require_freeze=None, require_frozen_record=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     common = argparse.ArgumentParser(add_help=False)
@@ -396,10 +435,10 @@ def main(argv=None, *, require_freeze=None, require_frozen_record=None) -> int:
     sub.add_parser("timing", parents=[common], help="m_control, m_horizon and the N rule from the dry run")
     args = parser.parse_args(argv)
     rows_path = args.runs / "rows.jsonl"
-    frozen_record = None
+    frozen_record, freeze = None, None
     if args.action in ("label", "report"):  # timing is the dry run's: it comes before the freeze
         from bench.evo import prereg as frozen  # imported late so this module stands alone
-        (require_freeze or frozen.require_freeze)(subprocess.run)
+        freeze = (require_freeze or frozen.require_freeze)(subprocess.run)
         if args.action == "report":  # the report plans from the frozen record, never from another prereg file
             frozen_record = (require_frozen_record or frozen.require_frozen_record)(args.prereg, subprocess.run)
     if args.action == "label":
@@ -419,14 +458,20 @@ def main(argv=None, *, require_freeze=None, require_frozen_record=None) -> int:
     rounds_by_task = {t: info[t] for t in tasks}
     rows = [r for r in rows if r["phase"] == "main"]
     records = load_records(args.runs, "main")
+    mixed = mixed_freezes(records, freeze)
+    if mixed:  # a moved tag would otherwise render runs made under other code as if they were frozen with it
+        print(json.dumps({"error": "main records were made under another freeze commit than the one the report "
+                                   "checks against: stop and ask the user", "freeze": freeze, "records": mixed}))
+        return 2
     found = problems(rows, records, tasks, dropped)
     if found:
         print(json.dumps({"error": "the main phase is not final: finish runs, scoring and labels first", **found}))
         return 2
     deviations = args.runs / "deviations.md"
-    summary = summarize(rows, records, tasks, rounds_by_task, dropped)
+    summary = summarize(rows, records, tasks, rounds_by_task, dropped, preregistered=len(frozen_record["tasks"]))
+    text = public_deviations(deviations.read_text(), args.runs) if deviations.exists() else ""
     args.out.parent.mkdir(parents=True, exist_ok=True)
-    args.out.write_text(render(summary, deviations.read_text() if deviations.exists() else ""))
+    args.out.write_text(render(summary, text))
     print(json.dumps({"primary": summary["primary"], "statuses": {t["task"]: t["status"] for t in summary["tasks"]}}))
     return 0
 
