@@ -1,5 +1,6 @@
 import hashlib
 import json
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -205,8 +206,11 @@ def test_build_bundle_refuses_extra_files(tmp_path):
 
 
 def git(repo, *args):
+    # every GIT_* variable is dropped: a git hook exports GIT_DIR, which would point these commits and the
+    # evo-prereg tag at the real repository instead of the temporary one
+    env = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
     return subprocess.run(["git", "-C", str(repo), "-c", "user.name=t", "-c", "user.email=t@example.invalid",
-                           *args], capture_output=True, text=True, check=True).stdout
+                           *args], capture_output=True, text=True, check=True, env=env).stdout
 
 
 def test_code_digests_hash_tracked_code_and_refuse_uncommitted_changes(tmp_path):
@@ -676,3 +680,23 @@ def test_public_reason_cuts_every_copy_failure_to_what_failed():
     assert prereg.public_reason("build failed twice: Command '['docker']' returned 1.") == "build failed twice"
     assert prereg.public_reason("nop rewards [1.0, 0.0], expected below 1.0 with round 1 graded") == (
         "nop rewards [1.0, 0.0], expected below 1.0 with round 1 graded")
+
+def test_the_git_helper_ignores_a_git_dir_that_a_hook_exports(tmp_path, monkeypatch):
+    clean = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+
+    def decoy_git(*args):
+        return subprocess.run(["git", "-C", str(decoy), "-c", "user.name=t", "-c", "user.email=t@example.invalid",
+                               *args], capture_output=True, text=True, env=clean)
+
+    decoy = tmp_path / "decoy"  # stands in for the real repository a pre-commit hook runs the suite in
+    decoy.mkdir()
+    decoy_git("init", "-q")
+    (decoy / "real.txt").write_text("real\n")
+    decoy_git("add", ".")
+    decoy_git("commit", "-qm", "real")
+    head = decoy_git("rev-parse", "HEAD").stdout
+    monkeypatch.setenv("GIT_DIR", str(decoy / ".git"))
+    repo, _ = tagged_repo(tmp_path / "scratch", "{}\n")
+    assert decoy_git("rev-parse", "HEAD").stdout == head
+    assert decoy_git("tag", "-l", config.FREEZE_TAG).stdout == ""
+    assert prereg.frozen_commit(lambda cmd, **kw: subprocess.run(cmd, env=clean, **kw), repo) is not None
