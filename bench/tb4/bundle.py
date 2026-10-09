@@ -12,12 +12,19 @@ from pathlib import Path
 from bench.tb4 import config
 
 MODULES = ("filelock", "gate", "goal", "paths", "refine_log", "steps", "task_state", "tree_hash")
-LAYOUT = {
-    "horizon/SKILL.md": ".claude/skills/horizon/SKILL.md",
-    "horizon/scripts/harness.py": "harness/cli.py",
-    "horizon/references/commands.md": "docs/harness-cli.md",
-    **{f"horizon/scripts/{m}.py": f"harness/{m}.py" for m in MODULES},
-}
+
+
+def layout(modules=MODULES) -> dict:
+    """{bundle path: repository path} for the skill, its CLI, its reference and `modules`."""
+    return {
+        "horizon/SKILL.md": ".claude/skills/horizon/SKILL.md",
+        "horizon/scripts/harness.py": "harness/cli.py",
+        "horizon/references/commands.md": "docs/harness-cli.md",
+        **{f"horizon/scripts/{m}.py": f"harness/{m}.py" for m in modules},
+    }
+
+
+LAYOUT = layout(MODULES)
 
 
 def _git_show(repo: Path, commit: str, path: str) -> bytes:
@@ -25,12 +32,12 @@ def _git_show(repo: Path, commit: str, path: str) -> bytes:
                           check=True, capture_output=True).stdout
 
 
-def build(repo: Path, commit: str, out_root: Path) -> dict:
-    """Write LAYOUT from the Git object store; return {bundle path: sha256}."""
+def build(repo: Path, commit: str, out_root: Path, modules=MODULES) -> dict:
+    """Write layout(modules) from the Git object store; return {bundle path: sha256}."""
     if out_root.exists() and any(out_root.iterdir()):
         raise FileExistsError(f"{out_root} is not empty")
     manifest = {}
-    for rel, src in sorted(LAYOUT.items()):
+    for rel, src in sorted(layout(modules).items()):
         data = _git_show(repo, commit, src)
         dest = out_root / rel
         dest.parent.mkdir(parents=True, exist_ok=True)
