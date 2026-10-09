@@ -22,6 +22,16 @@ WEEKLY_PER_AGENT_HOUR = 0.0127    # TB4: seven-day utilization one agent-hour us
 FIVE_HOUR_PER_AGENT_HOUR = 0.098  # TB4: five-hour utilization one agent-hour used
 FIVE_HOUR_WINDOW_HOURS = 5.0
 
+# Harbor exception types that mean the API or the network failed, not the model: the run is invalid and rerun.
+API_EXCEPTIONS = ("ApiError", "ApiRateLimitError", "ApiInternalServerError", "ApiOverloadedError",
+                  "ApiConnectionClosedError", "ApiResponseStalledError", "UnknownApiError",
+                  "ApiProviderResourceNotFoundError", "AgentAuthenticationError", "ModelNotFoundError",
+                  "NetworkConnectionError")
+# Harbor exception types that are the model's own outcome: EvoCode counts the round as failed; the run stays valid.
+MODEL_OUTCOMES = ("AgentTimeoutError", "AgentSafetyRefusalError", "ContextWindowExceededError",
+                  "OutputTokenExceededError", "VerifierTimeoutError", "RewardFileNotFoundError",
+                  "RewardFileEmptyError", "VerifierOutputParseError")
+
 
 class NotValidated(RuntimeError):
     """The task has no passing validation record, so it may not run."""
@@ -177,7 +187,9 @@ def _evidence(step: dict, events: list) -> list:
 
 def classify(read, slept: bool):
     """Why a finished job is invalid ("interrupted", "usage_limit", "api_error", "infrastructure",
-    "host_slept"), or None when it is valid. `read` is steps.read_trial output, or None without a result."""
+    "host_slept"), or None when it is valid. `read` is steps.read_trial output, or None without a result.
+    Harbor puts every agent-phase exception on the started step, so its type decides: usage and API types
+    invalidate the run, MODEL_OUTCOMES do not, and any other type is infrastructure (docker exec, container)."""
     if read is None:
         return "infrastructure"
     trial_exception = _exception_type(read.get("trial_exception"))
@@ -185,12 +197,13 @@ def classify(read, slept: bool):
         return "interrupted"
     started = started_steps(read)
     events = [_evidence(s, e) for s, e in started]
-    if (any(_exception_type(s.get("exception")) in USAGE_EXCEPTIONS for s, _ in started)
-            or any(stream.usage_limit_evidence(e) for e in events)):
+    types = [_exception_type(s.get("exception")) for s, _ in started]
+    if any(t in USAGE_EXCEPTIONS for t in types) or any(stream.usage_limit_evidence(e) for e in events):
         return "usage_limit"
-    if any(stream.terminal_api_error(e) for e in events):
+    if any(t in API_EXCEPTIONS for t in types) or any(stream.terminal_api_error(e) for e in events):
         return "api_error"
     if (trial_exception or not started
+            or any(t and t not in MODEL_OUTCOMES for t in types)
             or any(s.get("exception") and not s.get("agent_started") for s in read["steps"])):
         return "infrastructure"
     if slept:
@@ -331,9 +344,19 @@ def note_drop(paths: Paths, phase: str, task: str, arm: str, attempts: list) -> 
     return line
 
 
+def valid_record(paths: Paths, phase: str, task: str, arm: str):
+    """The first valid record of this (phase, task, arm), whatever its attempt number, or None."""
+    for path in sorted(paths.records.glob("*.json")):
+        record = json.loads(path.read_text())
+        if (record.get("phase"), record.get("task"), record.get("arm")) == (phase, task, arm) and record.get("valid"):
+            return record
+    return None
+
+
 def run_phase(phase: str, tasks, *, attempt: int = 1, paths: Paths, token: str, freeze: str, probe, infos=None,
               run=subprocess.run, now=time.time, sleep=time.sleep, log=print) -> dict:
-    """Run each task's arms in its seeded order; retry an invalid run once; two invalid runs drop the task."""
+    """Run each task's arms in its seeded order; retry an invalid run once; two invalid runs drop the task.
+    An arm that already has a valid record, of any attempt, is not run again: one scored attempt per arm."""
     if phase not in PHASES:
         raise ValueError(f"phase must be one of {PHASES}")
     infos = task_infos(paths) if infos is None else infos
@@ -348,6 +371,11 @@ def run_phase(phase: str, tasks, *, attempt: int = 1, paths: Paths, token: str, 
             continue
         prepare(infos[task], paths)
         for arm in order.arm_order(task, config.SEED):
+            done = valid_record(paths, phase, task, arm)
+            if done:
+                log(f"{task} {arm}: a valid record exists ({done['job_name']}); not run again")
+                records.append(done)
+                continue
             attempts = []
             for number in (attempt, attempt + 1):
                 record = run_trial(EvoTrial(phase, task, arm, number), paths, token, freeze, run=run, now=now,

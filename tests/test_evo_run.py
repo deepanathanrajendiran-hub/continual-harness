@@ -276,11 +276,51 @@ def test_classify_fixture_streams(tmp_path):
     assert run.classify(read(ok, said), False) == "api_error"
 
 
+@pytest.mark.parametrize("events", [(), CLEAN], ids=["empty-stream", "ordinary-stream"])
+@pytest.mark.parametrize("exception,expected", [
+    ("NonZeroAgentExitCodeError", "infrastructure"),
+    ("RuntimeError", "infrastructure"),
+    ({"exception_type": "RuntimeError", "exception_message": ""}, "infrastructure"),
+    ("AgentAuthenticationError", "api_error"),
+    ("ApiInternalServerError", "api_error"),
+    ("NetworkConnectionError", "api_error"),
+    ("VerifierTimeoutError", None),
+    ("ContextWindowExceededError", None),
+    ("AgentTimeoutError", None),
+])
+def test_an_exception_on_a_started_step_is_classified_by_its_harbor_type(tmp_path, exception, expected, events):
+    failing = started(tmp_path, "round-2", *events, exception=exception)
+    read = {"steps": [started(tmp_path, "round-1", *CLEAN), failing], "trial_exception": None}
+    assert run.classify(read, False) == expected
+
+
+def test_every_listed_exception_type_is_classified_as_listed(tmp_path):
+    for name in run.API_EXCEPTIONS:
+        read = {"steps": [started(tmp_path, f"api-{name}", *CLEAN, exception=name)], "trial_exception": None}
+        assert run.classify(read, False) == "api_error", name
+    for name in run.MODEL_OUTCOMES:
+        read = {"steps": [started(tmp_path, f"model-{name}", *CLEAN, exception=name)], "trial_exception": None}
+        assert run.classify(read, False) is None, name
+
+
 def test_usage_limit_in_a_later_round_invalidates_the_job(tmp_path):
     host = FakeHost(steps=[step("round-1"), step("round-2", (ALLOWED, INIT, REJECTED, DONE),
                                                      "NonZeroAgentExitCodeError")])
     record = go(ready(tmp_path), host)
     assert (record["valid"], record["invalid_reason"]) == (False, "usage_limit")
+
+
+@pytest.mark.parametrize("exception,reason", [
+    ("RuntimeError", "infrastructure"),
+    ("NonZeroAgentExitCodeError", "infrastructure"),
+    ("AgentAuthenticationError", "api_error"),
+    ("AgentTimeoutError", None),
+    ("VerifierTimeoutError", None),
+])
+def test_the_harbor_exception_on_a_started_round_decides_whether_the_job_is_valid(tmp_path, exception, reason):
+    host = FakeHost(steps=[step("round-1"), step("round-2", exception=exception)])
+    record = go(ready(tmp_path), host)
+    assert (record["valid"], record["invalid_reason"]) == (reason is None, reason)
 
 
 def test_a_job_without_a_trial_result_is_infrastructure_and_cleaned(tmp_path):
@@ -424,6 +464,32 @@ def test_a_second_arm_that_fails_twice_drops_the_task(tmp_path, monkeypatch):
         phase(tmp_path)
     assert calls == [(TASK, first, 1), (TASK, second, 1), (TASK, second, 2)]
     assert run.dropped_tasks(run.Paths(tmp_path), "main") == [TASK]
+
+
+def test_a_later_attempt_never_reruns_an_arm_that_already_has_a_valid_record(tmp_path):
+    paths, host, messages = ready(tmp_path), FakeHost(), []
+    first, second = order.arm_order(TASK, config.SEED)
+    for arm, valid in ((first, True), (second, False)):
+        name = config.job_name("main", TASK, arm, 1)
+        (paths.records / f"{name}.json").write_text(json.dumps(
+            {"job_name": name, "phase": "main", "task": TASK, "arm": arm, "attempt": 1, "valid": valid,
+             "invalid_reason": None if valid else "api_error"}))
+
+    def relaunch(attempt):
+        return run.run_phase("main", [TASK], attempt=attempt, paths=paths, token="t", freeze="f",
+                             probe=lambda: HEADROOM, infos={TASK: INFO}, run=host, now=lambda: 100.0,
+                             sleep=lambda seconds: None, log=messages.append)
+
+    result = relaunch(3)
+    harbor_jobs = [c[c.index("--job-name") + 1] for c in host.calls if c[:2] == ["harbor", "run"]]
+    assert harbor_jobs == [config.job_name("main", TASK, second, 3)]
+    assert [r["job_name"] for r in result["records"]] == [config.job_name("main", TASK, first, 1),
+                                                           config.job_name("main", TASK, second, 3)]
+    assert [m for m in messages if "valid record" in m] == [
+        f"{TASK} {first}: a valid record exists ({config.job_name('main', TASK, first, 1)}); not run again"]
+    host.calls.clear()
+    relaunch(5)
+    assert host.calls == []
 
 
 def test_prepare_makes_the_agent_copy_and_prompts_once(tmp_path, monkeypatch):
