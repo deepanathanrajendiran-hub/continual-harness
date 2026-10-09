@@ -138,6 +138,17 @@ def test_write_order_writes_the_registered_draw_once(tmp_path):
         order.write_order(path, seed=config.SEED + 1)
     assert json.loads(path.read_text()) == payload
 
+def test_write_order_pairs_arm_orders_within_the_pool_it_is_given(tmp_path):
+    subset = list(reversed(config.POOL))[1::2]
+    assert len(subset) == 6 and subset != [t for t in config.POOL if t in subset]
+    data = order.write_order(tmp_path / "order.json", pool=subset)
+    assert sorted(data["order"]) == sorted(subset)
+    for k in range(len(subset) // 2):
+        first, second = data["order"][2 * k], data["order"][2 * k + 1]
+        assert data["arm_orders"][second] == list(reversed(data["arm_orders"][first]))
+    for task in subset:
+        assert data["arm_orders"][task] == list(order.arm_order(task, config.SEED, pool=subset))
+
 
 def test_main_writes_and_prints_the_order(tmp_path, capsys):
     path = tmp_path / "order.json"

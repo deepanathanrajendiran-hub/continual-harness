@@ -46,10 +46,11 @@ def seeded_order(pool, seed: int, domains) -> list:
     return order
 
 
-def arm_order(task: str, seed: int) -> tuple:
+def arm_order(task: str, seed: int, *, pool=None, domains=None) -> tuple:
     """Consecutive pool tasks in the seeded order get opposite arm orders, so every even prefix of the order
     runs each arm first equally often; a task outside the pool gets its own seeded coin."""
-    ranked = seeded_order(config.POOL, seed, config.DOMAINS)
+    ranked = seeded_order(config.POOL if pool is None else pool, seed,
+                          config.DOMAINS if domains is None else domains)
     arms = list(config.ARMS)
     if task in ranked:
         position = ranked.index(task)
@@ -74,7 +75,7 @@ def n_rule(m_control: float, m_horizon: float, *, choices=config.N_CHOICES,
 def write_order(path: Path, *, pool=config.POOL, seed=config.SEED, domains=config.DOMAINS) -> dict:
     tasks = seeded_order(pool, seed, domains)
     payload = {"seed": seed, "algorithm": ALGORITHM, "order": tasks,
-               "arm_orders": {t: list(arm_order(t, seed)) for t in tasks}}
+               "arm_orders": {t: list(arm_order(t, seed, pool=pool, domains=domains)) for t in tasks}}
     text = json.dumps(payload, indent=2) + "\n"
     path = Path(path)
     if path.exists() and path.read_text() != text:
