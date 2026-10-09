@@ -259,6 +259,10 @@ BREAKS = {
                          f"{FIRST}: the verifier did not list {hc.TESTS_MARKER} in /tests"),
     "sentinel never planted": (lambda f: _set(f, FIRST, hc.PLANTED, "tmp.txt", ""),
                                f"{FIRST}: the /tmp sentinel was not planted"),
+    "round 2 procs empty": (lambda f: _set(f, SECOND, SECOND, "procs.txt", ""),
+                            f"{SECOND}: probe file {SECOND}/procs.txt has no PID-1 line"),
+    "round 2 procs without pid 1": (lambda f: _set(f, SECOND, SECOND, "procs.txt", "7 3 bash"),
+                                    f"{SECOND}: probe file {SECOND}/procs.txt has no PID-1 line"),
 }
 
 
@@ -317,6 +321,56 @@ def test_timeout_probe_records_without_asserting(tmp_path):
     assert rec["still_running_in_round_2"] == ["sleep 600"]
     assert rec["claude_like_in_round_2"] == [claude]
     assert hc.timeout_probe_findings(None, None)["ok"] is False
+
+PROBE_PROCS = (f"steps/{FIRST}/artifacts/logs/artifacts/probe/{hc.BEFORE}/procs.txt",
+               f"steps/{SECOND}/artifacts/logs/artifacts/probe/{SECOND}/procs.txt")
+
+
+@pytest.mark.parametrize("which, text, expected", [
+    (1, None, f"{SECOND}: probe file {SECOND}/procs.txt missing"),
+    (0, None, f"{FIRST}: probe file {hc.BEFORE}/procs.txt missing"),
+    (1, "", f"{SECOND}: probe file {SECOND}/procs.txt has no PID-1 line"),
+    (1, "52 1 sleep 600", f"{SECOND}: probe file {SECOND}/procs.txt has no PID-1 line"),
+    (0, "50 1 claude --print", f"{FIRST}: probe file {hc.BEFORE}/procs.txt has no PID-1 line"),
+])
+def test_timeout_probe_names_process_evidence_it_could_not_read(tmp_path, which, text, expected):
+    files = {PROBE_PROCS[0]: "1 0 sleep infinity\n50 1 claude --print",
+             PROBE_PROCS[1]: "1 0 sleep infinity",
+             f"steps/{FIRST}/artifacts/logs/artifacts/{FIRST}/harness/goals/check-goal.json": "{}"}
+    if text is None:
+        del files[PROBE_PROCS[which]]
+    else:
+        files[PROBE_PROCS[which]] = text
+    timed_out = step_result(FIRST, reward=0.0, exception=("AgentTimeoutError",
+                                                          "Agent execution timed out after 60.0 seconds"))
+    trial, result = make_trial(tmp_path, files=files, steps=[timed_out, step_result(SECOND)])
+    out = hc.timeout_probe_findings(trial, result)
+    assert out["ok"] is None  # recorded, not asserted
+    assert any(f.startswith(expected) for f in out["failures"]), out["failures"]
+    assert out["recorded"]["round_2_started"] is True  # the rest is still recorded
+
+
+def test_the_probe_variants_round_2_is_graded_on_its_own_file_only(tmp_path):
+    dest = hc.build_variant(tmp_path / "v", "probe")
+    script = dest / "steps" / SECOND / "tests" / "test.sh"
+    original = hc.DUMMY / "steps" / SECOND / "tests" / "test.sh"
+    assert "a.txt" not in script.read_text() and "b.txt" in script.read_text()
+    assert script.stat().st_mode & 0o111 == 0o111  # write_text kept the executable bit
+    assert "a.txt" in original.read_text() and original.stat().st_mode & 0o111 == 0o111  # the committed dummy
+    assert subprocess.run(["bash", "-n", str(script)]).returncode == 0
+    task = hc.prepare(tmp_path / "work", "probe", "agent", "evo-local/dummy:test")
+    assert (task / "steps" / SECOND / "tests" / "test.sh").stat().st_mode & 0o111 == 0o111
+    other = hc.build_variant(tmp_path / "other", "check")
+    assert (other / "steps" / SECOND / "tests" / "test.sh").read_text() == original.read_text()
+    # Run it against a stand-in /app and /logs: b.txt alone passes, a wrong b.txt fails.
+    app, logs = tmp_path / "app", tmp_path / "logs"
+    local = tmp_path / "local.sh"
+    local.write_text(script.read_text().replace("/app/", f"{app}/").replace("/logs/", f"{logs}/"))
+    app.mkdir()
+    for content, reward in (("B\n", "1"), ("X\n", "0")):
+        (app / "b.txt").write_text(content)
+        assert subprocess.run(["bash", str(local)]).returncode == 0
+        assert (logs / "verifier" / "reward.txt").read_text() == reward + "\n"
 
 
 def canary_stream(is_error, target="/app/.claude/harness/gates/x/request.md"):

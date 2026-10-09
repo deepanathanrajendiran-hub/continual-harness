@@ -64,6 +64,18 @@ If the Write tool refuses or fails, do not create the file any other way; reply 
 """
 
 
+# Probe variant only: round 1 times out before it can write its file, so round 2 must be graded on its own file.
+PROBE_ROUND_2_TEST = """#!/bin/bash
+# Probe variant: round 1 times out before it writes its file, so round 2 passes on /app/b.txt alone.
+mkdir -p /logs/verifier
+if [ "$(cat /app/b.txt 2>/dev/null)" = "B" ]; then
+  echo 1 > /logs/verifier/reward.txt
+else
+  echo 0 > /logs/verifier/reward.txt
+fi
+"""
+
+
 def dummy_toml(*, steps=STEPS, verifier_timeout_sec=VERIFIER_TIMEOUT_SEC, round1_agent_timeout_sec=None) -> str:
     """The dummy's task.toml; bench/evo/dummy/task.toml is this function's default output."""
     lines = [
@@ -115,6 +127,8 @@ def build_variant(dest: Path, variant: str) -> Path:
         (first / "tests" / "sleep_sec").write_text(f"{VERIFIER_SLEEP_SEC}\n")
     elif variant == "probe":
         (first / "instruction.md").write_text(SLEEP_INSTRUCTION)
+        # write_text rewrites the copied file in place, so it keeps its executable bit.
+        (dest / "steps" / STEPS[1] / "tests" / "test.sh").write_text(PROBE_ROUND_2_TEST)
     elif variant == "canary":
         (first / "instruction.md").write_text(CANARY_INSTRUCTION)
     return dest
@@ -203,6 +217,11 @@ def _args(lines) -> list:
     return [parts[2] for parts in (line.split(" ", 2) for line in lines or []) if len(parts) == 3]
 
 
+def _has_init(lines) -> bool:
+    """True when a probe procs.txt lists the container's PID 1 (a line "1 0 ..."), so it really listed processes."""
+    return any(line.startswith("1 0 ") for line in lines or [])
+
+
 def _claude_like(args: str) -> bool:
     return args.startswith("claude") or "/claude " in args
 
@@ -277,7 +296,11 @@ def check_findings(trial_dir, result) -> dict:
             failures.append(f"{name}: setup.sh is still in the project")
         if not (collected_root(trial_dir, name) / name / "harness" / "goals" / "check-goal.json").is_file():
             failures.append(f"{name}: the collect hook did not copy the ledger")
-    if DECOY in _args(lines(second, second, "procs.txt")):
+    survivors = lines(second, second, "procs.txt")
+    if not _has_init(survivors):
+        failures.append(f"{second}: probe file {second}/procs.txt has no PID-1 line, "
+                        "so a killed decoy cannot be told from an unread process list")
+    if DECOY in _args(survivors):
         failures.append(f"{second}: the collect hook left the stray claude decoy running")
     if TESTS_MARKER in lines(second, second, "tests.txt"):
         failures.append(f"{second}: round 1's /tests is readable")
@@ -312,14 +335,29 @@ def verifier_timeout_findings(trial_dir, result, expected_sec=SHORT_VERIFIER_TIM
 
 
 def timeout_probe_findings(trial_dir, result) -> dict:
-    """Record (not assert) what a round-1 agent timeout does to grading, to stray processes and to round 2."""
+    """Record (not assert) what a round-1 agent timeout does to grading, to stray processes and to round 2.
+
+    ok stays None, but a process list that is missing or lacks the container's PID-1 line is named in failures:
+    an empty list must not read as "nothing survived into round 2".
+    """
     if trial_dir is None or result is None:
         return _no_trial("recorded")
     trial_dir = Path(trial_dir)
     steps = _steps(result)
     first, second = steps.get(STEPS[0]), steps.get(STEPS[1])
-    before = _args(_read(probe_dir(trial_dir, STEPS[0], BEFORE) / "procs.txt"))
-    later = _args(_read(probe_dir(trial_dir, STEPS[1], STEPS[1]) / "procs.txt"))
+    failures = []
+
+    def processes(step, label):
+        found = _read(probe_dir(trial_dir, step, label) / "procs.txt")
+        if found is None:
+            failures.append(f"{step}: probe file {label}/procs.txt missing")
+        elif not _has_init(found):
+            failures.append(f"{step}: probe file {label}/procs.txt has no PID-1 line, "
+                            "so it did not list the container's processes")
+        return _args(found)
+
+    before = processes(STEPS[0], BEFORE)
+    later = processes(STEPS[1], STEPS[1])
     recorded = {
         "round_1_exception": _exception(first),
         "round_1_verifier_ran": bool(((first or {}).get("verifier") or {}).get("started_at")),
@@ -331,7 +369,7 @@ def timeout_probe_findings(trial_dir, result) -> dict:
         "still_running_in_round_2": [a for a in later if a == DECOY or SLEEPER in a],
         "claude_like_in_round_2": [a for a in later if _claude_like(a)],
     }
-    return {"ok": None, "failures": [], "recorded": recorded}
+    return {"ok": None, "failures": failures, "recorded": recorded}
 
 
 def canary_findings(trial_dir, result) -> dict:
