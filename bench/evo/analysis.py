@@ -2,6 +2,7 @@
 import argparse
 import json
 import statistics
+import subprocess
 import sys
 from collections import Counter
 from itertools import product
@@ -383,7 +384,7 @@ def timing(rows) -> dict:
             "rounds": {arm: len(values) for arm, values in minutes.items()}, "n": n}
 
 
-def main(argv=None) -> int:
+def main(argv=None, *, require_freeze=None, require_frozen_record=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--runs", type=Path, default=config.RUNS)
@@ -395,6 +396,12 @@ def main(argv=None) -> int:
     sub.add_parser("timing", parents=[common], help="m_control, m_horizon and the N rule from the dry run")
     args = parser.parse_args(argv)
     rows_path = args.runs / "rows.jsonl"
+    frozen_record = None
+    if args.action in ("label", "report"):  # timing is the dry run's: it comes before the freeze
+        from bench.evo import prereg as frozen  # imported late so this module stands alone
+        (require_freeze or frozen.require_freeze)(subprocess.run)
+        if args.action == "report":  # the report plans from the frozen record, never from another prereg file
+            frozen_record = (require_frozen_record or frozen.require_frozen_record)(args.prereg, subprocess.run)
     if args.action == "label":
         print(label_rows(rows_path, runner.read_token(), judge_fn=judge.judge))
         return 0
@@ -407,7 +414,7 @@ def main(argv=None) -> int:
         return 0 if result["n"] is not None else 1
     # the planned tasks are the pre-registered ones plus the reserves the runner brought in for its drops
     dropped = evo_run.dropped_tasks(evo_run.Paths(args.runs), "main")
-    tasks = evo_run.main_tasks(json.loads(args.prereg.read_text()), dropped)
+    tasks = evo_run.main_tasks(frozen_record, dropped)
     info = {t["task"]: t["rounds"] for t in dataset.list_tasks(args.runs / "dataset" / config.DATASET_REVISION / "tasks")}
     rounds_by_task = {t: info[t] for t in tasks}
     rows = [r for r in rows if r["phase"] == "main"]

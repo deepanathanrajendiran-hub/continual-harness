@@ -397,14 +397,16 @@ def main_tasks(prereg: dict, dropped) -> list:
     return list(prereg["tasks"]) + reserve[:len(set(dropped))]
 
 
-def phase_tasks(phase: str, prereg_path: Path, only=None, *, paths=None) -> list:
+def phase_tasks(phase: str, prereg_path: Path, only=None, *, paths=None, prereg=None) -> list:
     """The walkthrough task for the dry run; for the main run the pre-registered list plus the reserves that
-    replace the main tasks deviations.md records as dropped under `paths` (none without `paths`)."""
+    replace the main tasks deviations.md records as dropped under `paths` (none without `paths`). The main run
+    reads `prereg` (the frozen record) when it is given, else the file at `prereg_path`."""
     if phase == "dry":
         tasks = [config.WALKTHROUGH]
     else:
         dropped = dropped_tasks(paths, "main") if paths is not None else []
-        tasks = main_tasks(json.loads(Path(prereg_path).read_text()), dropped)
+        record = prereg if prereg is not None else json.loads(Path(prereg_path).read_text())
+        tasks = main_tasks(record, dropped)
     if only is None:
         return tasks
     if only not in tasks:
@@ -412,7 +414,7 @@ def phase_tasks(phase: str, prereg_path: Path, only=None, *, paths=None) -> list
     return [only]
 
 
-def main(argv=None, *, require_freeze=None) -> int:
+def main(argv=None, *, require_freeze=None, require_frozen_record=None, verify_runs=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--phase", choices=PHASES, required=True)
     parser.add_argument("--only", help="run just this task of the phase")
@@ -422,6 +424,8 @@ def main(argv=None, *, require_freeze=None) -> int:
     parser.add_argument("--print-commands", action="store_true", help="print the Harbor commands and exit")
     args = parser.parse_args(argv)
     paths = Paths(args.runs)
+    # for a main run this list only serves --print-commands and the --only check: the run itself plans below from
+    # the frozen record, never from the unchecked --prereg file
     tasks = phase_tasks(args.phase, args.prereg, args.only, paths=paths)
     if args.print_commands:
         for task in tasks:
@@ -433,14 +437,20 @@ def main(argv=None, *, require_freeze=None) -> int:
     with hold_lock(paths.lock):
         freeze = "pre-freeze"
         if args.phase == "main":
-            if require_freeze is None:
-                from bench.evo.prereg import require_freeze  # Task 11; imported late so this module stands alone
+            # Task 11; imported late so this module stands alone
+            from bench.evo import prereg as frozen
+            require_freeze = require_freeze or frozen.require_freeze
+            require_frozen_record = require_frozen_record or frozen.require_frozen_record
+            verify_runs = verify_runs or frozen.verify_runs
             freeze = require_freeze(subprocess.run)
+            record = require_frozen_record(args.prereg, subprocess.run)
+            tasks = phase_tasks(args.phase, args.prereg, args.only, paths=paths, prereg=record)
             # a validation rerun after the freeze rebuilds the image and rewrites its record: refuse that here
-            pinned = json.loads(Path(args.prereg).read_text())["task_details"]
+            pinned = record["task_details"]
             for task in tasks:
                 if validated_image(task, paths) != (pinned.get(task) or {}).get("image_id"):
                     raise ImageChanged(f"{task}: validated image differs from the pre-registered one")
+            verify_runs(record, args.runs, tasks)  # the bundle, prompt files and agent copies are the pinned ones
         token = read_token()
         try:
             result = run_phase(args.phase, tasks, attempt=args.attempt, paths=paths, token=token, freeze=freeze,

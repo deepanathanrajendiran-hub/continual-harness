@@ -303,7 +303,7 @@ def test_score_phase_writes_valid_records_of_the_phase_and_keeps_labels(tmp_path
 def test_cli_prints_counts_and_never_a_message(tmp_path, capsys):
     record = make_job(tmp_path, ["r1"], [{"events": [INIT, done("SECRET-FINAL-MESSAGE")]}])
     write_records(tmp_path, record)
-    assert score.main(["--runs", str(tmp_path), "--phase", "main"]) == 0
+    assert score.main(["--runs", str(tmp_path), "--phase", "main"], require_freeze=lambda git: "abc") == 0
     out = capsys.readouterr().out
     assert json.loads(out) == {"phase": "main", "rows": 1, "out": str(tmp_path / "rows.jsonl")}
     assert "SECRET" not in out
@@ -381,3 +381,27 @@ def test_a_collected_copy_with_no_goals_still_compares_the_next_round_with_nothi
     assert (rows[0]["goal_slugs"], rows[0]["end_reason"]) == ([], "no goal")
     assert (rows[1]["goal_slugs"], rows[1]["horizon_started"], rows[1]["end_reason"]) == (
         ["first-request"], True, "complete")
+
+class Unfrozen(RuntimeError):
+    """Raised by a fake freeze check."""
+
+
+def test_cli_scores_the_main_phase_only_after_the_freeze_check(tmp_path):
+    write_records(tmp_path, make_job(tmp_path, ["r1"], [{"events": [INIT, done()]}]))
+
+    def refuse(git):
+        raise Unfrozen("frozen paths changed since evo-prereg")
+
+    with pytest.raises(Unfrozen):
+        score.main(["--runs", str(tmp_path), "--phase", "main"], require_freeze=refuse)
+    assert not (tmp_path / "rows.jsonl").exists()
+
+
+def test_cli_scores_the_dry_phase_without_a_freeze(tmp_path, capsys):
+    write_records(tmp_path, make_job(tmp_path, ["r1"], [{"events": [INIT, done()]}], phase="dry"))
+
+    def never(git):
+        raise AssertionError("the dry run happens before the freeze")
+
+    assert score.main(["--runs", str(tmp_path), "--phase", "dry"], require_freeze=never) == 0
+    assert json.loads(capsys.readouterr().out)["rows"] == 1

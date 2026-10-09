@@ -260,14 +260,14 @@ def test_report_cli_writes_the_report_and_refuses_unfinished_work(tmp_path, monk
     monkeypatch.setattr(analysis.dataset, "list_tasks", list_tasks)
     out = tmp_path / "docs" / "report.md"
     args = ["report", "--runs", str(runs), "--prereg", str(prereg), "--out", str(out)]
-    assert analysis.main(args) == 0
+    assert analysis.main(args, **FROZEN) == 0
     assert seen == [runs / "dataset" / config.DATASET_REVISION / "tasks"]
     assert "| t3 |" in out.read_text() and "- t3 dropped" in out.read_text()
     assert json.loads(capsys.readouterr().out)["primary"]["n"] == 2
     out.unlink()
     rows[0]["label"] = None
     again = write_runs(tmp_path / "again", rows, records)
-    assert analysis.main(["report", "--runs", str(again), "--prereg", str(prereg), "--out", str(out)]) == 2
+    assert analysis.main(["report", "--runs", str(again), "--prereg", str(prereg), "--out", str(out)], **FROZEN) == 2
     assert not out.exists() and json.loads(capsys.readouterr().out)["unlabeled"] == ["main__t1__control__a1 round 1"]
 
 
@@ -284,7 +284,7 @@ def test_report_cli_plans_the_reserve_a_drop_brought_in_and_shows_the_dropped_ta
     monkeypatch.setattr(analysis.dataset, "list_tasks",
                         lambda root: [{"task": t, "rounds": n} for t, n in rounds.items()])
     out = tmp_path / "docs" / "report.md"
-    assert analysis.main(["report", "--runs", str(runs), "--prereg", str(prereg), "--out", str(out)]) == 0
+    assert analysis.main(["report", "--runs", str(runs), "--prereg", str(prereg), "--out", str(out)], **FROZEN) == 0
     printed = json.loads(capsys.readouterr().out)
     assert printed["statuses"] == {"t1": "valid", "t2": "valid", "t3": "dropped", "t4": "valid"}
     assert printed["primary"]["n"] == 3
@@ -306,7 +306,7 @@ def test_label_cli_uses_the_keychain_token_and_the_tb4_judge(tmp_path, monkeypat
     runs = write_runs(tmp_path, [row("t1", "control", 1, False, label=None)], [])
     monkeypatch.setattr(analysis.runner, "read_token", lambda: "tok")
     monkeypatch.setattr(judge, "judge", lambda message, token: "neither")
-    assert analysis.main(["label", "--runs", str(runs)]) == 0
+    assert analysis.main(["label", "--runs", str(runs)], **FROZEN) == 0
     assert json.loads((runs / "rows.jsonl").read_text())["label"] == "neither"
 
 
@@ -330,3 +330,60 @@ def test_the_leftover_audit_counts_rounds_by_what_the_hook_found():
     left = summary["validity"]["leftovers"]
     assert (left["audited"], left["killed"], left["survivors"], left["tmp"]) == (3, 1, 1, 2)
     assert "rounds audited 3 of" in analysis.render(summary)
+
+class Unfrozen(RuntimeError):
+    """Raised by a fake freeze check."""
+
+
+# the freeze checks `label` and `report` make first, answered as a clean freeze whose record is the prereg file
+FROZEN = {"require_freeze": lambda git: "abc",
+          "require_frozen_record": lambda path, git: json.loads(path.read_text())}
+
+
+def test_label_cli_needs_the_freeze_before_it_reads_the_token(tmp_path, monkeypatch):
+    runs = write_runs(tmp_path, [row("t1", "control", 1, False, label=None)], [])
+
+    def no_token():
+        raise AssertionError("token read before the freeze check")
+
+    monkeypatch.setattr(analysis.runner, "read_token", no_token)
+
+    def refuse(git):
+        raise Unfrozen("frozen paths changed since evo-prereg")
+
+    with pytest.raises(Unfrozen):
+        analysis.main(["label", "--runs", str(runs)], require_freeze=refuse)
+    assert json.loads((runs / "rows.jsonl").read_text())["label"] is None
+
+
+def test_report_cli_needs_the_freeze_and_plans_from_the_frozen_record(tmp_path, monkeypatch, capsys):
+    rows, records = study()
+    runs = write_runs(tmp_path, rows, records, deviations="- t3 dropped\n")
+    prereg = tmp_path / "prereg.json"
+    prereg.write_text(json.dumps({"tasks": ["other"]}))  # a file that is not the frozen record
+    monkeypatch.setattr(analysis.dataset, "list_tasks",
+                        lambda root: [{"task": t, "rounds": n} for t, n in {**ROUNDS, "other": 9}.items()])
+    out = tmp_path / "docs" / "report.md"
+    args = ["report", "--runs", str(runs), "--prereg", str(prereg), "--out", str(out)]
+    asked = []
+
+    def refuse_freeze(git):
+        raise Unfrozen("tag evo-prereg is missing")
+
+    def record(path, git):
+        asked.append(path)
+        return {"tasks": TASKS}
+
+    with pytest.raises(Unfrozen):
+        analysis.main(args, require_freeze=refuse_freeze, require_frozen_record=record)
+    assert asked == [] and not out.exists()  # the freeze comes first
+
+    def refuse_record(path, git):
+        raise Unfrozen("prereg.json differs from the tagged one")
+
+    with pytest.raises(Unfrozen):
+        analysis.main(args, require_freeze=lambda git: "abc", require_frozen_record=refuse_record)
+    assert not out.exists()
+    assert analysis.main(args, require_freeze=lambda git: "abc", require_frozen_record=record) == 0
+    assert asked == [prereg]
+    assert set(json.loads(capsys.readouterr().out)["statuses"]) == set(TASKS)  # the record's tasks, not the file's

@@ -1,12 +1,13 @@
 import hashlib
 import json
+import shutil
 import subprocess
 from pathlib import Path
 
 import pytest
 
-from bench.evo import config, order, prereg, validate
-from bench.tb4 import bundle
+from bench.evo import config, copies, order, prereg, validate
+from bench.tb4 import bundle, copies as tb4_copies
 
 
 def cp(cmd, code=0, out=""):
@@ -258,8 +259,12 @@ def test_require_freeze_accepts_a_descendant_with_the_frozen_paths_unchanged():
 
     assert prereg.require_freeze(recording) == "abc"
     diff = next(c for c in calls if c[3] == "diff")
+    # the code, the record, and what the post-run steps read: the judge rubric, the spec and prereg.md
     assert diff[4:] == ["--quiet", "abc", "HEAD", "--", "bench/evo", "bench/tb4",
-                        "docs/evaluations/evocode-horizon/prereg.json"]
+                        "docs/evaluations/evocode-horizon/prereg.json",
+                        "docs/evaluations/tb4-horizon-pilot/prompts/judge.md",
+                        "docs/superpowers/specs/2026-10-09-evocode-horizon-design.md",
+                        "docs/evaluations/evocode-horizon/prereg.md"]
     assert ["refs/tags/evo-prereg^{commit}"] == [c[-1] for c in calls if c[3] == "rev-parse"]
 
 
@@ -458,6 +463,11 @@ def test_pinned_settings_and_dataset(pinned):
     assert all(pinned["pilot"][job]["ok"] is True for job in prereg.PILOT_JOBS if job not in prereg.RECORDED_ONLY)
 
 
+@frozen
+def test_pinned_markdown_is_the_rendering_of_the_record(pinned):
+    assert prereg.render(pinned) == _blob(prereg.PREREG_MD).decode()
+
+
 def test_collect_accepts_a_nop_chain_that_stopped_after_a_graded_first_round():
     # A step with min_reward aborts the chain after the nop's failed round 1; validate.failures accepts this.
     validations = {t: valid(t) for t in ORDER}
@@ -502,3 +512,138 @@ def test_prereg_md_states_the_nop_rule_and_why_a_reserve_can_be_empty():
     text = prereg.render(make(validations=validations))
     assert "nop reward below 1 on round 1 and on every later round it reached" in text
     assert "No reserve: validation stopped at the Nth passing task, or no later task passed it." in text
+
+def verified_runs(tmp_path, tasks=(ORDER[0], ORDER[1])):
+    """A RUNS holding the bundle, both prompt files and the agent copy of each task, and the record that pins them."""
+    runs = tmp_path / "runs"
+    record = {"bundle": prereg.build_bundle(runs), "prompts": {"file_sha256": {}}, "task_details": {}}
+    for task in tasks:
+        copy = runs / "copies" / "agent" / task
+        (copy / "steps").mkdir(parents=True)
+        (copy / "task.toml").write_text(f'name = "{task}"\n')
+        record["task_details"][task] = {"minutes": 30, "copy_digest": tb4_copies.tree_digest(copy)}
+        for arm in config.ARMS:
+            path = copies.write_prompt(runs / "prompts" / f"{task}__{arm}.md", arm, 30)
+            record["prompts"]["file_sha256"][f"{arm}@30"] = sha(path.read_bytes())
+    return runs, record
+
+
+def test_verify_runs_accepts_the_run_directory_the_record_pins(tmp_path):
+    runs, record = verified_runs(tmp_path)
+    assert prereg.verify_runs(record, runs, list(record["task_details"])) is None
+    assert prereg.verify_runs(record, runs, [ORDER[1]]) is None
+
+
+def test_verify_runs_skips_prompt_files_and_copies_that_do_not_exist_yet(tmp_path):
+    runs, record = verified_runs(tmp_path)
+    shutil.rmtree(runs / "prompts")
+    shutil.rmtree(runs / "copies")
+    assert prereg.verify_runs(record, runs, [ORDER[0], ORDER[1]]) is None
+
+
+def test_verify_runs_refuses_a_bundle_that_differs_from_the_record(tmp_path):
+    runs, record = verified_runs(tmp_path)
+    other = dict(record["bundle"], files=dict(record["bundle"]["files"], **{"horizon/SKILL.md": "0" * 64}))
+    with pytest.raises(prereg.NotFrozen, match="bundle"):
+        prereg.verify_runs(dict(record, bundle=other), runs, [ORDER[0]])
+
+
+def test_verify_runs_refuses_an_edited_bundle_directory(tmp_path):
+    runs, record = verified_runs(tmp_path)
+    (runs / "bundle" / "horizon" / "scripts" / "reviewing.py").write_text("# edited\n")
+    with pytest.raises(prereg.NotFrozen, match="reviewing.py"):
+        prereg.verify_runs(record, runs, [ORDER[0]])
+
+
+def test_verify_runs_refuses_a_prompt_file_that_differs_from_the_record(tmp_path):
+    runs, record = verified_runs(tmp_path)
+    (runs / "prompts" / f"{ORDER[1]}__horizon.md").write_text("Take your time.\n")
+    assert prereg.verify_runs(record, runs, [ORDER[0]]) is None  # only the tasks in play are held to the record
+    with pytest.raises(prereg.NotFrozen, match=f"{ORDER[1]}__horizon.md"):
+        prereg.verify_runs(record, runs, [ORDER[0], ORDER[1]])
+
+
+def test_verify_runs_refuses_an_agent_copy_that_differs_from_the_record(tmp_path):
+    runs, record = verified_runs(tmp_path)
+    (runs / "copies" / "agent" / ORDER[1] / "extra.txt").write_text("not validated\n")
+    assert prereg.verify_runs(record, runs, [ORDER[0]]) is None
+    with pytest.raises(prereg.NotFrozen, match=ORDER[1]):
+        prereg.verify_runs(record, runs, [ORDER[0], ORDER[1]])
+
+
+def test_verify_runs_refuses_a_task_the_record_does_not_name(tmp_path):
+    runs, record = verified_runs(tmp_path)
+    with pytest.raises(prereg.NotFrozen, match=ORDER[5]):
+        prereg.verify_runs(record, runs, [ORDER[0], ORDER[5]])
+
+
+def tagged_repo(tmp_path, text=None):
+    """A real repository holding docs/evaluations/evocode-horizon/prereg.json, tagged evo-prereg when text is given."""
+    repo = tmp_path / "repo with space "
+    path = repo / prereg.PREREG_JSON
+    path.parent.mkdir(parents=True)
+    path.write_text("{}\n")
+    git(tmp_path, "init", "-q", str(repo))
+    if text is not None:
+        path.write_text(text)
+    git(repo, "add", ".")
+    git(repo, "commit", "-qm", "freeze")
+    if text is not None:
+        git(repo, "tag", "-a", config.FREEZE_TAG, "-m", "freeze")
+    return repo, path
+
+
+def test_require_frozen_record_returns_the_record_the_tag_holds(tmp_path):
+    text = json.dumps({"tasks": ["t1"], "n": 1}, indent=2) + "\n"
+    repo, path = tagged_repo(tmp_path, text)
+    assert prereg.require_frozen_record(path, repo=repo) == {"tasks": ["t1"], "n": 1}
+    assert prereg.require_frozen_record(str(path), subprocess.run, repo=repo) == {"tasks": ["t1"], "n": 1}
+
+
+def test_require_frozen_record_refuses_a_file_that_is_not_the_tagged_one(tmp_path):
+    repo, path = tagged_repo(tmp_path, json.dumps({"tasks": ["t1"]}) + "\n")
+    elsewhere = tmp_path / "prereg.json"
+    elsewhere.write_text(json.dumps({"tasks": ["t2"]}) + "\n")
+    with pytest.raises(prereg.NotFrozen, match="differs"):
+        prereg.require_frozen_record(elsewhere, repo=repo)
+    path.write_text(json.dumps({"tasks": ["t1"]}) + " \n")  # even whitespace
+    with pytest.raises(prereg.NotFrozen, match="differs"):
+        prereg.require_frozen_record(path, repo=repo)
+    with pytest.raises(prereg.NotFrozen, match="cannot read"):
+        prereg.require_frozen_record(tmp_path / "nothing.json", repo=repo)
+
+
+def test_require_frozen_record_refuses_without_a_tag_or_a_tagged_record(tmp_path):
+    repo, path = tagged_repo(tmp_path)
+    with pytest.raises(prereg.NotFrozen, match=config.FREEZE_TAG):
+        prereg.require_frozen_record(path, repo=repo)
+    git(repo, "rm", "-q", prereg.PREREG_JSON)
+    git(repo, "commit", "-qm", "no record")
+    git(repo, "tag", "-a", config.FREEZE_TAG, "-m", "freeze")
+    with pytest.raises(prereg.NotFrozen, match=prereg.PREREG_JSON):
+        prereg.require_frozen_record(path, repo=repo)
+
+
+def test_collect_writes_a_public_reason_without_host_paths_or_test_names():
+    docker = ("build failed twice: Command '['docker', 'build', '-t', 'evo-local/x:9fcae3e5539d', "
+              "'/Users/x/Documents/evocode-horizon-runs/copies/validation/x']' returned non-zero exit status 1.")
+    other = f"image ID changed during checks; see {config.RUNS}/logs/build__x.log and {Path.home()}/.cache/harbor"
+    validations = {t: valid(t) for t in ORDER}
+    validations[ORDER[0]] = valid(ORDER[0], ok=False, reason=docker)
+    validations[ORDER[1]] = valid(ORDER[1], ok=False, reason="copy failed: steps/round-1/tests/x: not a regular file")
+    validations[ORDER[2]] = valid(ORDER[2], ok=False, reason=other)
+    validations[ORDER[3]] = valid(ORDER[3], ok=False, reason="nop reward 1.0 in round-3")
+    out = make(validations=validations, task_infos=infos())
+    assert out["replaced"] == [
+        {"task": ORDER[0], "reason": "build failed twice"},
+        {"task": ORDER[1], "reason": "copy failed"},
+        {"task": ORDER[2], "reason": "image ID changed during checks; see $RUNS/logs/build__x.log and ~/.cache/harbor"},
+        {"task": ORDER[3], "reason": "nop reward 1.0 in round-3"}]
+    committed = json.dumps(out) + prereg.render(out)
+    for private in ("/Users/x", "Command '", "tests/x", "round-1/", str(config.RUNS), str(Path.home())):
+        assert private not in committed
+
+def test_prereg_md_is_the_rendering_of_the_stored_json(tmp_path):
+    # json.dumps(sort_keys=True) reorders the settings table; the freeze pin renders the stored record again
+    json_path, md_path = prereg.write(make(), tmp_path)
+    assert md_path.read_text() == prereg.render(json.loads(json_path.read_text()))

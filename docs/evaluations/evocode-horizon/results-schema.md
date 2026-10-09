@@ -77,7 +77,7 @@ Written by `python3 -m bench.evo.prereg write`, committed and tagged `evo-prereg
 | --- | --- |
 | `study`, `spec`, `freeze_tag` | Title, the design spec's path and sha256, and the tag name |
 | `n`, `n_rule` | N, and the rule's inputs: the choices, the planned rounds per task, the budget, the dry run's minutes per round per arm, its rounds and its task |
-| `tasks`, `replaced` | The measured tasks in order; the tasks before them passed over for failing validation, with the reason |
+| `tasks`, `replaced` | The measured tasks in order; the tasks before them passed over for failing validation, with a public reason: a copy or build failure is cut to what failed (`copy failed`, `build failed twice`), and the host's `RUNS` and home paths become `$RUNS` and `~`. The full text stays in `RUNS/validation/<task>.json` |
 | `reserve` | The pre-registered replacements: the tasks after the Nth measured one whose validation passes the same checks, in order. A main task dropped for an infrastructure failure is replaced by the next unused one; with none left a drop stays a drop |
 | `task_details` | For each measured and reserve task: its position in the order, rounds, minutes, agent and verifier timeouts, arm order, image tag, image ID and agent copy digest |
 | `arms`, `arm_orders`, `draw` | Arm names, each measured task's seeded arm order, and the seeded draw (seed, domains, pool, excluded prefix, walkthrough, algorithm, order) |

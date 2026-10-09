@@ -7,6 +7,7 @@ the collect hook saved. It never opens tests/, solution/ or instructions, and it
 import argparse
 import json
 import re
+import subprocess
 import sys
 import tomllib
 from pathlib import Path
@@ -227,11 +228,15 @@ def score_phase(phase: str, *, runs: Path = config.RUNS) -> int:
     return len(rows)
 
 
-def main(argv=None) -> int:
+def main(argv=None, *, require_freeze=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--runs", type=Path, default=config.RUNS)
     parser.add_argument("--phase", choices=("dry", "main"), required=True)
     args = parser.parse_args(argv)
+    if args.phase == "main":  # the dry run happens before the freeze; scoring the main run needs it intact
+        if require_freeze is None:
+            from bench.evo.prereg import require_freeze  # imported late so this module stands alone
+        require_freeze(subprocess.run)
     count = score_phase(args.phase, runs=args.runs)
     print(json.dumps({"phase": args.phase, "rows": count, "out": str(args.runs / "rows.jsonl")}))
     return 0

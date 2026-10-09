@@ -11,15 +11,18 @@ from pathlib import Path
 
 from bench.evo import config, copies, dataset, validate
 from bench.evo import order as evo_order
-from bench.tb4 import bundle as tb4_bundle
+from bench.evo import run as evo_run
+from bench.tb4 import bundle as tb4_bundle, copies as tb4_copies
 
 SPEC = "docs/superpowers/specs/2026-10-09-evocode-horizon-design.md"
 JUDGE_RUBRIC = "docs/evaluations/tb4-horizon-pilot/prompts/judge.md"
 DOCS_REL = config.DOCS.relative_to(config.REPO_ROOT).as_posix()
 PREREG_JSON = f"{DOCS_REL}/prereg.json"
+PREREG_MD = f"{DOCS_REL}/prereg.md"
 REPORT = f"{DOCS_REL}/report.md"
 CODE_PATHS = ("bench/evo", "bench/tb4")
-FROZEN_PATHS = (*CODE_PATHS, PREREG_JSON)
+# What the main run, scoring, the judge and the report read: the code, the record, its rendering, the rubric, the spec.
+FROZEN_PATHS = (*CODE_PATHS, PREREG_JSON, JUDGE_RUBRIC, SPEC, PREREG_MD)
 # Task 7's Harbor check jobs, by job name without the attempt; the probe is recorded, not asserted.
 PILOT_JOBS = ("check__dummy__oracle", "check__dummy-vtimeout__oracle", "check__dummy__control",
               "check__dummy-probe__control", "canary__dummy__horizon")
@@ -163,6 +166,17 @@ def select_tasks(n: int, order_list, validations: dict, task_infos: dict) -> tup
     return selected, replaced
 
 
+def public_reason(reason):
+    """A validation reason as the committed record states it. RUNS/validation/<task>.json keeps the full text.
+    A copy or build failure keeps only what failed: its text can hold a docker command line with the absolute RUNS
+    path, or the path of a file under the task's tests/. Any other reason loses the host's RUNS and home paths."""
+    if not isinstance(reason, str):
+        return reason
+    if reason.startswith(("copy failed", "build failed")):
+        return reason.split(":", 1)[0]
+    return reason.replace(str(config.RUNS), "$RUNS").replace(str(Path.home()), "~")
+
+
 def reserve_tasks(order_list, tasks, validations: dict, task_infos: dict) -> list:
     """The pre-registered replacements: every task after the Nth selected one whose validation record passes the
     checks the selected tasks pass (ok, the saved rewards, the copy code digest, one agent timeout for all rounds).
@@ -244,6 +258,7 @@ def collect(n, order, validations, dry_timing, *, task_infos, bundle, pin, obser
         raise FreezeError(f"N = {n}, but the N rule gives {n_from_timing(dry_timing)}")
     check_inputs(pin, bundle, observed, pilot)
     tasks, replaced = select_tasks(n, order["order"], validations, task_infos)
+    replaced = [{**item, "reason": public_reason(item["reason"])} for item in replaced]
     mixed = [t for t in tasks if task_infos[t].get("uniform_agent_timeout") is False]
     if mixed:
         raise FreezeError(f"rounds of {mixed} have different agent timeouts, so one M per task is wrong: "
@@ -385,12 +400,14 @@ def render(p: dict) -> str:
 
 
 def write(prereg: dict, docs_dir=config.DOCS) -> tuple:
-    """Write prereg.json and prereg.md; return their paths."""
+    """Write prereg.json and prereg.md; return their paths. The markdown renders the stored JSON, not the dict
+    that was passed: sorting the keys reorders some tables, and the freeze pin renders the stored record again."""
     docs_dir = Path(docs_dir)
     docs_dir.mkdir(parents=True, exist_ok=True)
     json_path, md_path = docs_dir / "prereg.json", docs_dir / "prereg.md"
-    _write_text(json_path, json.dumps(prereg, indent=2, sort_keys=True) + "\n")
-    _write_text(md_path, render(prereg))
+    text = json.dumps(prereg, indent=2, sort_keys=True) + "\n"
+    _write_text(json_path, text)
+    _write_text(md_path, render(json.loads(text)))
     return json_path, md_path
 
 
@@ -483,6 +500,51 @@ def require_freeze(run=subprocess.run, *, repo=config.REPO_ROOT) -> str:
     if git("ls-files", "--error-unmatch", "--", REPORT).returncode == 0:
         raise NotFrozen(f"{REPORT} is committed: the main run is closed")
     return tag
+
+
+def require_frozen_record(path, run=subprocess.run, *, repo=config.REPO_ROOT) -> dict:
+    """The parsed prereg.json at the freeze tag, once `path` holds exactly its bytes. A main run, the judge and the
+    report plan from this record; a prereg file that is not the frozen one would change the task list unnoticed."""
+    tag = frozen_commit(run, repo)
+    if tag is None:
+        raise NotFrozen(f"tag {config.FREEZE_TAG} is missing")
+    proc = run(["git", "-C", str(repo), "show", f"{tag}:{PREREG_JSON}"], capture_output=True)
+    if proc.returncode != 0:
+        raise NotFrozen(f"{config.FREEZE_TAG} has no {PREREG_JSON}")
+    try:
+        found = Path(path).read_bytes()
+    except OSError as error:
+        raise NotFrozen(f"cannot read {path}: {error}") from error
+    if found != proc.stdout:
+        raise NotFrozen(f"{path} differs from {PREREG_JSON} at {config.FREEZE_TAG}")
+    return json.loads(proc.stdout)
+
+
+def verify_runs(prereg: dict, runs, tasks) -> None:
+    """Before a main run, hold RUNS to the record: the Horizon bundle, every prompt file and every agent copy that
+    exists for the tasks in play must be what prereg.json pins. Raises NotFrozen naming the first mismatch."""
+    runs = Path(runs)
+    try:
+        built = build_bundle(runs)
+    except BundleMismatch as error:
+        raise NotFrozen(str(error)) from error
+    if built != prereg["bundle"]:
+        pinned = prereg["bundle"].get("files") or {}
+        differ = sorted(k for k in set(built["files"]) | set(pinned) if built["files"].get(k) != pinned.get(k))
+        raise NotFrozen(f"{runs / 'bundle'} is not the bundle prereg.json pins; it differs in "
+                        f"{differ or 'its commit or modules'}")
+    paths = evo_run.Paths(runs)
+    for task in tasks:
+        details = (prereg.get("task_details") or {}).get(task)
+        if details is None:
+            raise NotFrozen(f"{task} is not pre-registered in prereg.json")
+        for arm in config.ARMS:
+            prompt, key = paths.prompt(task, arm), f"{arm}@{details['minutes']}"
+            if prompt.is_file() and sha256_file(prompt) != prereg["prompts"]["file_sha256"].get(key):
+                raise NotFrozen(f"{prompt} differs from the {key} prompt file prereg.json pins")
+        copy = paths.copy(task)
+        if copy.exists() and tb4_copies.tree_digest(copy) != details["copy_digest"]:
+            raise NotFrozen(f"{copy} differs from the agent copy prereg.json pins for {task}")
 
 
 def main(argv=None) -> int:

@@ -591,13 +591,16 @@ class TokenRead(Exception):
     """Raised by the patched read_token: main got past every check that comes before the token."""
 
 
-def frozen_main(paths, prereg, monkeypatch):
+def frozen_main(paths, prereg, monkeypatch, **fakes):
     def token(*args, **kwargs):
         raise TokenRead
 
     monkeypatch.setattr(run, "read_token", token)
+    # by default the prereg file is the frozen record and the run directory matches it; a test overrides either
+    fakes = {"require_frozen_record": lambda path, git: json.loads(Path(path).read_text()),
+             "verify_runs": lambda record, runs, tasks: None, **fakes}
     return run.main(["--phase", "main", "--runs", str(paths.root), "--prereg", str(prereg)],
-                    require_freeze=lambda git: "abc")
+                    require_freeze=lambda git: "abc", **fakes)
 
 
 def test_main_refuses_a_validated_image_that_differs_from_the_preregistered_one(tmp_path, monkeypatch):
@@ -623,3 +626,64 @@ def test_main_checks_the_preregistered_image_of_a_reserve_once_it_is_in_play(tmp
     drop(paths, TASK)
     with pytest.raises(run.ImageChanged, match=RESERVE[0]):
         frozen_main(paths, prereg, monkeypatch)
+
+class Unfrozen(RuntimeError):
+    """Raised by a fake freeze check."""
+
+
+def test_main_takes_its_tasks_and_image_pins_from_the_frozen_record_not_the_prereg_file(tmp_path, monkeypatch):
+    paths = ready(tmp_path)
+    prereg = tmp_path / "prereg.json"
+    prereg.write_text(json.dumps({"tasks": [OTHER], "task_details": {OTHER: {"image_id": "sha256:" + "f" * 64}}}))
+    frozen = {"tasks": [TASK], "task_details": {TASK: {"image_id": IMAGE}}}
+    asked = []
+
+    def require_frozen_record(path, git):
+        asked.append(Path(path))
+        return frozen
+
+    with pytest.raises(TokenRead):  # OTHER was never validated: the file's list would stop the run first
+        frozen_main(paths, prereg, monkeypatch, require_frozen_record=require_frozen_record)
+    assert asked == [prereg]
+
+
+def test_main_stops_when_the_prereg_file_is_not_the_frozen_record(tmp_path, monkeypatch):
+    paths = ready(tmp_path)
+    prereg = tmp_path / "prereg.json"
+    prereg.write_text(json.dumps({"tasks": [TASK], "task_details": {TASK: {"image_id": IMAGE}}}))
+
+    def refuse(path, git):
+        raise Unfrozen("prereg.json differs from the tagged one")
+
+    with pytest.raises(Unfrozen):  # not TokenRead: the token is not read
+        frozen_main(paths, prereg, monkeypatch, require_frozen_record=refuse)
+
+
+def test_main_verifies_the_run_directory_against_the_record_after_the_image_pins_and_before_the_token(
+        tmp_path, monkeypatch):
+    paths = ready(tmp_path)
+    (paths.validation / f"{RESERVE[0]}.json").write_text(json.dumps(
+        {"task": RESERVE[0], "image_id": IMAGE, "arch": "arm64", "ok": True, "reason": None}))
+    prereg = tmp_path / "prereg.json"
+    frozen = {"tasks": [TASK], "reserve": RESERVE[:1], "task_details": {TASK: {"image_id": IMAGE}}}
+    prereg.write_text(json.dumps(frozen))
+    calls = []
+
+    def verify_runs(record, runs, tasks):
+        calls.append((record, Path(runs), list(tasks)))
+        raise Unfrozen("the bundle differs")
+
+    with pytest.raises(Unfrozen):  # not TokenRead: the token is not read
+        frozen_main(paths, prereg, monkeypatch, verify_runs=verify_runs)
+    assert calls == [(frozen, paths.root, [TASK])]
+    drop(paths, TASK)  # a drop brings the reserve into the list that is verified
+    frozen["task_details"][RESERVE[0]] = {"image_id": "sha256:" + "e" * 64}
+    prereg.write_text(json.dumps(frozen))
+    with pytest.raises(run.ImageChanged, match=RESERVE[0]):  # the image pins come first
+        frozen_main(paths, prereg, monkeypatch, verify_runs=verify_runs)
+    assert len(calls) == 1
+    frozen["task_details"][RESERVE[0]] = {"image_id": IMAGE}
+    prereg.write_text(json.dumps(frozen))
+    with pytest.raises(Unfrozen):
+        frozen_main(paths, prereg, monkeypatch, verify_runs=verify_runs)
+    assert calls[-1][2] == [TASK, RESERVE[0]]
