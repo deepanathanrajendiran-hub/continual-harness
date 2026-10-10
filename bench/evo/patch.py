@@ -64,19 +64,27 @@ def _overlaps(span: tuple, spans) -> bool:
 
 
 def _arch_case_arms(text: str) -> list:
-    """The (start, end) of the arms of each case statement in text that has an arm whose pattern names aarch64 or
-    arm64: such a statement already picks the arm64 artifact, so its x86_64 and amd64 arms are left as they are."""
+    """The (start, end) of each x86_64 or amd64 arm, from its pattern to its `;;`, of each case statement in text
+    that also has an arm whose pattern names aarch64 or arm64: that statement already picks the arm64 artifact, so
+    its x86_64 and amd64 arms are left as they are. An arm whose pattern names both, a `*)` arm, every other arm
+    and the `case ... in` header are not included: they can run on arm64."""
     spans = []
     for case in CASE.finditer(text):
-        patterns = (CASE_ARM.match(arm) for arm in CASE_ARM_END.split(case["arms"]))
-        if any(match and ARM64_NAME.search(match["pattern"]) for match in patterns):
-            spans.append(case.span("arms"))
+        ends = [i for end in CASE_ARM_END.finditer(text, case.start("arms"), case.end("arms")) for i in end.span()]
+        bounds = [case.start("arms"), *ends, case.end("arms")]
+        arms = [CASE_ARM.match(text, start, end) for start, end in zip(bounds[::2], bounds[1::2])]
+        arms = [(arm["pattern"], arm.start("pattern"), arm.endpos) for arm in arms if arm]
+        if any(ARM64_NAME.search(pattern) for pattern, _, _ in arms):
+            spans += [(start, end) for pattern, start, end in arms
+                      if ARCH_TOKEN.search(pattern) and not ARM64_NAME.search(pattern)]
     return spans
 
 
-def _masks(lines: list, members: list) -> dict:
-    """Per member line, the (start, end) spans in that line that belong to an arch case statement's arms."""
-    spans, masks, offset = _arch_case_arms("".join(lines[i] for i in members)), {}, 0
+def _masks(keyword: str, lines: list, members: list) -> dict:
+    """Per member line, the (start, end) spans in that line that belong to an x86_64 or amd64 arm of an arch case
+    statement. Only a RUN instruction is a shell command, so every other instruction has none."""
+    spans = _arch_case_arms("".join(lines[i] for i in members)) if keyword == "RUN" else []
+    masks, offset = {}, 0
     for index in members:
         end = offset + len(lines[index])
         masks[index] = [(max(s, offset) - offset, min(e, end) - offset) for s, e in spans if s < end and e > offset]
@@ -97,7 +105,7 @@ def arm_patch(dockerfile: str) -> tuple:
     for keyword, members in _instructions(lines):
         if keyword in BUNDLING:
             _refuse_bundled(keyword, lines, members)
-        masks = _masks(lines, members)
+        masks = _masks(keyword, lines, members)
         rewritten = False
         if keyword in PATCHED:
             for index in members:

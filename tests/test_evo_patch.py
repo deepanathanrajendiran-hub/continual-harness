@@ -174,6 +174,39 @@ def test_a_go_download_outside_the_arms_of_an_arch_case_statement_is_still_rewri
     assert [c.split(":", 1)[0] for c in changed] == ["7", "8"]
 
 
+@pytest.mark.parametrize("instruction,old,new", [
+    # a Go download inside the aarch64 arm
+    ('RUN case "$(uname -m)" in x86_64) A=amd64 ;; '
+     'aarch64) curl -fsSLO https://go.dev/dl/go1.22.1.linux-amd64.tar.gz ;; esac',
+     "go1.22.1.linux-amd64.tar.gz", "go1.22.1.linux-arm64.tar.gz"),
+    # GOARCH inside the arm64 arm
+    ('RUN case "$(dpkg --print-architecture)" in amd64) A=1 ;; arm64) export GOARCH=amd64 ;; esac',
+     "export GOARCH=amd64", "export GOARCH=arm64"),
+    # a yq download inside the *) arm
+    ('RUN case "$(uname -m)" in x86_64) : ;; aarch64) : ;; '
+     '*) curl -fsSLO https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64 ;; esac',
+     "yq_linux_amd64", "yq_linux_arm64"),
+])
+def test_rewrites_still_apply_in_the_arms_of_an_arch_case_statement_that_run_on_arm64(instruction, old, new):
+    dockerfile = f"FROM ubuntu:22.04\n{instruction}\n"
+    text, changed = patch.arm_patch(dockerfile)
+    assert text == dockerfile.replace(old, new) and text != dockerfile
+    assert [c.split(":", 1)[0] for c in changed] == ["2"]
+
+
+@pytest.mark.parametrize("instruction", [
+    # the *) arm runs on arm64
+    'RUN case "$(uname -m)" in x86_64) A=x86_64 ;; aarch64) A=arm64 ;; *) A=amd64 ;; esac',
+    # a combined arm runs on both, so its amd64 artifact is wrong on arm64
+    'RUN case "$(uname -m)" in x86_64|aarch64) curl -fsSLO https://example.com/tool-linux-amd64 ;; esac',
+    # only a RUN instruction holds a shell case statement
+    'ENV X="case y in x86_64) amd64 ;; aarch64) arm64 ;; esac"',
+])
+def test_amd64_outside_the_x86_64_arms_of_a_run_case_statement_still_raises(instruction):
+    with pytest.raises(patch.UnknownArchPattern, match="^line 2: "):
+        patch.arm_patch(f"FROM ubuntu:22.04\n{instruction}\n")
+
+
 @pytest.mark.parametrize("instruction", [
     "COPY go1.21.0.linux-amd64.tar.gz /tmp/",
     "COPY vendor/go1.21.0.linux-amd64.tar.gz /usr/local/",
