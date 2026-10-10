@@ -67,8 +67,9 @@ OUTCOMES = {
 DECISIONS = (
     "Task copies add python3 to the image for both arms when the image lacks it, so the Horizon CLI can run "
     "(user decision, 2026-10-09; tasks theme_d10_w4 and theme_d1_w11 had no python3).",
-    "The ARM patcher leaves an architecture case statement unchanged when it already has an arm64 branch "
-    "(user decision, 2026-10-09; task theme_d12_w1).",
+    "The ARM patcher leaves the x86_64/amd64 arms of an architecture case statement in a RUN instruction "
+    "unchanged when the same statement also has an aarch64/arm64 arm, and patches the rest of the statement as "
+    "usual (user decision, 2026-10-09; task theme_d12_w1).",
     "theme_d5_w9 was swapped out at validation: its oracle passes only round 1, and the same happens without the "
     "round hooks, so the failure is the task's, not the runner's (diagnosed 2026-10-09).",
 )
