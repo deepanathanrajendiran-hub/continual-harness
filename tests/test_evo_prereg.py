@@ -185,6 +185,22 @@ def test_write_renders_both_files(tmp_path):
     assert "None" not in text.replace("None of", "")
 
 
+def test_collect_and_render_record_the_decisions_made_before_the_freeze():
+    assert prereg.DECISIONS == (
+        "Task copies add python3 to the image for both arms when the image lacks it, so the Horizon CLI can run "
+        "(user decision, 2026-10-09; tasks theme_d10_w4 and theme_d1_w11 had no python3).",
+        "The ARM patcher leaves an architecture case statement unchanged when it already has an arm64 branch "
+        "(user decision, 2026-10-09; task theme_d12_w1).",
+        "theme_d5_w9 was swapped out at validation: its oracle passes only round 1, and the same happens without the "
+        "round hooks, so the failure is the task's, not the runner's (diagnosed 2026-10-09).",
+    )
+    out = make()
+    assert out["decisions"] == list(prereg.DECISIONS)
+    head, section = prereg.render(out).split("\n## Decisions made before the freeze\n\n", 1)
+    assert "### Reserve" in head and "## N rule" not in head  # Step 13 prints from ## Tasks to ## N rule
+    assert section.split("\n## N rule\n", 1)[0].splitlines() == [f"- {d}" for d in prereg.DECISIONS]
+
+
 def test_build_bundle_builds_then_verifies(tmp_path):
     runs = tmp_path / "runs"
     manifest = prereg.build_bundle(runs)

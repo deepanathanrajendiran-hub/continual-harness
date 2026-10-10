@@ -58,7 +58,7 @@ One per validated task, written by `python3 -m bench.evo.validate`. A saved reco
 | --- | --- | --- |
 | `task` | str | Task directory name |
 | `copy_digest`, `validation_copy_digest` | str or null | Tree digests of the agent copy and the validation copy |
-| `arm_patch` | object | `{changed, artifacts}` from the copy's `arm-patch.json`: the Dockerfile lines the arm64 patch rewrote, and the bundled Go archives it swapped for go.dev's arm64 ones; absent when the copy failed |
+| `arm_patch` | object | `{changed, artifacts, added}` from the copy's `arm-patch.json`: the Dockerfile lines the arm64 patch rewrote, the bundled Go archives it swapped for go.dev's arm64 ones, and the lines appended to every copy's Dockerfile (`copies.PYTHON_LINE`, which installs python3 when the image lacks it); absent when the copy failed |
 | `image_tag` | str | The local image tag, `evo-local/<task>:<first 12 characters of the dataset revision>` |
 | `image_id`, `arch` | str or null | The built image's ID and architecture (`arm64` to pass) |
 | `workdir` | str or null | Where Harbor runs the agent, the hooks and the oracle: `[environment].workdir`, else the image WORKDIR |
@@ -72,7 +72,7 @@ One per validated task, written by `python3 -m bench.evo.validate`. A saved reco
 
 ## Pre-registration: `prereg.json`
 
-Written by `python3 -m bench.evo.prereg write`, committed and tagged `evo-prereg`. Top-level keys:
+Written by `python3 -m bench.evo.prereg write`, committed and tagged `evo-prereg`. Its 24 top-level keys:
 
 | Key | Meaning |
 | --- | --- |
@@ -80,6 +80,7 @@ Written by `python3 -m bench.evo.prereg write`, committed and tagged `evo-prereg
 | `n`, `n_rule` | N, and the rule's inputs: the choices, the planned rounds per task, the budget, the dry run's minutes per round per arm, its rounds and its task |
 | `tasks`, `replaced` | The measured tasks in order; the tasks before them passed over for failing validation, with a public reason: a copy or build failure is cut to what failed (`copy failed`, `build failed twice`), and the host's `RUNS` and home paths become `$RUNS` and `~`. The full text stays in `RUNS/validation/<task>.json` |
 | `reserve` | The pre-registered replacements: the tasks after the Nth measured one whose validation passes the same checks, in order. A main task dropped for an infrastructure failure is replaced by the next unused one; with none left a drop stays a drop |
+| `decisions` | The decisions made before the freeze, one sentence each (`prereg.DECISIONS`); `prereg.md` lists them under `## Decisions made before the freeze` |
 | `task_details` | For each measured and reserve task: its position in the order, rounds, minutes, agent and verifier timeouts, arm order, image tag, image ID and agent copy digest |
 | `arms`, `arm_orders`, `draw` | Arm names, each measured task's seeded arm order, and the seeded draw (seed, domains, pool, excluded prefix, walkthrough, algorithm, order) |
 | `prompts` | Each prompt text a measured or reserve task uses, keyed by arm and minutes (for example `horizon@30`), with the sha256 of the text and of the file `copies.write_prompt` writes |

@@ -1,5 +1,6 @@
-"""Agent and validation copies of an EvoCode task: arm64 Dockerfile, per-round hooks, step verifier
-timeouts, an optional pinned image, and no reference solutions in agent copies. Also the prompt files.
+"""Agent and validation copies of an EvoCode task: arm64 Dockerfile with python3 for the Horizon CLI when the
+image lacks it (both arms), per-round hooks, step verifier timeouts, an optional pinned image, and no
+reference solutions in agent copies. Also the prompt files.
 
 Harbor 0.24.0 facts these hooks rely on (harbor/trial/multi_step.py, harbor/trial/trial.py):
 - Before each agent phase, Harbor uploads steps/<name>/workdir/. into the container's working directory
@@ -38,6 +39,12 @@ TMP_LISTING_FILE = "tmp-ls.txt"
 PROJECT_FILES_FILE = "project-files.txt"
 SURVIVORS_FILE = "survivors.txt"
 ARM_PATCH_FILE = "arm-patch.json"  # the patch record, at the top of each copy
+
+# Appended to every copy's Dockerfile after the ARM patch, for both arms; it does nothing when the image has python3.
+PYTHON_LINE = ("RUN command -v python3 >/dev/null 2>&1 || (apt-get update && DEBIAN_FRONTEND=noninteractive apt-get "
+               "install -y --no-install-recommends python3 && rm -rf /var/lib/apt/lists/*)")
+PYTHON_BLOCK = ("\n# evo: python3 for the Horizon CLI, added to both arms when the image lacks it "
+                f"(bench/evo/copies.py)\n{PYTHON_LINE}\n")
 
 SETUP_SH = """#!/bin/bash
 # EvoCode first look: per-round reset (bench/evo/copies.py). Harbor runs this as the step's agent user
@@ -251,8 +258,9 @@ def _fill_copy(dest: Path, kind: str, image_tag: str | None) -> None:
     dockerfile = dest / "environment" / "Dockerfile"
     text, artifacts = patch.replace_bundled_go(dest / "environment", dockerfile.read_text())
     patched, changed = patch.arm_patch(text)
-    dockerfile.write_text(patched)
-    (dest / ARM_PATCH_FILE).write_text(json.dumps({"changed": changed, "artifacts": artifacts}, indent=2) + "\n")
+    dockerfile.write_text(patched + PYTHON_BLOCK)
+    record = {"changed": changed, "artifacts": artifacts, "added": [PYTHON_LINE]}
+    (dest / ARM_PATCH_FILE).write_text(json.dumps(record, indent=2) + "\n")
     toml_path = dest / "task.toml"
     text = toml_path.read_text()
     data = tomllib.loads(text)
@@ -291,10 +299,12 @@ def _refuse_symlinks_leaving(task_dir: Path) -> None:
 
 
 def make_copy(src_task_dir: Path, dest_dir: Path, *, kind: str, image_tag: str | None) -> str:
-    """Copy a task, then patch, hook, time and pin the copy; agent copies lose every solution. The source
-    is only read: a task holding an absolute symlink, or one that leaves the task directory, is refused
-    with ValueError before anything is copied, because the copy's edits would follow the link back into
-    the source. Returns the copy's tree digest; on any error the partial copy is removed."""
+    """Copy a task, then patch, hook, time and pin the copy; agent copies lose every solution. The copy's
+    Dockerfile gets the ARM patch and then PYTHON_BLOCK, which installs python3 for the Horizon CLI when the image
+    lacks it; arm-patch.json records the patched lines as `changed`, the swapped Go archives as `artifacts` and the
+    appended RUN line as `added`. The source is only read: a task holding an absolute symlink, or one that leaves
+    the task directory, is refused with ValueError before anything is copied, because the copy's edits would follow
+    the link back into the source. Returns the copy's tree digest; on any error the partial copy is removed."""
     if kind not in KINDS:
         raise ValueError(f"kind must be one of {KINDS}, not {kind!r}")
     src_task_dir, dest_dir = Path(src_task_dir), Path(dest_dir)

@@ -125,6 +125,55 @@ def test_from_an_amd64_platform_raises():
         patch.arm_patch("FROM --platform=linux/amd64 ubuntu:22.04\n")
 
 
+ARCH_CASE = """FROM ubuntu:22.04
+RUN apt-get update && apt-get install -y curl ca-certificates
+RUN case "$(uname -m)" in \\
+      x86_64) goarch=amd64 ;; \\
+      aarch64) goarch=arm64 ;; \\
+    esac \\
+ && curl -fsSL "https://go.dev/dl/go1.22.1.linux-${goarch}.tar.gz" | tar -C /usr/local -xz
+ENV PATH=/usr/local/go/bin:$PATH
+"""
+
+
+def test_an_arch_case_statement_with_an_arm64_arm_is_left_unchanged():
+    assert patch.arm_patch(ARCH_CASE) == (ARCH_CASE, [])
+
+
+@pytest.mark.parametrize("arms", [
+    "x86_64|amd64) A=amd64 ;; aarch64|arm64) A=arm64 ;;",
+    "x86_64) export GOARCH=amd64 ;; aarch64) export GOARCH=arm64 ;;",  # GOARCH inside an arm is not rewritten
+])
+def test_a_one_line_arch_case_statement_with_an_arm64_arm_is_left_unchanged(arms):
+    dockerfile = f'FROM ubuntu:22.04\nRUN case "$(uname -m)" in {arms} esac\n'
+    assert patch.arm_patch(dockerfile) == (dockerfile, [])
+
+
+@pytest.mark.parametrize("instruction", [
+    'RUN case "$(uname -m)" in x86_64|amd64) A=amd64 ;; esac',
+    # the arm64 arm belongs to another case statement than the x86_64-only one
+    'RUN case "$(uname -m)" in x86_64) A=amd64 ;; aarch64) A=arm64 ;; esac'
+    ' && case "$(uname -m)" in x86_64) B=1 ;; esac',
+    # an amd64 artifact outside the arms
+    'RUN case "$(uname -m)" in x86_64) A=amd64 ;; aarch64) A=arm64 ;; esac'
+    ' && curl -fsSLO https://example.com/tool-linux-amd64',
+])
+def test_an_arch_case_statement_without_an_arm64_arm_or_a_token_outside_the_arms_still_raises(instruction):
+    with pytest.raises(patch.UnknownArchPattern, match="^line 2: "):
+        patch.arm_patch(f"FROM ubuntu:22.04\n{instruction}\n")
+
+
+def test_a_go_download_outside_the_arms_of_an_arch_case_statement_is_still_rewritten():
+    dockerfile = ARCH_CASE.replace(
+        ' && curl -fsSL "https://go.dev/dl/go1.22.1.linux-${goarch}.tar.gz" | tar -C /usr/local -xz\n',
+        " && curl -fsSLO https://go.dev/dl/go1.22.1.linux-amd64.tar.gz \\\n"
+        " && tar -C /usr/local -xzf go1.22.1.linux-amd64.tar.gz\n")
+    text, changed = patch.arm_patch(dockerfile)
+    assert text == dockerfile.replace("go1.22.1.linux-amd64.tar.gz", "go1.22.1.linux-arm64.tar.gz")
+    assert "x86_64) goarch=amd64 ;;" in text
+    assert [c.split(":", 1)[0] for c in changed] == ["7", "8"]
+
+
 @pytest.mark.parametrize("instruction", [
     "COPY go1.21.0.linux-amd64.tar.gz /tmp/",
     "COPY vendor/go1.21.0.linux-amd64.tar.gz /usr/local/",

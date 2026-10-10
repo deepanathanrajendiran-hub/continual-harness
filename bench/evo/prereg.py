@@ -63,6 +63,16 @@ OUTCOMES = {
     ),
 }
 
+# The user's decisions before the freeze, one sentence each; prereg.json and prereg.md both carry them.
+DECISIONS = (
+    "Task copies add python3 to the image for both arms when the image lacks it, so the Horizon CLI can run "
+    "(user decision, 2026-10-09; tasks theme_d10_w4 and theme_d1_w11 had no python3).",
+    "The ARM patcher leaves an architecture case statement unchanged when it already has an arm64 branch "
+    "(user decision, 2026-10-09; task theme_d12_w1).",
+    "theme_d5_w9 was swapped out at validation: its oracle passes only round 1, and the same happens without the "
+    "round hooks, so the failure is the task's, not the runner's (diagnosed 2026-10-09).",
+)
+
 
 class FreezeError(RuntimeError):
     """The inputs do not support a freeze: fix them before the freeze, or stop and ask the user."""
@@ -296,6 +306,7 @@ def collect(n, order, validations, dry_timing, *, task_infos, bundle, pin, obser
         "tasks": tasks,
         "replaced": replaced,
         "reserve": reserve,
+        "decisions": list(DECISIONS),
         "task_details": details,
         "arms": list(config.ARMS),
         "arm_orders": {t: list(order["arm_orders"][t]) for t in tasks},
@@ -362,6 +373,7 @@ def render(p: dict) -> str:
               "task in the order whose validation passes the same checks.", ""]
     lines += (_task_table(p, reserve) if reserve
               else ["No reserve: validation stopped at the Nth passing task, or no later task passed it."])
+    lines += ["", "## Decisions made before the freeze", ""] + [f"- {x}" for x in p["decisions"]]
     lines += [
         "", "## N rule", "",
         f"The timing dry run on `{rule['dry_task']}` gave m_control = {rule['m_control']:.2f} and m_horizon = "

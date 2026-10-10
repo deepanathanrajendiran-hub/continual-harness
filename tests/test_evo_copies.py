@@ -222,6 +222,32 @@ def test_validation_copy_keeps_every_solution(tmp_path):
     assert (dest / "solution" / "README.md").is_file()
 
 
+PYTHON_BLOCK_TEXT = (
+    "\n"
+    "# evo: python3 for the Horizon CLI, added to both arms when the image lacks it (bench/evo/copies.py)\n"
+    "RUN command -v python3 >/dev/null 2>&1 || (apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y "
+    "--no-install-recommends python3 && rm -rf /var/lib/apt/lists/*)\n")
+
+
+@pytest.mark.parametrize("kind", copies.KINDS)
+def test_every_copy_ends_with_the_python3_block_after_the_arm_patch_and_records_it(tmp_path, kind):
+    import json
+
+    assert copies.PYTHON_BLOCK == PYTHON_BLOCK_TEXT
+    assert copies.PYTHON_LINE == PYTHON_BLOCK_TEXT.splitlines()[-1]
+    src = make_task(tmp_path / "src")
+    before = tree_digest(src)
+    dest = tmp_path / "copy" / "theme_demo"
+    copies.make_copy(src, dest, kind=kind, image_tag=TAG)
+    patched, changed = patch.arm_patch(GO_DOCKERFILE)
+    assert (dest / "environment" / "Dockerfile").read_text() == patched + PYTHON_BLOCK_TEXT
+    assert json.loads((dest / copies.ARM_PATCH_FILE).read_text()) == {
+        "changed": changed, "artifacts": [], "added": [copies.PYTHON_LINE]}
+    assert len(changed) == 1
+    assert (src / "environment" / "Dockerfile").read_text() == GO_DOCKERFILE
+    assert tree_digest(src) == before
+
+
 def test_copies_of_one_task_have_one_digest_and_no_image_pin_when_none_is_given(tmp_path):
     src = make_task(tmp_path / "src")
     first = copies.make_copy(src, tmp_path / "a" / "theme_demo", kind="agent", image_tag=None)

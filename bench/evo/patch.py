@@ -1,4 +1,5 @@
-"""Rewrite a Dockerfile's linux-amd64 Go and yq downloads to linux-arm64; refuse any other amd64 pattern."""
+"""Rewrite a Dockerfile's linux-amd64 Go and yq downloads to linux-arm64; refuse any other amd64 pattern.
+The arms of a shell case statement that already has an aarch64 or arm64 arm are left as they are."""
 import argparse
 import hashlib
 import json
@@ -19,6 +20,13 @@ RULES = (
 )
 ARCH_TOKEN = re.compile(r"(?<![A-Za-z0-9])(?:amd64|x86_64)(?![A-Za-z0-9])")
 SHA256 = re.compile(r"(?<![0-9A-Fa-f])[0-9A-Fa-f]{64}(?![0-9A-Fa-f])")
+
+# A shell case statement, `case WORD in ARMS esac`; ARMS split at each `;;`, `;;&` or `;&` into arms, and an arm
+# opens with its pattern, `x86_64)`, `(x86_64)` or `x86_64|amd64)`, after any whitespace or line continuation.
+CASE = re.compile(r"(?<![\w.-])case[ \t]+[^\n]+?[ \t]+in(?![\w.-])(?P<arms>.*?)(?<![\w.-])esac(?![\w.-])", re.S)
+CASE_ARM_END = re.compile(r";;&?|;&")
+CASE_ARM = re.compile(r"(?:\s|\\(?=\r?\n))*\(?(?P<pattern>[^()]*)\)")
+ARM64_NAME = re.compile(r"(?<![A-Za-z0-9])(?:aarch64|arm64)(?![A-Za-z0-9])")
 
 
 class UnknownArchPattern(ValueError):
@@ -51,9 +59,35 @@ def _refuse_bundled(keyword: str, lines: list, members: list) -> None:
                     f"build context: {lines[index].strip()}")
 
 
-def _rewrite(line: str) -> str:
+def _overlaps(span: tuple, spans) -> bool:
+    return any(start < span[1] and span[0] < end for start, end in spans)
+
+
+def _arch_case_arms(text: str) -> list:
+    """The (start, end) of the arms of each case statement in text that has an arm whose pattern names aarch64 or
+    arm64: such a statement already picks the arm64 artifact, so its x86_64 and amd64 arms are left as they are."""
+    spans = []
+    for case in CASE.finditer(text):
+        patterns = (CASE_ARM.match(arm) for arm in CASE_ARM_END.split(case["arms"]))
+        if any(match and ARM64_NAME.search(match["pattern"]) for match in patterns):
+            spans.append(case.span("arms"))
+    return spans
+
+
+def _masks(lines: list, members: list) -> dict:
+    """Per member line, the (start, end) spans in that line that belong to an arch case statement's arms."""
+    spans, masks, offset = _arch_case_arms("".join(lines[i] for i in members)), {}, 0
+    for index in members:
+        end = offset + len(lines[index])
+        masks[index] = [(max(s, offset) - offset, min(e, end) - offset) for s, e in spans if s < end and e > offset]
+        offset = end
+    return masks
+
+
+def _rewrite(line: str, masked=()) -> str:
+    # every rule swaps amd64 for arm64, the same length, so spans found before a rewrite still hold after it
     for pattern, replacement in RULES:
-        line = pattern.sub(replacement, line)
+        line = pattern.sub(lambda m: m[0] if _overlaps(m.span(), masked) else m.expand(replacement), line)
     return line
 
 
@@ -63,10 +97,11 @@ def arm_patch(dockerfile: str) -> tuple:
     for keyword, members in _instructions(lines):
         if keyword in BUNDLING:
             _refuse_bundled(keyword, lines, members)
+        masks = _masks(lines, members)
         rewritten = False
         if keyword in PATCHED:
             for index in members:
-                old, new = lines[index], _rewrite(lines[index])
+                old, new = lines[index], _rewrite(lines[index], masks[index])
                 if new != old:
                     lines[index], rewritten = new, True
                     changed.append(f"{index + 1}: {old.strip()} -> {new.strip()}")
@@ -75,7 +110,7 @@ def arm_patch(dockerfile: str) -> tuple:
                 raise UnknownArchPattern(
                     f"line {index + 1}: a pinned sha256 sits in an instruction whose amd64 artifact was "
                     f"rewritten; the arm64 artifact needs its own checksum: {lines[index].strip()}")
-            if ARCH_TOKEN.search(lines[index]):
+            if any(not _overlaps(m.span(), masks[index]) for m in ARCH_TOKEN.finditer(lines[index])):
                 raise UnknownArchPattern(
                     f"line {index + 1}: amd64 pattern this patcher does not know: {lines[index].strip()}")
     return "".join(lines), changed

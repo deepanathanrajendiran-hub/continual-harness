@@ -112,7 +112,7 @@ def test_happy_path_validates_every_round_and_writes_the_record(tmp_path):
     assert (out["rounds"], out["oracle"], out["nop"], out["planted"]) == (2, [1.0, 1.0], [0.0, 0.0], [1.0, 1.0])
     assert (out["image_tag"], out["image_id"], out["arch"], out["workdir"]) == (TAG, "sha256:img", "arm64", "/app")
     assert out["oracle_cases"] == [[4, 4], [4, 4]] and out["python"]["ok"]
-    assert out["arm_patch"] == {"changed": [], "artifacts": []}
+    assert out["arm_patch"] == {"changed": [], "artifacts": [], "added": [validate.copies.PYTHON_LINE]}
     assert len(out["copy_digest"]) == 64 and len(out["validation_copy_digest"]) == 64
     assert json.loads((tmp_path / "validation" / "demo.json").read_text()) == out
     copies = tmp_path / "copies"
