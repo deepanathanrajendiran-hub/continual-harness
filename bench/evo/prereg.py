@@ -72,6 +72,10 @@ DECISIONS = (
     "usual (user decision, 2026-10-09; task theme_d12_w1).",
     "theme_d5_w9 was swapped out at validation: its oracle passes only round 1, and the same happens without the "
     "round hooks, so the failure is the task's, not the runner's (diagnosed 2026-10-09).",
+    "The runner keeps TB4's usage pacing rates (0.098 five-hour and 0.0127 seven-day utilization per "
+    "agent-hour), although the timing dry run measured about 0.15 to 0.19 five-hour utilization per agent-hour "
+    "while other work shared the account; a job that hits a usage limit is invalid and is rerun, never scored "
+    "(user decision, 2026-10-10).",
 )
 
 
