@@ -1,0 +1,2 @@
+- 2026-10-10: Step 14: informal interim look at 12 of 20 main runs at the user's request (rounds passed per task and arm, read-only, nothing written to rows.jsonl); the run continued unchanged.
+- 2026-10-10: Step 14: second informal interim look at 14 of 20 main runs at the user's request (rounds passed per task and arm, read-only, nothing written to rows.jsonl); the run continued unchanged.
