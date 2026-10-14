@@ -8,7 +8,8 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-FIELDS = ("STUDY", "REPO_PREFIX", "EXCLUDED", "RUNS", "DOCS", "FREEZE_TAG", "REPO_LABEL")
+FIELDS = ("STUDY", "REPO_PREFIX", "EXCLUDED", "RUNS", "DOCS", "FREEZE_TAG", "REPO_LABEL", "MODEL",
+          "MODEL_NAME", "PILOT")
 
 
 def load(study):
@@ -29,6 +30,7 @@ def test_ansible_is_the_default_and_keeps_its_paths():
     assert c["DOCS"] == str(ROOT / "docs" / "evaluations" / "swepro-refine")
     assert c["FREEZE_TAG"] == "swepro-prereg"
     assert len(c["EXCLUDED"]) == 2
+    assert c["MODEL"] == "anthropic/claude-sonnet-5-5" and c["MODEL_NAME"] == "Sonnet 5.5"
 
 
 @pytest.mark.parametrize("study,prefix", [("openlibrary", "instance_internetarchive__openlibrary-"),
@@ -67,3 +69,22 @@ def test_the_ansible_refine_prompt_is_unchanged():
     from bench.swepro import refine
     assert "tasks in the ansible repository\n(github.com/ansible/ansible)" in refine.PROMPT
     assert "holds no ansible code, only the notes the agent will have on future ansible\ntasks" in refine.PROMPT
+
+
+def test_the_ansible_haiku_study_reuses_the_ansible_pool_with_haiku():
+    c = json.loads(load("ansible-haiku").stdout)
+    a = json.loads(load(None).stdout)
+    assert c["MODEL"] == "anthropic/claude-haiku-5-5" and c["MODEL_NAME"] == "Haiku 5.5"
+    assert (c["REPO_LABEL"], c["REPO_PREFIX"], c["EXCLUDED"]) == ("ansible", a["REPO_PREFIX"], a["EXCLUDED"])
+    assert c["RUNS"] == str(Path.home() / "swepro-runs-ansible-haiku")
+    assert c["DOCS"] == str(ROOT / "docs" / "evaluations" / "swepro-refine-ansible-haiku")
+    assert c["FREEZE_TAG"] == "swepro-prereg-ansible-haiku"
+    practice = json.loads((ROOT / "docs" / "evaluations" / "swepro-refine" / "split.json").read_text())["practice"]
+    assert len(set(c["PILOT"])) == 8 and set(c["PILOT"]) <= set(practice)
+
+
+def test_the_report_limits_name_the_study_model():
+    env = {**os.environ, "SWEPRO_STUDY": "ansible-haiku"}
+    code = "from bench.swepro import analysis; print(analysis.LIMITS[0])"
+    out = subprocess.run([sys.executable, "-c", code], cwd=ROOT, env=env, capture_output=True, text=True).stdout
+    assert "(ansible) and one model (Haiku 5.5)" in out

@@ -25,6 +25,7 @@ FLAKY_TASK = ("instance_ansible__ansible-40ade1f84b8bb10a63576b0ac320c13f57c87d3
 
 # Pilot tasks: random.Random(PILOT_SEED).sample(sorted repo tasks, 8). Plain Claude Code ran them once to
 # pick a repository after ansible stopped at the ceiling, so they are excluded from that repository's study.
+# The Haiku pilot drew from the committed ansible practice list instead; practice tasks are never scored.
 PILOT_SEED = 20261017
 OPENLIBRARY_PILOT = tuple(f"instance_internetarchive__openlibrary-{t}" for t in (
     "09865f5fb549694d969f0a8e49b9d204ef1853ca-ve8c8d62a2b60610a3c4631f5f23ed866bada9818",
@@ -40,23 +41,39 @@ FLIPT_PILOT = tuple(f"instance_flipt-io__flipt-{t}" for t in (
     "5af0757e96dec4962a076376d1bedc79de0d4249", "9d25c18b79bc7829a6fb08ec9e8793d5d17e2868",
     "c6a7b1fd933e763b1675281b30077e161fa115a1", "dae029cba7cdb98dfb1a6b416c00d324241e6063",
     "e594593dae52badf80ffd27878d2275c7f0b20e9", "ea9a2663b176da329b3f574da2ce2a664fc5b4a1"))
+ANSIBLE_HAIKU_PILOT = tuple(f"instance_ansible__ansible-{t}" for t in (
+    "106909db8b730480615f4a33de0eb5b710944e78-v0f01c69f1e2528b935359cfe578530722bca2c59",
+    "1c06c46cc14324df35ac4f39a45fb3ccd602195d-v0f01c69f1e2528b935359cfe578530722bca2c59",
+    "29aea9ff3466e4cd2ed00524b9e56738d568ce8b-vba6da65a0f3baefda7a058ebbd0a8dcafb8512f5",
+    "415e08c2970757472314e515cb63a51ad825c45e-v7eee2454f617569fd6889f2211f75bc02a35f9f8",
+    "83fb24b923064d3576d473747ebbe62e4535c9e3-vba6da65a0f3baefda7a058ebbd0a8dcafb8512f5",
+    "942424e10b2095a173dbd78e7128f52f7995849b-v30a923fb5c164d6cd18280c02422f75e611e8fb2",
+    "984216f52e76b904e5b0fa0fb956ab4f1e0a7751-v1055803c3a812189a1133297f7f5468579283f86",
+    "c1f2df47538b884a43320f53e787197793b105e8-v906c969b551b346ef54a2c0b41e04f632b7b73c2"))
+SONNET = ("anthropic/claude-sonnet-5-5", "Sonnet 5.5")
+HAIKU = ("anthropic/claude-haiku-5-5", "Haiku 5.5")
 STUDIES = {
-    "ansible": {"prefix": "instance_ansible__ansible-", "github": "ansible/ansible",
-                "excluded": (SMOKE_TASK, FLAKY_TASK)},
-    "openlibrary": {"prefix": "instance_internetarchive__openlibrary-", "github": "internetarchive/openlibrary",
-                    "excluded": OPENLIBRARY_PILOT},
-    "flipt": {"prefix": "instance_flipt-io__flipt-", "github": "flipt-io/flipt", "excluded": FLIPT_PILOT},
+    "ansible": {"repo": "ansible", "prefix": "instance_ansible__ansible-", "github": "ansible/ansible",
+                "excluded": (SMOKE_TASK, FLAKY_TASK), "pilot": (), "model": SONNET},
+    "openlibrary": {"repo": "openlibrary", "prefix": "instance_internetarchive__openlibrary-",
+                    "github": "internetarchive/openlibrary", "excluded": OPENLIBRARY_PILOT,
+                    "pilot": OPENLIBRARY_PILOT, "model": SONNET},
+    "flipt": {"repo": "flipt", "prefix": "instance_flipt-io__flipt-", "github": "flipt-io/flipt",
+              "excluded": FLIPT_PILOT, "pilot": FLIPT_PILOT, "model": SONNET},
+    "ansible-haiku": {"repo": "ansible", "prefix": "instance_ansible__ansible-", "github": "ansible/ansible",
+                      "excluded": (SMOKE_TASK, FLAKY_TASK), "pilot": ANSIBLE_HAIKU_PILOT, "model": HAIKU},
 }
 if STUDY not in STUDIES:
     raise ValueError(f"unknown SWEPRO_STUDY {STUDY!r}: choose one of {sorted(STUDIES)}")
-REPO_LABEL = STUDY
+REPO_LABEL = STUDIES[STUDY]["repo"]
 REPO_PREFIX = STUDIES[STUDY]["prefix"]
 REPO_GITHUB = STUDIES[STUDY]["github"]
 EXCLUDED = STUDIES[STUDY]["excluded"]
+PILOT = STUDIES[STUDY]["pilot"]
+MODEL, MODEL_NAME = STUDIES[STUDY]["model"]
 
 HARBOR_VERSION = "0.24.0"
 CLAUDE_CODE_VERSION = "2.1.293"
-MODEL = "anthropic/claude-sonnet-5-5"
 EFFORT = "high"
 MAX_OUTPUT_TOKENS = "128000"
 CLAUDE_ARM_URL = f"https://downloads.claude.ai/claude-code-releases/{CLAUDE_CODE_VERSION}/linux-arm64-musl/claude"

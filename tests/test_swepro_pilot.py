@@ -5,14 +5,15 @@ from swepro_fakes import FakeHarbor, make_tasks
 
 from bench.swepro import config, pilot
 
-OL = config.STUDIES["openlibrary"]["excluded"]
-FL = config.STUDIES["flipt"]["excluded"]
+OL = config.STUDIES["openlibrary"]["pilot"]
+FL = config.STUDIES["flipt"]["pilot"]
+AH = config.STUDIES["ansible-haiku"]["pilot"]
 
 
 @pytest.fixture
 def runs(tmp_path):
     runs = tmp_path / "runs"
-    make_tasks(runs / "scale" / "v2" / "tasks", [*OL, *FL])
+    make_tasks(runs / "scale" / "v2" / "tasks", [*OL, *FL, *AH])
     return runs
 
 
@@ -71,3 +72,14 @@ def test_summary_counts_passes_among_counted_tasks():
 def test_choose_picks_the_repository_closest_to_half_inside_the_gate(rates, choice):
     summary = {repo: {"passes": p, "counted": n, "rate": p / n, "tasks": 8} for repo, (p, n) in rates.items()}
     assert pilot.choose(summary) == choice
+
+
+def test_a_single_study_pilot_labels_its_tasks_with_that_study(runs):
+    record = pilot.pilot_task(AH[0], runs=runs, token="tok", run=FakeHarbor(runs), pace=lambda: None,
+                              candidates=("ansible-haiku",))
+    assert record["repo"] == "ansible-haiku"
+
+
+def test_choose_considers_only_the_given_candidates():
+    summary = {"ansible-haiku": {"passes": 4, "counted": 8, "rate": 0.5, "tasks": 8}}
+    assert pilot.choose(summary, candidates=("ansible-haiku",)) == "ansible-haiku"

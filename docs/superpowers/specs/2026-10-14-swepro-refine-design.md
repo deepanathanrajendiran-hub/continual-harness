@@ -320,3 +320,20 @@ except the following.
   `docs/evaluations/swepro-refine-<repo>`, and the freeze tag
   `swepro-prereg-<repo>`. The refine prompt names the repository. Ansible
   keeps its original names.
+
+## Amendment 2 (2026-10-14): Haiku on ansible
+
+The Sonnet pilot was stopped after 6 runs:
+- openlibrary passed 4 of 4;
+- on flipt, Scale's reference fix scored 0 on both tasks run, which points to a local environment problem.
+
+The user chose Haiku instead. The `ansible-haiku` study is the ansible study above with
+`anthropic/claude-haiku-5-5` for both arms and every refine session. Everything else carries over:
+- the same pool, validation records and committed split, since validation does not depend on the model;
+- fresh notes;
+- its own run directory, docs directory and freeze tag.
+
+A Haiku pilot runs plain Claude Code once on 8 tasks drawn with `random.Random(20261017)` from the
+committed practice list, under the Amendment 1 choice rule with this study as the only candidate.
+Practice tasks are never scored, so nothing is excluded. If the pilot rate is outside (4/30, 26/30),
+stop and bring it to the user.
