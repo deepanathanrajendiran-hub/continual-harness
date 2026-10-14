@@ -11,9 +11,9 @@ ALPHA = 0.05
 TOL = 1e-9
 GRID = tuple(k / 100 for k in range(-100, 101))
 LIMITS = (
-    "One repository (ansible) and one model (Sonnet 5.5) through Claude Code only.",
+    f"One repository ({config.REPO_LABEL}) and one model (Sonnet 5.5) through Claude Code only.",
     "Plain against refined cannot separate useful lessons from any added notes; a placebo-notes arm would.",
-    "The ansible fixes are public, so the model may have seen some of them; both arms share this.",
+    f"The {config.REPO_LABEL} fixes are public, so the model may have seen some of them; both arms share this.",
     "Edits were auto-approved and the daily cap lifted, which normal refine use does not do.",
     "The amd64 task images ran under Rosetta on Colima with an arm64 Claude Code; scores are not "
     "comparable with the public leaderboard.",
@@ -127,9 +127,9 @@ def render(summary: dict, *, practice: dict, learned: str, deviations: str) -> s
     lo, hi = p["ci95"]
     lines = [
         "# SWE-bench Pro: does refine make Claude Code better on new tasks?", "",
-        f"Refine learned from {practice.get('runs', 'n/a')} ansible practice tasks; its notes were frozen; plain "
-        f"Claude Code and Claude Code with the frozen notes then tried each of {p['n']} unseen ansible tasks "
-        f"{config.ATTEMPTS} times. Every run was scored by re-grading its patch on a pristine image.", "",
+        f"Refine learned from {practice.get('runs', 'n/a')} {config.REPO_LABEL} practice tasks; its notes were "
+        f"frozen; plain Claude Code and Claude Code with the frozen notes then tried each of {p['n']} unseen "
+        f"{config.REPO_LABEL} tasks {config.ATTEMPTS} times. Every run was scored by re-grading its patch on a pristine image.", "",
         f"Setup: {config.MODEL} at effort {config.EFFORT}, Claude Code {config.CLAUDE_CODE_VERSION} (arm64-musl "
         f"build), Harbor {config.HARBOR_VERSION}, SWE-bench Pro v2 at {config.SCALE_COMMIT[:12]}, agent offline "
         f"except {config.ALLOW_HOST}.", "",

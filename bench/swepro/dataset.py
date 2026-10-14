@@ -1,4 +1,4 @@
-"""Fetch SWE-bench Pro v2 at the pinned commit and list the study's ansible tasks.
+"""Fetch SWE-bench Pro v2 at the pinned commit and list the study repository's tasks.
 
 Reads only task.toml. Never opens a task's tests/, solution/ or instruction.md.
 """
@@ -39,14 +39,15 @@ def fetch(dest: Path = config.RUNS / "scale", *, run=subprocess.run) -> Path:
     return dest / "v2" / "tasks"
 
 
-def ansible_tasks(tasks_dir: Path) -> list:
+def repo_tasks(tasks_dir: Path) -> list:
+    """The study repository's tasks (config.REPO_PREFIX), sorted."""
     return sorted(p.name for p in tasks_dir.iterdir()
                   if p.name.startswith(config.REPO_PREFIX) and (p / "task.toml").is_file())
 
 
 def study_pool(tasks_dir: Path) -> list:
-    """The ansible tasks minus the smoke and flaky tasks, which must both be present."""
-    names = ansible_tasks(tasks_dir)
+    """The repository's tasks minus config.EXCLUDED, which must all be present."""
+    names = repo_tasks(tasks_dir)
     missing = [t for t in config.EXCLUDED if t not in names]
     if missing:
         raise DatasetError(f"excluded tasks not in the tree: {missing}")
@@ -74,13 +75,13 @@ def install_replay(scale_repo: Path, tools_dir: Path) -> Path:
 
 
 def main(argv=None) -> int:
-    parser = argparse.ArgumentParser(description="Fetch SWE-bench Pro v2 and list the ansible pool.")
+    parser = argparse.ArgumentParser(description="Fetch SWE-bench Pro v2 and list the study pool.")
     parser.add_argument("--runs", type=Path, default=config.RUNS)
     args = parser.parse_args(argv)
     tasks = fetch(args.runs / "scale")
     install_replay(args.runs / "scale", args.runs / "tools")
     pool = study_pool(tasks)
-    print(f"{len(ansible_tasks(tasks))} ansible tasks; {len(pool)} in the study pool")
+    print(f"{len(repo_tasks(tasks))} {config.REPO_LABEL} tasks; {len(pool)} in the study pool")
     return 0
 
 

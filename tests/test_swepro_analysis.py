@@ -109,3 +109,11 @@ def test_render_shows_the_result_and_every_task():
                            deviations="- 2026-10-20: none")
     for needle in ("Mean d", "| a |", "| b |", "It learned X.", "2026-10-20", "sign-flip", "Limits"):
         assert needle in text, needle
+
+
+def test_render_names_the_study_repository(monkeypatch):
+    monkeypatch.setattr(config, "REPO_LABEL", "flipt")
+    summary = analysis.summarize(rows_for("a", (1, 0, 0), (1, 1, 0)), probes=[{"passed": True}],
+                                 frozen_hash=FROZEN, draws=100)
+    text = analysis.render(summary, practice={"passes": 15, "runs": 30}, learned="", deviations="")
+    assert "30 flipt practice tasks" in text and "unseen flipt tasks" in text

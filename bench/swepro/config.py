@@ -2,24 +2,57 @@
 
 Spec: docs/superpowers/specs/2026-10-14-swepro-refine-design.md
 """
+import os
 from pathlib import Path
 
 from bench.tb4 import config as _tb4
 
+STUDY = os.environ.get("SWEPRO_STUDY", "ansible")  # which repository's study; ansible keeps the bare names
+_SUFFIX = "" if STUDY == "ansible" else f"-{STUDY}"
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
-RUNS = Path.home() / "swepro-runs"  # Colima shares only $HOME with containers
-DOCS = REPO_ROOT / "docs" / "evaluations" / "swepro-refine"
+RUNS = Path.home() / f"swepro-runs{_SUFFIX}"  # Colima shares only $HOME with containers
+DOCS = REPO_ROOT / "docs" / "evaluations" / f"swepro-refine{_SUFFIX}"
 SPEC = "docs/superpowers/specs/2026-10-14-swepro-refine-design.md"
 
 SCALE_URL = "https://github.com/scaleapi/SWE-bench_Pro-os.git"
 SCALE_COMMIT = "66f92766bba642462d4bbe5479e83f91f9211862"
 REPLAY_SHA256 = "5c8b344de37164e9723f1724c2573013957fb644c3913a64c12c1718c737d876"  # v2/tooling/patch_replay.py
-REPO_PREFIX = "instance_ansible__ansible-"
 SMOKE_TASK = ("instance_ansible__ansible-0ea40e09d1b35bcb69ff4d9cecf3d0defa4b36e8"
               "-v30a923fb5c164d6cd18280c02422f75e611e8fb2")
 FLAKY_TASK = ("instance_ansible__ansible-40ade1f84b8bb10a63576b0ac320c13f57c87d34"
               "-v6382ea168a93d80a64aab1fbd8c4f02dc5ada5bf")  # timing-sensitive per Scale's GATE.md
-EXCLUDED = (SMOKE_TASK, FLAKY_TASK)
+
+# Pilot tasks: random.Random(PILOT_SEED).sample(sorted repo tasks, 8). Plain Claude Code ran them once to
+# pick a repository after ansible stopped at the ceiling, so they are excluded from that repository's study.
+PILOT_SEED = 20261017
+OPENLIBRARY_PILOT = tuple(f"instance_internetarchive__openlibrary-{t}" for t in (
+    "09865f5fb549694d969f0a8e49b9d204ef1853ca-ve8c8d62a2b60610a3c4631f5f23ed866bada9818",
+    "308a35d6999427c02b1dbf5211c033ad3b352556-ve8c8d62a2b60610a3c4631f5f23ed866bada9818",
+    "431442c92887a3aece3f8aa771dd029738a80eb1-v76304ecdb3a5954fcf13feb710e8c40fcf24b73c",
+    "630221ab686c64e75a2ce253c893c033e4814b2e-v93c53c13d5f9b383ebb411ee7750b49dcd1a34c6",
+    "9cd47f4dc21e273320d9e30d889c864f8cb20ccf-v0f5aece3601a5b4419f7ccec1dbda2071be28ee4",
+    "bdba0af0f6cbaca8b5fc3be2a3080f38156d9c92-ve8c8d62a2b60610a3c4631f5f23ed866bada9818",
+    "c8996ecc40803b9155935fd7ff3b8e7be6c1437c-ve8fc82d8aae8463b752a211156c5b7b59f349237",
+    "e8084193a895d8ee81200f49093389a3887479ce-ve8c8d62a2b60610a3c4631f5f23ed866bada9818"))
+FLIPT_PILOT = tuple(f"instance_flipt-io__flipt-{t}" for t in (
+    "0fd09def402258834b9d6c0eaa6d3b4ab93b4446", "3d5a345f94c2adc8a0eaa102c189c08ad4c0f8e8",
+    "5af0757e96dec4962a076376d1bedc79de0d4249", "9d25c18b79bc7829a6fb08ec9e8793d5d17e2868",
+    "c6a7b1fd933e763b1675281b30077e161fa115a1", "dae029cba7cdb98dfb1a6b416c00d324241e6063",
+    "e594593dae52badf80ffd27878d2275c7f0b20e9", "ea9a2663b176da329b3f574da2ce2a664fc5b4a1"))
+STUDIES = {
+    "ansible": {"prefix": "instance_ansible__ansible-", "github": "ansible/ansible",
+                "excluded": (SMOKE_TASK, FLAKY_TASK)},
+    "openlibrary": {"prefix": "instance_internetarchive__openlibrary-", "github": "internetarchive/openlibrary",
+                    "excluded": OPENLIBRARY_PILOT},
+    "flipt": {"prefix": "instance_flipt-io__flipt-", "github": "flipt-io/flipt", "excluded": FLIPT_PILOT},
+}
+if STUDY not in STUDIES:
+    raise ValueError(f"unknown SWEPRO_STUDY {STUDY!r}: choose one of {sorted(STUDIES)}")
+REPO_LABEL = STUDY
+REPO_PREFIX = STUDIES[STUDY]["prefix"]
+REPO_GITHUB = STUDIES[STUDY]["github"]
+EXCLUDED = STUDIES[STUDY]["excluded"]
 
 HARBOR_VERSION = "0.24.0"
 CLAUDE_CODE_VERSION = "2.1.293"
@@ -47,8 +80,8 @@ PROBE_EVERY = 10
 WEEKLY_CEILING = 0.9
 FIVE_HOUR_CEILING = 0.9
 
-FREEZE_TAG = "swepro-prereg"
-PHASES = ("validate", "practice", "refine", "test", "regrade", "probe")
+FREEZE_TAG = f"swepro-prereg{_SUFFIX}"
+PHASES = ("validate", "practice", "refine", "test", "regrade", "probe", "pilot")
 ARMS = ("plain", "refined")
 JOB_ARMS = (*ARMS, "oracle", "nop", "refine", "probe")
 

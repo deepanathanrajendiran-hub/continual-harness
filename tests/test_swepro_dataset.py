@@ -28,8 +28,8 @@ def tree(tmp_path):
     return tasks
 
 
-def test_ansible_tasks_are_sorted_and_need_a_task_toml(tree):
-    assert dataset.ansible_tasks(tree) == sorted([A1, A2, *config.EXCLUDED])
+def test_repo_tasks_are_sorted_and_need_a_task_toml(tree):
+    assert dataset.repo_tasks(tree) == sorted([A1, A2, *config.EXCLUDED])
 
 
 def test_the_study_pool_drops_the_smoke_and_flaky_tasks(tree):

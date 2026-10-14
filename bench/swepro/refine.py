@@ -15,15 +15,15 @@ from bench.tb4 import stream
 
 PROMPT = """/refine
 
-You are improving the working notes of a coding agent that solves tasks in the ansible repository
-(github.com/ansible/ansible). A practice task has just finished. Its evidence is in /inputs:
+You are improving the working notes of a coding agent that solves tasks in the {label} repository
+(github.com/{github}). A practice task has just finished. Its evidence is in /inputs:
 
 - /inputs/task.md: the task statement the agent was given.
 - /inputs/transcript.jsonl: the agent's session transcript.
 - /inputs/result.txt: the hidden-test result in one line, for example `passed` or
   `failed: 2 of 16 graded tests failed`. You will not get test names or test output.
 
-The project is /app. It holds no ansible code, only the notes the agent will have on future ansible
+The project is /app. It holds no {label} code, only the notes the agent will have on future {label}
 tasks: CLAUDE.md, .claude/skills, .claude/agents, and project memory. Follow the refine skill as written,
 with PROJECT=/app and project scope, to decide whether this evidence supports one small change that
 would help on *different* future tasks in this repository.
@@ -32,7 +32,7 @@ For this study the operator authorises you to apply your own proposal: run `refi
 `--approved` and `--override-cap`. Apply at most one proposal. If nothing is worth learning, apply
 nothing and say so. Do not run `refine-outcome` or `refine-undo`, and do not copy task-specific code,
 file contents or test names into the notes.
-"""
+""".format(label=config.REPO_LABEL, github=config.REPO_GITHUB)
 
 TASK_TOML = """schema_version = "1.4"
 

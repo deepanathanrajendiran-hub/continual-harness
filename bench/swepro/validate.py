@@ -75,7 +75,7 @@ def summarize(runs: Path, pool) -> dict:
 def main(argv=None) -> int:
     jobs.require_no_harbor()
     jobs.install_stop_handlers()
-    parser = argparse.ArgumentParser(description="Validate the ansible pool with oracle and nop on Colima.")
+    parser = argparse.ArgumentParser(description="Validate the study pool with oracle and nop on Colima.")
     parser.add_argument("--runs", type=Path, default=config.RUNS)
     parser.add_argument("--only", nargs="*", help="validate just these tasks")
     parser.add_argument("--parallel", type=int, default=2, help="tasks validated at once (Colima has 10 GB)")
