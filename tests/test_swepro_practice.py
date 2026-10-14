@@ -106,3 +106,11 @@ def test_gate_counts_edits_by_layer_and_sessions_that_changed_nothing():
     assert g["edits_by_layer"] == {"rho": 1, "M": 1, "G": 1, "K": 1}
     assert g["sessions_without_change"] == 26 and g["edits"] == 4
     assert g["projected_test_seven_day"] is None
+
+def test_a_crash_after_a_later_tasks_refine_resumes_from_the_saved_refine_record(env):
+    runs = env[0]
+    first = go(env, FakeHarbor(runs), order=P[:2])
+    (runs / "practice" / "records" / "002.json").unlink()  # crashed after refine 2 absorbed, before the record
+    records = go(env, FakeHarbor(runs), order=P[:2])
+    assert records[1]["refine"]["entries_added"] == first[1]["refine"]["entries_added"] != []
+    assert records[1]["refine"]["changed"] == first[1]["refine"]["changed"]

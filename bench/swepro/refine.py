@@ -135,6 +135,9 @@ def absorb(out_dir: Path, state: Path, archive: Path) -> list:
 
 def run_session(index: int, task: str, task_dir: Path, trial_dir: Path, result_line: str, *, runs: Path,
                 skill: Path, token: str, run=subprocess.run, before_rerun=lambda reason: None) -> dict:
+    saved = runs / "refine" / "records" / f"{index:03d}.json"
+    if saved.exists():  # already absorbed: absorbing again would re-archive the state and lose the diff
+        return json.loads(saved.read_text())
     state = runs / "refine" / "state"
     task_path = build_task(runs / "refine" / "task")
     inputs = make_inputs(task_dir, trial_dir, result_line, runs / "refine" / "inputs" / f"{index:03d}")

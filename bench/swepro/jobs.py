@@ -12,7 +12,10 @@ from pathlib import Path
 from bench.evo.run import API_EXCEPTIONS, MODEL_OUTCOMES
 from bench.swepro import config
 from bench.tb4 import stream
-from bench.tb4.run import STRIP_ENV, USAGE_EXCEPTIONS
+from bench.tb4.run import STRIP_ENV, USAGE_EXCEPTIONS, sleep_marker
+import signal
+import threading
+import time
 
 ARM_AGENT = "bench.swepro.agent:ArmClaudeCode"
 REFINE_AGENT = "bench.swepro.agent:RefineClaudeCode"
@@ -21,9 +24,35 @@ RESULT_EXCEPTIONS = (*MODEL_OUTCOMES, "NonZeroAgentExitCodeError")  # the model'
 INPUT_FIELDS = ("inputTokens", "cacheReadInputTokens", "cacheCreationInputTokens")
 AUDIT = re.compile(r"(?<![\w.-])/(?:tests|solution|logs/verifier)(?![\w.-])")
 
+# A grading job (validation, re-grade) whose verifier failed produced no score: rerun it, unlike an agent run.
+VERIFIER_EXCEPTIONS = ("VerifierTimeoutError", "RewardFileNotFoundError", "RewardFileEmptyError",
+                       "VerifierOutputParseError")
+STOP = threading.Event()  # set by the SIGINT/SIGTERM handler; no try starts after it
+PULL_TRIES = 3
+
 
 class JobError(RuntimeError):
     pass
+
+def host_marker() -> str:
+    """kern.sleeptime/waketime: different before and after a job means the Mac slept during it."""
+    return sleep_marker()
+
+
+def install_stop_handlers() -> None:
+    """Ctrl-C or kill stops every worker thread from starting another try, not just the main thread."""
+    def stop(signum, frame):
+        STOP.set()
+        raise KeyboardInterrupt
+    signal.signal(signal.SIGINT, stop)
+    signal.signal(signal.SIGTERM, stop)
+
+
+def require_no_harbor(run=subprocess.run) -> None:
+    """A `harbor run` left by a killed runner keeps going; a new runner beside it would double-run its job."""
+    proc = run(["pgrep", "-f", "harbor run"], capture_output=True, text=True)
+    if proc.returncode == 0:
+        raise JobError(f"harbor run still alive (pids {' '.join((proc.stdout or '').split())}); wait or kill it")
 
 
 def harbor_command(task_dir: Path, job: str, jobs_dir: Path, agent: str, kwargs: dict, *, claude: bool,
@@ -72,11 +101,13 @@ def _json(path: Path):
 
 
 def read_trial(job_dir: Path):
-    """The job's one trial as a flat dict, or None when Harbor left no single result.json."""
+    """The job's one trial as a flat dict, or None when Harbor left no single readable result.json."""
     trial = _trial_dir(job_dir)
     if trial is None:
         return None
-    result = json.loads((trial / "result.json").read_text())
+    result = _json(trial / "result.json")  # None when a killed Harbor left it half-written
+    if not isinstance(result, dict):
+        return None
     exception = (result.get("exception_info") or {}).get("exception_type")
     rewards = (result.get("verifier_result") or {}).get("rewards") or {}
     agent = trial / "agent"
@@ -103,11 +134,13 @@ def read_trial(job_dir: Path):
         "audit_tests": bool(AUDIT.search(tool_text)),
         "usage_evidence": bool(stream.usage_limit_evidence(events)),
         "api_error": bool(stream.terminal_api_error(events)) and exception not in RESULT_EXCEPTIONS,
+        "host_slept": False,
     }
 
 
-def classify(read) -> str | None:
-    """None for a valid run; otherwise why it must be rerun."""
+def classify(read, grading: bool = False) -> str | None:
+    """None for a valid run; otherwise why it must be rerun. `grading` marks a validation or re-grade job,
+    whose only product is the verifier's reward: a verifier failure or a missing reward is then a rerun."""
     if read is None:
         return "infrastructure"
     exception = read["exception"]
@@ -117,6 +150,10 @@ def classify(read) -> str | None:
         return "usage_limit"
     if exception in API_EXCEPTIONS or read["api_error"]:
         return "api_error"
+    if read.get("host_slept"):
+        return "host_slept"
+    if grading and (exception in VERIFIER_EXCEPTIONS or read["reward"] is None):
+        return "infrastructure"
     if exception and exception not in RESULT_EXCEPTIONS:
         return "infrastructure"
     return None
@@ -126,15 +163,25 @@ def run_job(cmd: list, job_dir: Path, *, env: dict, log_path: Path, run=subproce
     if fresh and job_dir.exists():
         raise JobError(f"{job_dir} exists; a job directory is never reused")
     log_path.parent.mkdir(parents=True, exist_ok=True)
+    before = host_marker()
     with open(log_path, "a") as log:
         run(cmd, stdout=log, stderr=subprocess.STDOUT, env=env, text=True)
-    return read_trial(job_dir)
+    read = read_trial(job_dir)
+    if read is not None and host_marker() != before:
+        read["host_slept"] = True
+    return read
 
 
-def pull_image(image: str, run=subprocess.run) -> None:
-    proc = run(["docker", "pull", "-q", "--platform", "linux/amd64", image], capture_output=True, text=True)
-    if proc.returncode != 0:
-        raise JobError(f"docker pull {image} failed: {(proc.stderr or '')[-300:]}")
+def pull_image(image: str, run=subprocess.run, sleep=time.sleep, tries: int = PULL_TRIES) -> None:
+    """Pull the amd64 image, retrying a transient registry failure with a growing wait."""
+    for attempt in range(1, tries + 1):
+        proc = run(["docker", "pull", "-q", "--platform", "linux/amd64", image], capture_output=True, text=True)
+        if proc.returncode == 0:
+            return
+        if attempt < tries:
+            print(f"docker pull {image} failed (try {attempt}); retrying", flush=True)
+            sleep(60 * attempt)
+    raise JobError(f"docker pull {image} failed {tries} times: {(proc.stderr or '')[-300:]}")
 
 
 def remove_image(image: str, run=subprocess.run) -> None:
@@ -142,11 +189,11 @@ def remove_image(image: str, run=subprocess.run) -> None:
 
 
 def run_with_reruns(job: str, make_cmd, *, jobs_dir: Path, logs_dir: Path, env: dict, run=subprocess.run,
-                    before_rerun=lambda reason: None, reruns: int = config.INFRA_RERUNS):
+                    before_rerun=lambda reason: None, reruns: int = config.INFRA_RERUNS, grading: bool = False):
     """Run `job`; rerun it as `{job}-rerun{k}` while the result is invalid, at most `reruns` times.
 
     A job directory left by an earlier process (killed before its record was written) counts as that
-    try: it is read, not run again, and a valid one is kept.
+    try: it is read, not run again, and a valid one is kept. No try starts once STOP is set.
 
     Returns (read, tries): the last try's read_trial result (None if Harbor left none) and one
     {"job", "reason"} per try, where reason is classify()'s verdict (None for the valid one)."""
@@ -155,9 +202,11 @@ def run_with_reruns(job: str, make_cmd, *, jobs_dir: Path, logs_dir: Path, env: 
         name = job if k == 0 else f"{job}-rerun{k}"
         if (jobs_dir / name).exists():
             read = read_trial(jobs_dir / name)
+        elif STOP.is_set():
+            raise JobError(f"stop requested before {name}")
         else:
             read = run_job(make_cmd(name), jobs_dir / name, env=env, log_path=logs_dir / f"{name}.log", run=run)
-        reason = classify(read)
+        reason = classify(read, grading=grading)
         tries.append({"job": name, "reason": reason})
         if reason is None:
             break

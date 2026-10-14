@@ -126,6 +126,8 @@ def gate(records, *, usage_start: dict, usage_end: dict) -> dict:
 
 
 def main(argv=None) -> int:
+    jobs.require_no_harbor()
+    jobs.install_stop_handlers()
     parser = argparse.ArgumentParser(description="Run the practice phase, then print the go/no-go numbers.")
     parser.add_argument("--runs", type=Path, default=config.RUNS)
     parser.add_argument("--docs", type=Path, default=config.DOCS)

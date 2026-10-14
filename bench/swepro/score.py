@@ -12,6 +12,8 @@ ROW_FIELDS = ("task", "arm", "attempt", "job", "final_job", "reruns", "valid", "
 
 
 def row(record: dict, regrade) -> dict:
+    """A run scores 1 only if it is valid and its pristine re-grade passed; a run still invalid after its
+    reruns scores 0 even when its last partial patch would pass."""
     notes = record.get("notes") or {}
     regrade = regrade or {}
     reward_regrade = regrade.get("reward") if regrade.get("valid") else None
@@ -19,7 +21,7 @@ def row(record: dict, regrade) -> dict:
         "task": record["task"], "arm": record["arm"], "attempt": record["attempt"], "job": record["job"],
         "final_job": record["final_job"], "reruns": len(record["tries"]) - 1, "valid": record["valid"],
         "reward_sandbox": record.get("reward"), "regrade_valid": bool(regrade.get("valid")),
-        "reward_regrade": reward_regrade, "score": 1 if reward_regrade == 1.0 else 0,
+        "reward_regrade": reward_regrade, "score": 1 if record["valid"] and reward_regrade == 1.0 else 0,
         "exception": record.get("exception"), "cost_usd": record.get("cost_usd"),
         "tokens_in": record.get("tokens_in"), "tokens_out": record.get("tokens_out"),
         "agent_sec": record.get("agent_sec"), "claude_version": record.get("claude_version"),

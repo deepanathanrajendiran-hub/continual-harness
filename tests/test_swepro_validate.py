@@ -108,3 +108,16 @@ def test_a_task_whose_image_has_its_own_claude_dir_or_no_app_repo_is_invalid(tmp
     assert rec["valid"] is False and rec["reason"] == "repo layout: /app/.git missing or /app/.claude present"
     layout = [c for c in calls if isinstance(c, list) and c[1] == "run"]
     assert layout and "--platform" in layout[0] and f"img:{A[0]}" in layout[0]
+
+def test_a_crashed_oracle_verifier_is_rerun_not_a_drop(tmp_path, tasks):
+    seen = []
+    run, _ = harbor(tmp_path, {})
+
+    def flaky(cmd, **kw):
+        if cmd[0] == "harbor" and "oracle" in cmd and not seen:
+            seen.append(1)
+            return harbor(tmp_path, {(A[0], "oracle"): "VerifierTimeoutError"})[0](cmd, **kw)
+        return run(cmd, **kw)
+
+    rec = validate.validate_task(A[0], tasks, tmp_path / "runs", run=flaky)
+    assert rec["valid"] is True and [t["reason"] for t in rec["tries"]["oracle"]] == ["infrastructure", None]

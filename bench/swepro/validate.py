@@ -42,7 +42,7 @@ def validate_task(task: str, tasks_dir: Path, runs: Path = config.RUNS, *, run=s
             name = config.job_name("validate", task, agent, 1)
             read, tries = jobs.run_with_reruns(
                 name, lambda n, a=agent: jobs.harbor_command(tasks_dir / task, n, runs / "jobs", a, {}, claude=False),
-                jobs_dir=runs / "jobs", logs_dir=runs / "logs", env=jobs.job_env(None), run=run)
+                jobs_dir=runs / "jobs", logs_dir=runs / "logs", env=jobs.job_env(None), run=run, grading=True)
             record["tries"][agent] = tries
             reason = tries[-1]["reason"]
             record[agent] = None if reason else read["reward"]
@@ -73,6 +73,8 @@ def summarize(runs: Path, pool) -> dict:
 
 
 def main(argv=None) -> int:
+    jobs.require_no_harbor()
+    jobs.install_stop_handlers()
     parser = argparse.ArgumentParser(description="Validate the ansible pool with oracle and nop on Colima.")
     parser.add_argument("--runs", type=Path, default=config.RUNS)
     parser.add_argument("--only", nargs="*", help="validate just these tasks")

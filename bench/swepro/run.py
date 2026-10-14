@@ -78,6 +78,8 @@ def run_test(order, *, runs: Path, token: str, freeze: str, run=subprocess.run, 
 
 
 def main(argv=None) -> int:
+    jobs.require_no_harbor()
+    jobs.install_stop_handlers()
     parser = argparse.ArgumentParser(description="Run the frozen test phase.")
     parser.add_argument("--runs", type=Path, default=config.RUNS)
     parser.add_argument("--docs", type=Path, default=config.DOCS)

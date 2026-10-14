@@ -126,7 +126,8 @@ def test_pull_asks_for_amd64(tmp_path):
 
 def test_a_failed_pull_raises():
     with pytest.raises(jobs.JobError):
-        jobs.pull_image("img:tag", run=lambda cmd, **kw: subprocess.CompletedProcess(cmd, 1, "", "nope"))
+        jobs.pull_image("img:tag", run=lambda cmd, **kw: subprocess.CompletedProcess(cmd, 1, "", "nope"),
+                        sleep=lambda s: None)
 
 
 def test_run_job_writes_the_log_and_returns_the_trial(tmp_path):
@@ -209,3 +210,67 @@ def test_an_existing_job_directory_is_read_not_run(tmp_path):
     read, tries = jobs.run_with_reruns("j", make_cmd, jobs_dir=tmp_path / "jobs", logs_dir=tmp_path / "logs",
                                        env={}, run=lambda *a, **k: pytest.fail("ran again"))
     assert tries == [{"job": "j", "reason": None}] and read["reward"] == 1.0
+
+def test_verifier_exceptions_are_infrastructure_only_for_grading_jobs(tmp_path):
+    """A re-grade or validation whose verifier crashed has no score; an agent run keeps its patch."""
+    for exc in ("VerifierTimeoutError", "RewardFileNotFoundError", "RewardFileEmptyError",
+                "VerifierOutputParseError"):
+        job, _ = trial(tmp_path / exc, exception=exc)
+        read = jobs.read_trial(job)
+        assert jobs.classify(read) is None
+        assert jobs.classify(read, grading=True) == "infrastructure"
+
+
+def test_a_grading_job_without_a_reward_is_infrastructure(tmp_path):
+    job, _ = trial(tmp_path, verifier=False)
+    assert jobs.classify(jobs.read_trial(job), grading=True) == "infrastructure"
+
+
+def test_grading_reruns_a_crashed_verifier(tmp_path):
+    read, tries = jobs.run_with_reruns("j", make_cmd, jobs_dir=tmp_path / "jobs", logs_dir=tmp_path / "logs",
+                                       env={}, run=fake_harbor(tmp_path, ["VerifierTimeoutError", None]),
+                                       grading=True)
+    assert [t["reason"] for t in tries] == ["infrastructure", None]
+
+
+def test_a_failed_pull_is_retried_twice_before_giving_up():
+    results, waits = [1, 1, 0], []
+
+    def run(cmd, **kw):
+        return subprocess.CompletedProcess(cmd, results.pop(0), "", "transient")
+
+    jobs.pull_image("img:tag", run=run, sleep=waits.append)
+    assert results == [] and len(waits) == 2
+    with pytest.raises(jobs.JobError):
+        jobs.pull_image("img:tag", run=lambda cmd, **kw: subprocess.CompletedProcess(cmd, 1, "", "down"),
+                        sleep=lambda s: None)
+
+
+def test_a_run_that_spanned_a_host_sleep_is_rerun(tmp_path, monkeypatch):
+    markers = iter(["sleep 1", "sleep 2", "sleep 2", "sleep 2"])
+    monkeypatch.setattr(jobs, "host_marker", lambda: next(markers))
+    read, tries = jobs.run_with_reruns("j", make_cmd, jobs_dir=tmp_path / "jobs", logs_dir=tmp_path / "logs",
+                                       env={}, run=fake_harbor(tmp_path, [None, None]))
+    assert [t["reason"] for t in tries] == ["host_slept", None]
+
+
+def test_a_stop_request_ends_reruns(tmp_path):
+    jobs.STOP.set()
+    try:
+        with pytest.raises(jobs.JobError, match="stop"):
+            jobs.run_with_reruns("j", make_cmd, jobs_dir=tmp_path / "jobs", logs_dir=tmp_path / "logs", env={},
+                                 run=lambda *a, **k: pytest.fail("ran after stop"))
+    finally:
+        jobs.STOP.clear()
+
+
+def test_require_no_harbor_refuses_while_a_harbor_run_is_alive():
+    jobs.require_no_harbor(run=lambda cmd, **kw: subprocess.CompletedProcess(cmd, 1, "", ""))
+    with pytest.raises(jobs.JobError, match="4242"):
+        jobs.require_no_harbor(run=lambda cmd, **kw: subprocess.CompletedProcess(cmd, 0, "4242\n", ""))
+
+
+def test_a_half_written_result_counts_as_no_result(tmp_path):
+    job, t = trial(tmp_path)
+    (t / "result.json").write_text('{"task_name": "x", "exce')
+    assert jobs.read_trial(job) is None and jobs.classify(None) == "infrastructure"

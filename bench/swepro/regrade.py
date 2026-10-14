@@ -22,7 +22,7 @@ def regrade(source_job: str, task: str, arm: str, attempt: int, *, runs: Path, r
                                    {"source_job": runs / "jobs" / source_job}, claude=False, model="replay")
 
     read, tries = jobs.run_with_reruns(name, make_cmd, jobs_dir=runs / "jobs", logs_dir=runs / "logs",
-                                       env=jobs.job_env(None, extra_path=[runs / "tools"]), run=run)
+                                       env=jobs.job_env(None, extra_path=[runs / "tools"]), run=run, grading=True)
     valid = tries[-1]["reason"] is None
     graded = feedback.counts(Path(read["trial_dir"]), task_dir) if valid else None
     record = {"job": name, "source_job": source_job, "task": task, "arm": arm, "attempt": attempt,
@@ -48,6 +48,8 @@ def regrade_practice(runs: Path, *, run=subprocess.run) -> list:
 
 
 def main(argv=None) -> int:
+    jobs.require_no_harbor()
+    jobs.install_stop_handlers()
     parser = argparse.ArgumentParser(description="Re-grade the practice runs on pristine images.")
     parser.add_argument("--runs", type=Path, default=config.RUNS)
     args = parser.parse_args(argv)

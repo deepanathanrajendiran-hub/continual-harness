@@ -47,3 +47,7 @@ def test_build_rows_joins_records_to_regrades(tmp_path):
     assert len(rows) == 1 and rows[0]["score"] == 1 and set(rows[0]) == set(score.ROW_FIELDS)
     score.write_rows(rows, tmp_path / "rows.jsonl")
     assert score.read_rows(tmp_path / "rows.jsonl") == rows
+
+def test_an_invalid_run_scores_zero_even_if_its_regrade_passes():
+    r = score.row(record(valid=False, tries=[{"reason": "usage_limit"}] * 3), {"valid": True, "reward": 1.0})
+    assert r["reward_regrade"] == 1.0 and r["score"] == 0

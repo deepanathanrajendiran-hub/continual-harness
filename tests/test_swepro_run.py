@@ -120,3 +120,17 @@ def test_regrade_records_reward_and_graded_counts(env):
     assert rec["reward"] == 0.0 and (rec["graded_failed"], rec["graded_total"]) == (1, 2)
     again = regrade.regrade("test__x__plain__a1", T[0], "plain", 1, runs=runs, run=lambda *a, **k: pytest.fail())
     assert again == rec
+
+def test_a_regrade_whose_verifier_crashed_is_rerun(env):
+    runs, _ = env
+    seen = []
+
+    def reward(phase, task, arm, attempt):
+        if phase == "regrade" and not seen:
+            seen.append(1)
+            return "VerifierTimeoutError"
+        return 1.0
+
+    rec = regrade.regrade("test__x__plain__a1", T[0], "plain", 1, runs=runs, run=FakeHarbor(runs, reward=reward))
+    assert rec["valid"] and rec["reward"] == 1.0
+    assert [t["reason"] for t in rec["tries"]] == ["infrastructure", None]
