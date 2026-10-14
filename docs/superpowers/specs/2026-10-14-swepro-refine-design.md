@@ -293,3 +293,30 @@ published.
   share this.
 - **Refine writes nothing.** A valid outcome; the test phase then compares
   plain against near-plain and the report says so.
+
+## Amendment 1 (2026-10-14): a harder repository
+
+The ansible study stopped at the gate: 29 of 30 practice runs passed
+(`docs/evaluations/swepro-refine/report.md`). The user asked to try a
+harder repository. Everything above applies unchanged to the new study,
+except the following.
+
+- **Candidates.** Only repositories with at least 70 tasks can supply 30
+  practice and 40 test tasks: openlibrary (82), flipt (78) and qutebrowser
+  (73). Qutebrowser drops below 70 once its pilot tasks are set aside, so the
+  candidates are openlibrary and flipt.
+- **Pilot.** For each candidate, `random.Random(20261017)` draws 8 tasks from
+  its sorted task list. These are pinned in `config.py`. Plain Claude Code
+  (same model, effort, build and network policy) runs each task once, and
+  each task is validated with oracle and nop. Only rewards are read. A task
+  counts if it is valid and the agent run had no infrastructure failure.
+- **Choice.** Among candidates with at least 4 counted tasks and a pass rate
+  strictly between 4/30 and 26/30, choose the one closest to 50%; a tie goes
+  to openlibrary. If neither qualifies, stop and bring it to the user.
+- **Exclusion.** The chosen repository's 8 pilot tasks are excluded from its
+  study pool, so no test task has been run before the freeze.
+- **Separation.** `SWEPRO_STUDY=<repo>` selects the task prefix, the
+  exclusions, the run directory `~/swepro-runs-<repo>`, the docs directory
+  `docs/evaluations/swepro-refine-<repo>`, and the freeze tag
+  `swepro-prereg-<repo>`. The refine prompt names the repository. Ansible
+  keeps its original names.
