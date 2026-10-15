@@ -1,0 +1,12 @@
+{
+  "choice": null,
+  "model": "deepseek-v4-flash",
+  "summary": {
+    "openlibrary-mini": {
+      "counted": 8,
+      "passes": 8,
+      "rate": 1.0,
+      "tasks": 8
+    }
+  }
+}
