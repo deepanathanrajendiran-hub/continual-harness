@@ -270,6 +270,15 @@ def test_require_no_harbor_refuses_while_a_harbor_run_is_alive():
         jobs.require_no_harbor(run=lambda cmd, **kw: subprocess.CompletedProcess(cmd, 0, "4242\n", ""))
 
 
+def test_require_no_harbor_for_one_jobs_dir_ignores_another_studys_harbor_run(tmp_path):
+    mine, other = tmp_path / "a" / "jobs", tmp_path / "b" / "jobs"
+    alive = f"4242 harbor run -p /t -a x -o {other} --job-name j -y\n"
+    ps = lambda cmd, **kw: subprocess.CompletedProcess(cmd, 0, alive, "")
+    jobs.require_no_harbor(mine, run=ps)
+    with pytest.raises(jobs.JobError, match="4242"):
+        jobs.require_no_harbor(other, run=ps)
+
+
 def test_a_half_written_result_counts_as_no_result(tmp_path):
     job, t = trial(tmp_path)
     (t / "result.json").write_text('{"task_name": "x", "exce')

@@ -48,11 +48,15 @@ def install_stop_handlers() -> None:
     signal.signal(signal.SIGTERM, stop)
 
 
-def require_no_harbor(run=subprocess.run) -> None:
-    """A `harbor run` left by a killed runner keeps going; a new runner beside it would double-run its job."""
-    proc = run(["pgrep", "-f", "harbor run"], capture_output=True, text=True)
-    if proc.returncode == 0:
-        raise JobError(f"harbor run still alive (pids {' '.join((proc.stdout or '').split())}); wait or kill it")
+def require_no_harbor(jobs_dir: Path | None = None, run=subprocess.run) -> None:
+    """A `harbor run` left by a killed runner keeps going; a new runner beside it would double-run its job.
+    With `jobs_dir`, only harbor runs writing there count, so another study's run can go on beside it."""
+    proc = run(["pgrep", "-lf", "harbor run"], capture_output=True, text=True)
+    lines = (proc.stdout or "").splitlines() if proc.returncode == 0 else []
+    if jobs_dir is not None:
+        lines = [line for line in lines if f" -o {jobs_dir} " in f"{line} "]
+    if lines:
+        raise JobError(f"harbor run still alive (pids {' '.join(line.split()[0] for line in lines)}); wait or kill it")
 
 
 def harbor_command(task_dir: Path, job: str, jobs_dir: Path, agent: str, kwargs: dict, *, claude: bool,

@@ -68,13 +68,13 @@ def choose(summary: dict, candidates=CANDIDATES):
 
 
 def main(argv=None) -> int:
-    jobs.require_no_harbor()
     jobs.install_stop_handlers()
     parser = argparse.ArgumentParser(description="Pilot plain Claude Code on each candidate repository.")
     parser.add_argument("--runs", type=Path, default=RUNS)
     parser.add_argument("--parallel", type=int, default=2)
     parser.add_argument("--this-study", action="store_true", help="pilot only SWEPRO_STUDY's own tasks")
     args = parser.parse_args(argv)
+    jobs.require_no_harbor(args.runs / "jobs")  # pilots in other run directories may go on beside it
     token = tb4run.read_token()
 
     def pace():

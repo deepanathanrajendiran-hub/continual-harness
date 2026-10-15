@@ -62,6 +62,9 @@ STUDIES = {
               "excluded": FLIPT_PILOT, "pilot": FLIPT_PILOT, "model": SONNET},
     "ansible-haiku": {"repo": "ansible", "prefix": "instance_ansible__ansible-", "github": "ansible/ansible",
                       "excluded": (SMOKE_TASK, FLAKY_TASK), "pilot": ANSIBLE_HAIKU_PILOT, "model": HAIKU},
+    "openlibrary-haiku": {"repo": "openlibrary", "prefix": "instance_internetarchive__openlibrary-",
+                          "github": "internetarchive/openlibrary", "excluded": OPENLIBRARY_PILOT,
+                          "pilot": OPENLIBRARY_PILOT, "model": HAIKU},
 }
 if STUDY not in STUDIES:
     raise ValueError(f"unknown SWEPRO_STUDY {STUDY!r}: choose one of {sorted(STUDIES)}")

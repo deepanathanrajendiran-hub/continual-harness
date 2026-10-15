@@ -88,3 +88,13 @@ def test_the_report_limits_name_the_study_model():
     code = "from bench.swepro import analysis; print(analysis.LIMITS[0])"
     out = subprocess.run([sys.executable, "-c", code], cwd=ROOT, env=env, capture_output=True, text=True).stdout
     assert "(ansible) and one model (Haiku 5.5)" in out
+
+
+def test_the_openlibrary_haiku_study_reuses_the_openlibrary_pool_with_haiku():
+    c = json.loads(load("openlibrary-haiku").stdout)
+    o = json.loads(load("openlibrary").stdout)
+    assert c["MODEL"] == "anthropic/claude-haiku-5-5" and c["MODEL_NAME"] == "Haiku 5.5"
+    assert (c["REPO_LABEL"], c["REPO_PREFIX"], c["EXCLUDED"], c["PILOT"]) == (
+        "openlibrary", o["REPO_PREFIX"], o["EXCLUDED"], o["PILOT"])
+    assert c["RUNS"] == str(Path.home() / "swepro-runs-openlibrary-haiku")
+    assert c["FREEZE_TAG"] == "swepro-prereg-openlibrary-haiku"
