@@ -1,0 +1,4 @@
+- 2026-10-14: Step 4: refine snapshot taken from main's working tree at 2d08d89c565587195c20cee4e0d3150a5f92c090 with 4 uncommitted refine/harness entries; pinned by hash, not reproducible from git history.
+- 2026-10-14: The user delegated the run ("i am gonna sleep so i need yo to run the test yourself"). Step 9 gate: follow the pre-registered rule (stop_high/stop_low stop; ask_user proceeds), plus an operator guard to stop if the projected test-phase seven-day usage exceeds 0.70. Step 10: operator approves the bundle if the copy check is clean; the user reads it afterwards. No push or publish without the user.
+- 2026-10-14: The ansible practice re-grade was paused at 10 of 30 at the user's request so the pilot could start; it resumes later with the same command.
+- 2026-10-15 02:15: Sonnet re-grade paused again at 12/30 to make room for openlibrary-mini validation (Colima memory); resume later with python3 -m bench.swepro.regrade.
