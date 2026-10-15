@@ -9,7 +9,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 FIELDS = ("STUDY", "REPO_PREFIX", "EXCLUDED", "RUNS", "DOCS", "FREEZE_TAG", "REPO_LABEL", "MODEL",
-          "MODEL_NAME", "PILOT")
+          "MODEL_NAME", "PILOT", "ALLOW_HOST", "BASE_URL", "PROVIDER_KEYCHAIN")
 
 
 def load(study):
@@ -98,3 +98,18 @@ def test_the_openlibrary_haiku_study_reuses_the_openlibrary_pool_with_haiku():
         "openlibrary", o["REPO_PREFIX"], o["EXCLUDED"], o["PILOT"])
     assert c["RUNS"] == str(Path.home() / "swepro-runs-openlibrary-haiku")
     assert c["FREEZE_TAG"] == "swepro-prereg-openlibrary-haiku"
+
+
+def test_ansible_talks_to_anthropic_with_the_subscription():
+    c = json.loads(load(None).stdout)
+    assert (c["ALLOW_HOST"], c["BASE_URL"], c["PROVIDER_KEYCHAIN"]) == ("api.anthropic.com", None, None)
+
+
+def test_the_openlibrary_deepseek_study_points_claude_code_at_deepseek():
+    c = json.loads(load("openlibrary-deepseek").stdout)
+    o = json.loads(load("openlibrary").stdout)
+    assert (c["MODEL"], c["MODEL_NAME"]) == ("deepseek-v4-flash", "DeepSeek V4 Flash")
+    assert (c["ALLOW_HOST"], c["BASE_URL"]) == ("api.deepseek.com", "https://api.deepseek.com/anthropic")
+    assert c["PROVIDER_KEYCHAIN"] == "swepro-deepseek-key"
+    assert (c["REPO_PREFIX"], c["EXCLUDED"], c["PILOT"]) == (o["REPO_PREFIX"], o["EXCLUDED"], o["PILOT"])
+    assert c["RUNS"] == str(Path.home() / "swepro-runs-openlibrary-deepseek")

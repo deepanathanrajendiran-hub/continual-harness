@@ -66,7 +66,8 @@ def harbor_command(task_dir: Path, job: str, jobs_dir: Path, agent: str, kwargs:
     if claude:
         cmd += ["-m", config.MODEL, "--effort", config.EFFORT,
                 "--ak", f"version={config.CLAUDE_CODE_VERSION}", "--ak", "disable_web_search=true",
-                "--ae", "CLAUDE_CODE_OAUTH_TOKEN=${CLAUDE_CODE_OAUTH_TOKEN}",
+                *(["--ae", f"ANTHROPIC_BASE_URL={config.BASE_URL}", "--ae", "ANTHROPIC_AUTH_TOKEN=${SWEPRO_PROVIDER_KEY}"]
+                  if config.BASE_URL else ["--ae", "CLAUDE_CODE_OAUTH_TOKEN=${CLAUDE_CODE_OAUTH_TOKEN}"]),
                 "--ae", f"CLAUDE_CODE_MAX_OUTPUT_TOKENS={config.MAX_OUTPUT_TOKENS}"]
     elif model:
         cmd += ["-m", model]
@@ -77,9 +78,21 @@ def harbor_command(task_dir: Path, job: str, jobs_dir: Path, agent: str, kwargs:
     return cmd + ["-n", "1", "-k", "1", "-r", "0", "-o", str(jobs_dir), "--job-name", job, "-y"]
 
 
+def provider_key(run=subprocess.run) -> str:
+    """The model provider's API key from Keychain; never printed."""
+    proc = run(["security", "find-generic-password", "-s", config.PROVIDER_KEYCHAIN, "-w"],
+               capture_output=True, text=True)
+    if proc.returncode != 0 or not (proc.stdout or "").strip():
+        raise JobError(f"no provider key in Keychain service {config.PROVIDER_KEYCHAIN}")
+    return proc.stdout.strip()
+
+
 def job_env(token: str | None, base=None, extra_path=()) -> dict:
-    env = {k: v for k, v in (os.environ if base is None else base).items() if k not in STRIP_ENV}
-    if token:
+    strip = (*STRIP_ENV, "CLAUDE_CODE_OAUTH_TOKEN") if config.PROVIDER_KEYCHAIN else STRIP_ENV
+    env = {k: v for k, v in (os.environ if base is None else base).items() if k not in strip}
+    if token and config.PROVIDER_KEYCHAIN:  # a provider study never sends the subscription token
+        env["SWEPRO_PROVIDER_KEY"] = provider_key()
+    elif token:
         env["CLAUDE_CODE_OAUTH_TOKEN"] = token
     env["PYTHONPATH"] = ":".join([str(config.REPO_ROOT), *map(str, extra_path)])
     return env

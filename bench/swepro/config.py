@@ -52,6 +52,12 @@ ANSIBLE_HAIKU_PILOT = tuple(f"instance_ansible__ansible-{t}" for t in (
     "c1f2df47538b884a43320f53e787197793b105e8-v906c969b551b346ef54a2c0b41e04f632b7b73c2"))
 SONNET = ("anthropic/claude-sonnet-5-5", "Sonnet 5.5")
 HAIKU = ("anthropic/claude-haiku-5-5", "Haiku 5.5")
+DEEPSEEK = ("deepseek-v4-flash", "DeepSeek V4 Flash")
+PROVIDERS = {  # where Claude Code sends model calls; anthropic uses the subscription token
+    "anthropic": {"host": "api.anthropic.com", "base_url": None, "keychain": None},
+    "deepseek": {"host": "api.deepseek.com", "base_url": "https://api.deepseek.com/anthropic",
+                 "keychain": "swepro-deepseek-key"},
+}
 STUDIES = {
     "ansible": {"repo": "ansible", "prefix": "instance_ansible__ansible-", "github": "ansible/ansible",
                 "excluded": (SMOKE_TASK, FLAKY_TASK), "pilot": (), "model": SONNET},
@@ -65,6 +71,9 @@ STUDIES = {
     "openlibrary-haiku": {"repo": "openlibrary", "prefix": "instance_internetarchive__openlibrary-",
                           "github": "internetarchive/openlibrary", "excluded": OPENLIBRARY_PILOT,
                           "pilot": OPENLIBRARY_PILOT, "model": HAIKU},
+    "openlibrary-deepseek": {"repo": "openlibrary", "prefix": "instance_internetarchive__openlibrary-",
+                             "github": "internetarchive/openlibrary", "excluded": OPENLIBRARY_PILOT,
+                             "pilot": OPENLIBRARY_PILOT, "model": DEEPSEEK, "provider": "deepseek"},
 }
 if STUDY not in STUDIES:
     raise ValueError(f"unknown SWEPRO_STUDY {STUDY!r}: choose one of {sorted(STUDIES)}")
@@ -74,6 +83,10 @@ REPO_GITHUB = STUDIES[STUDY]["github"]
 EXCLUDED = STUDIES[STUDY]["excluded"]
 PILOT = STUDIES[STUDY]["pilot"]
 MODEL, MODEL_NAME = STUDIES[STUDY]["model"]
+_PROVIDER = PROVIDERS[STUDIES[STUDY].get("provider", "anthropic")]
+ALLOW_HOST = _PROVIDER["host"]
+BASE_URL = _PROVIDER["base_url"]
+PROVIDER_KEYCHAIN = _PROVIDER["keychain"]
 
 HARBOR_VERSION = "0.24.0"
 CLAUDE_CODE_VERSION = "2.1.293"
@@ -83,7 +96,6 @@ CLAUDE_ARM_URL = f"https://downloads.claude.ai/claude-code-releases/{CLAUDE_CODE
 CLAUDE_ARM_SHA256 = "00755ae106b6925c1adb2b17e4c6d9b0c41eb4cc55bcad3581345b0aa3176c85"
 ALPINE_IMAGE = "alpine:3.23.4@sha256:5b10f432ef3da1b8d4c7eb6c487f2f5a8f096bc91145e68878dd4a5019afde11"
 REFINE_BASE_IMAGE = "python:3.12-slim@sha256:a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1"
-ALLOW_HOST = "api.anthropic.com"
 KEYCHAIN_SERVICE = _tb4.KEYCHAIN_SERVICE
 
 SPLIT_SEED = 20261014

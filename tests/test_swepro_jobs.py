@@ -56,6 +56,35 @@ def test_oracle_command_has_no_model_or_token(tmp_path):
     assert "-m" not in cmd and not any("OAUTH" in c for c in cmd)
 
 
+@pytest.fixture
+def deepseek(monkeypatch):
+    monkeypatch.setattr(config, "ALLOW_HOST", "api.deepseek.com")
+    monkeypatch.setattr(config, "BASE_URL", "https://api.deepseek.com/anthropic")
+    monkeypatch.setattr(config, "PROVIDER_KEYCHAIN", "swepro-deepseek-key")
+    monkeypatch.setattr(jobs, "provider_key", lambda: "pk")
+
+
+def test_a_provider_command_points_claude_code_at_the_provider_and_never_sends_the_subscription(tmp_path,
+                                                                                                deepseek):
+    joined = " ".join(jobs.harbor_command(tmp_path / "task", "pilot__t__plain__a1", tmp_path / "jobs",
+                                          jobs.ARM_AGENT, {}, claude=True))
+    assert "--ae ANTHROPIC_BASE_URL=https://api.deepseek.com/anthropic" in joined
+    assert "--ae ANTHROPIC_AUTH_TOKEN=${SWEPRO_PROVIDER_KEY}" in joined
+    assert "--allow-agent-host api.deepseek.com" in joined and "OAUTH" not in joined
+
+
+def test_a_provider_job_env_carries_the_provider_key_not_the_subscription_token(deepseek):
+    env = jobs.job_env("tok", base={"CLAUDE_CODE_OAUTH_TOKEN": "leak", "PATH": "/bin"})
+    assert env["SWEPRO_PROVIDER_KEY"] == "pk" and "CLAUDE_CODE_OAUTH_TOKEN" not in env
+    assert "SWEPRO_PROVIDER_KEY" not in jobs.job_env(None, base={"PATH": "/bin"})
+
+
+def test_a_missing_provider_key_stops_the_run(monkeypatch):
+    monkeypatch.setattr(config, "PROVIDER_KEYCHAIN", "swepro-nope")
+    with pytest.raises(jobs.JobError, match="swepro-nope"):
+        jobs.provider_key(run=lambda cmd, **kw: subprocess.CompletedProcess(cmd, 44, "", "not found"))
+
+
 def test_job_env_strips_api_keys_and_adds_the_repo_to_pythonpath(tmp_path):
     env = jobs.job_env("tok", base={"ANTHROPIC_API_KEY": "k", "PATH": "/bin"}, extra_path=[tmp_path])
     assert "ANTHROPIC_API_KEY" not in env and env["CLAUDE_CODE_OAUTH_TOKEN"] == "tok"
