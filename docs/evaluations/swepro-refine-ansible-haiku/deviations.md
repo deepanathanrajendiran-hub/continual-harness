@@ -1,0 +1,2 @@
+- 2026-10-14: ansible-haiku reuses the ansible run's Scale clone, tools, refine snapshot (a8290580…) and validation records (80 valid); validation does not depend on the model.
+- 2026-10-14: The Haiku pilot passed 7 of 8 (0.875, just over 26/30), so Amendment 2's rule said stop. The user chose to run practice anyway and let the pre-registered 30-task gate decide.

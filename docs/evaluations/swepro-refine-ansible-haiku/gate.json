@@ -1,0 +1,15 @@
+{
+  "decision": "stop_high",
+  "edits": 9,
+  "edits_by_layer": {
+    "M": 9
+  },
+  "mean_agent_cost_usd": 0.048114678333333334,
+  "mean_refine_cost_usd": 0.012480677333333334,
+  "mean_tokens": 985393.5,
+  "passes": 30,
+  "projected_test_seven_day": 0.079403244364157,
+  "runs": 30,
+  "sessions_without_change": 21,
+  "seven_day_used": 0.010000000000000009
+}
