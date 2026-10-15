@@ -1,0 +1,2 @@
+- 2026-10-15 11:45: scale/, tools/ (incl. the same mini-swe-agent bundle), validation/ and valid.json (74 valid) copied from ~/swepro-runs-openlibrary-mini; only the step cap differs (Amendment 4, user request).
+- 2026-10-15 12:18: pilot 3/8 (0.375), inside (4/30, 26/30); 7 of 8 runs hit the 20-step cap and were graded on their patch (2 of those passed), no reruns. Split 30 practice / 44 test from the 74 valid tasks.
