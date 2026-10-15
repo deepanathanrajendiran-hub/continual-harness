@@ -113,3 +113,17 @@ def test_the_openlibrary_deepseek_study_points_claude_code_at_deepseek():
     assert c["PROVIDER_KEYCHAIN"] == "swepro-deepseek-key"
     assert (c["REPO_PREFIX"], c["EXCLUDED"], c["PILOT"]) == (o["REPO_PREFIX"], o["EXCLUDED"], o["PILOT"])
     assert c["RUNS"] == str(Path.home() / "swepro-runs-openlibrary-deepseek")
+
+
+def test_a_provider_studys_network_probe_needs_the_provider_open_and_anthropic_closed():
+    env = {**os.environ, "SWEPRO_STUDY": "openlibrary-deepseek"}
+    code = "import json; from bench.swepro import probe; print(json.dumps([probe.MODEL_URL, probe.BLOCKED_URLS]))"
+    model_url, blocked = json.loads(subprocess.run([sys.executable, "-c", code], cwd=ROOT, env=env,
+                                                   capture_output=True, text=True).stdout)
+    assert model_url == "https://api.deepseek.com/v1/models"
+    assert "https://api.anthropic.com/v1/models" in blocked
+
+
+def test_the_ansible_network_probe_is_unchanged():
+    from bench.swepro import probe
+    assert probe.MODEL_URL == "https://api.anthropic.com/v1/models" and len(probe.BLOCKED_URLS) == 4

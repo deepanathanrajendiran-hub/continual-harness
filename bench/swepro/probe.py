@@ -1,7 +1,7 @@
 """Check that the agent phase is offline except the model endpoint.
 
 The probe is a copy of the smoke task (excluded from the study) whose oracle solution tries five URLs with
-Python (the images have no curl). It must reach only api.anthropic.com.
+Python (the images have no curl). It must reach only the study's model host (config.ALLOW_HOST).
 """
 import argparse
 import json
@@ -12,9 +12,11 @@ from pathlib import Path
 
 from bench.swepro import config, dataset, jobs
 
-MODEL_URL = "https://api.anthropic.com/v1/models"
+MODEL_URL = f"https://{config.ALLOW_HOST}/v1/models"
+ANTHROPIC_URL = "https://api.anthropic.com/v1/models"
 BLOCKED_URLS = ("https://api.github.com", "https://raw.githubusercontent.com/ansible/ansible/devel/README.md",
-                "https://pypi.org/simple/", "https://www.google.com")
+                "https://pypi.org/simple/", "https://www.google.com",
+                *(() if MODEL_URL == ANTHROPIC_URL else (ANTHROPIC_URL,)))  # a provider study must not reach Anthropic
 PROBE_SCRIPT = """#!/bin/bash
 echo "=== NETWORK PROBE (agent phase, python) ==="
 PY=$(command -v python3 || command -v python)
