@@ -382,3 +382,19 @@ Everything else carries over unchanged:
 
 The claim narrows to: do notes that refine writes during practice help a minimal agent solve more
 unseen tasks in the same repository?
+
+## Amendment 4 (2026-10-15): plan B with a 20-step cap
+
+Plan B's pilot passed 8 of 8 at 100 steps; its runs took 22 to 78 steps, none hitting the cap. The
+user asked for the cap to be cut to 20 steps and for web search to stay off.
+
+- **Study.** `openlibrary-mini20` is `openlibrary-mini` with `step_limit` 20 and nothing else changed:
+  same pool, pilot tasks, agent, model, provider, refine setup, rules and gate. It has its own run
+  directory, docs directory and freeze tag (`swepro-prereg-openlibrary-mini20`).
+- **Capped runs.** A run stopped at the cap is graded on the patch it left, like any other run; it is
+  the model's outcome, not an infrastructure failure, and is never rerun.
+- **Web search.** Already off and unchanged. Every Claude Code session (refine) is started with
+  `--disallowedTools WebSearch,WebFetch`, and mini-swe-agent has only a bash tool in a container
+  whose network is closed except to `api.deepseek.com`.
+- **Pilot.** The same 8 tasks, once each, plain arm. Inside (4/30, 26/30): continue to split and
+  practice under the existing rules. Outside: stop and bring it to the user.

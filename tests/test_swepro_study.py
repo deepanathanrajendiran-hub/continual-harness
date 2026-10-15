@@ -10,7 +10,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 FIELDS = ("STUDY", "REPO_PREFIX", "EXCLUDED", "RUNS", "DOCS", "FREEZE_TAG", "REPO_LABEL", "MODEL",
           "MODEL_NAME", "PILOT", "ALLOW_HOST", "BASE_URL", "PROVIDER_KEYCHAIN", "HARNESS",
-          "AGENT_MODEL")
+          "AGENT_MODEL", "MINI_STEP_LIMIT")
 
 
 def load(study):
@@ -142,6 +142,16 @@ def test_the_openlibrary_mini_study_runs_mini_swe_agent_on_deepseek_and_refines_
     out = subprocess.run([sys.executable, "-c", code], cwd=ROOT, env=env, capture_output=True, text=True).stdout
     assert out.splitlines()[0] == "bench.swepro.agent:ArmMiniSweAgent"
     assert "through mini-swe-agent only" in out and "(DeepSeek V4 Flash)" in out
+
+
+def test_the_openlibrary_mini20_study_is_openlibrary_mini_capped_at_20_steps():
+    c = json.loads(load("openlibrary-mini20").stdout)
+    m = json.loads(load("openlibrary-mini").stdout)
+    assert (c["MINI_STEP_LIMIT"], m["MINI_STEP_LIMIT"]) == (20, 100)
+    same = ("HARNESS", "AGENT_MODEL", "MODEL", "ALLOW_HOST", "PROVIDER_KEYCHAIN", "EXCLUDED", "PILOT", "REPO_PREFIX")
+    assert {k: c[k] for k in same} == {k: m[k] for k in same}
+    assert c["FREEZE_TAG"] == "swepro-prereg-openlibrary-mini20"
+    assert c["RUNS"] == str(Path.home() / "swepro-runs-openlibrary-mini20")
 
 
 def test_claude_studies_keep_claude_code_as_the_agent_under_test():

@@ -78,6 +78,10 @@ STUDIES = {
                          "github": "internetarchive/openlibrary", "excluded": OPENLIBRARY_PILOT,
                          "pilot": OPENLIBRARY_PILOT, "model": DEEPSEEK, "provider": "deepseek",
                          "harness": "mini", "agent_model": "deepseek/deepseek-v4-flash"},
+    "openlibrary-mini20": {"repo": "openlibrary", "prefix": "instance_internetarchive__openlibrary-",
+                           "github": "internetarchive/openlibrary", "excluded": OPENLIBRARY_PILOT,
+                           "pilot": OPENLIBRARY_PILOT, "model": DEEPSEEK, "provider": "deepseek",
+                           "harness": "mini", "agent_model": "deepseek/deepseek-v4-flash", "step_limit": 20},
 }
 if STUDY not in STUDIES:
     raise ValueError(f"unknown SWEPRO_STUDY {STUDY!r}: choose one of {sorted(STUDIES)}")
@@ -96,7 +100,7 @@ HARNESS = STUDIES[STUDY].get("harness", "claude")  # the agent under test; refin
 HARNESS_NAME = {"claude": "Claude Code", "mini": "mini-swe-agent"}[HARNESS]
 AGENT_MODEL = STUDIES[STUDY].get("agent_model", MODEL)  # what the agent under test is called with
 MINI_VERSION = "2.4.6"
-MINI_STEP_LIMIT = 100
+MINI_STEP_LIMIT = STUDIES[STUDY].get("step_limit", 100)  # mini-swe-agent turns before it is stopped
 MINI_UV_VERSION = "0.12.20"
 MINI_EXCLUDE_NEWER = "2026-10-01T00:00:00Z"
 MINI_PYTHON_URL = ("https://github.com/astral-sh/python-build-standalone/releases/download/20260929/"
