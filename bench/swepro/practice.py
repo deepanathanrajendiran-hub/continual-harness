@@ -126,12 +126,12 @@ def gate(records, *, usage_start: dict, usage_end: dict) -> dict:
 
 
 def main(argv=None) -> int:
-    jobs.require_no_harbor()
     jobs.install_stop_handlers()
     parser = argparse.ArgumentParser(description="Run the practice phase, then print the go/no-go numbers.")
     parser.add_argument("--runs", type=Path, default=config.RUNS)
     parser.add_argument("--docs", type=Path, default=config.DOCS)
     args = parser.parse_args(argv)
+    jobs.require_no_harbor(args.runs / "jobs")  # other studies' runs may go on beside it
     order = json.loads((args.docs / "split.json").read_text())["practice"]
     token = tb4run.read_token()
 

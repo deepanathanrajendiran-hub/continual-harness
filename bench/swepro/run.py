@@ -78,12 +78,12 @@ def run_test(order, *, runs: Path, token: str, freeze: str, run=subprocess.run, 
 
 
 def main(argv=None) -> int:
-    jobs.require_no_harbor()
     jobs.install_stop_handlers()
     parser = argparse.ArgumentParser(description="Run the frozen test phase.")
     parser.add_argument("--runs", type=Path, default=config.RUNS)
     parser.add_argument("--docs", type=Path, default=config.DOCS)
     args = parser.parse_args(argv)
+    jobs.require_no_harbor(args.runs / "jobs")  # other studies' runs may go on beside it
     freeze = prereg.require_freeze()
     p = json.loads((args.docs / "prereg.json").read_text())
     prereg.check_runtime(p, args.runs)

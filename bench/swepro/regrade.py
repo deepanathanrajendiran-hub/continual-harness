@@ -48,11 +48,11 @@ def regrade_practice(runs: Path, *, run=subprocess.run) -> list:
 
 
 def main(argv=None) -> int:
-    jobs.require_no_harbor()
     jobs.install_stop_handlers()
     parser = argparse.ArgumentParser(description="Re-grade the practice runs on pristine images.")
     parser.add_argument("--runs", type=Path, default=config.RUNS)
     args = parser.parse_args(argv)
+    jobs.require_no_harbor(args.runs / "jobs")  # other studies' runs may go on beside it
     records = regrade_practice(args.runs)
     print(f"{sum(1 for r in records if r['reward'] == 1.0)} of {len(records)} practice runs pass on re-grade")
     return 0

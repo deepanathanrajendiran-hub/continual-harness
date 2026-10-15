@@ -73,13 +73,13 @@ def summarize(runs: Path, pool) -> dict:
 
 
 def main(argv=None) -> int:
-    jobs.require_no_harbor()
     jobs.install_stop_handlers()
     parser = argparse.ArgumentParser(description="Validate the study pool with oracle and nop on Colima.")
     parser.add_argument("--runs", type=Path, default=config.RUNS)
     parser.add_argument("--only", nargs="*", help="validate just these tasks")
     parser.add_argument("--parallel", type=int, default=2, help="tasks validated at once (Colima has 10 GB)")
     args = parser.parse_args(argv)
+    jobs.require_no_harbor(args.runs / "jobs")  # other studies' runs may go on beside it
     tasks_dir = args.runs / "scale" / "v2" / "tasks"
     pool = dataset.study_pool(tasks_dir)
     todo = args.only or pool

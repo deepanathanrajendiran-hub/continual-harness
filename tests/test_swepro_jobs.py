@@ -352,3 +352,21 @@ def test_a_half_written_result_counts_as_no_result(tmp_path):
     job, t = trial(tmp_path)
     (t / "result.json").write_text('{"task_name": "x", "exce')
     assert jobs.read_trial(job) is None and jobs.classify(None) == "infrastructure"
+
+
+class _GuardHit(Exception):
+    pass
+
+
+@pytest.mark.parametrize("module", ["validate", "practice", "regrade", "run", "pilot"])
+def test_every_runner_waits_only_on_harbor_runs_in_its_own_run_directory(tmp_path, monkeypatch, module):
+    import importlib
+    runner = importlib.import_module(f"bench.swepro.{module}")
+
+    def guard(jobs_dir=None, run=None):
+        raise _GuardHit(jobs_dir)
+
+    monkeypatch.setattr(jobs, "require_no_harbor", guard)
+    with pytest.raises(_GuardHit) as hit:
+        runner.main(["--runs", str(tmp_path)])
+    assert hit.value.args[0] == tmp_path / "jobs"
