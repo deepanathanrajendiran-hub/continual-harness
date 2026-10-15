@@ -337,3 +337,48 @@ A Haiku pilot runs plain Claude Code once on 8 tasks drawn with `random.Random(2
 committed practice list, under the Amendment 1 choice rule with this study as the only candidate.
 Practice tasks are never scored, so nothing is excluded. If the pilot rate is outside (4/30, 26/30),
 stop and bring it to the user.
+
+## Amendment 3 (2026-10-15): a minimal agent with DeepSeek (plan B)
+
+Every Claude Code pilot sat at the gate's ceiling:
+- Haiku on ansible passed practice 30 of 30 (stop_high);
+- Haiku passed the openlibrary pilot 8 of 8;
+- DeepSeek V4 Flash inside Claude Code passed it 8 of 8.
+
+The pipeline was checked before blaming the tasks:
+- an empty patch scores 0, and the reference fix scores 1;
+- the task images hold no commits after the base, no fix object, no `/tests` and no `/solution`;
+- 534 practice tool calls show no route to the answer;
+- 7 passing patches still pass on pristine images with every test-file change removed.
+
+The user chose plan B: keep the study, swap the agent under test for a minimal one.
+
+The `openlibrary-mini` study is the openlibrary study with these changes:
+- **Agent under test.** mini-swe-agent 2.4.6 (a single bash tool and one prompt), driven by DeepSeek
+  V4 Flash (`deepseek/deepseek-v4-flash` through LiteLLM) at `api.deepseek.com`, the only host open in
+  the agent phase. It is capped at 100 steps, with no cost limit. Its Python 3.12.14
+  (python-build-standalone 20260929, checksum-verified) and packages (resolved with
+  `--exclude-newer 2026-10-01`) are pre-built into the tools directory, so the offline agent phase
+  installs nothing.
+- **Notes.** The only note layer the agent can read is rho, the notes file. In the refined arm its
+  text is appended to mini-swe-agent's system prompt under "Notes from earlier tasks in this
+  repository", inside a Jinja raw block. The plain arm gets mini-swe-agent's default prompt. Memory,
+  skills and subagents have no channel into this agent.
+- **Refine.** It is still Claude Code running the frozen refine skill, now on DeepSeek V4 Flash through
+  `api.deepseek.com/anthropic`. Its inputs are the task statement, mini-swe-agent's own trajectory
+  (as `transcript.json`) and the result line. Its prompt says that only CLAUDE.md reaches the agent,
+  and that edits to any other layer are lost. The practice records keep counting edits by layer, so
+  any lost edits show in the report.
+- **Key.** The DeepSeek key is read from Keychain service `swepro-deepseek-key`. Neither the agent
+  nor refine ever receives the Claude subscription token.
+- **Pilot.** Plain mini-swe-agent runs once on the 8 pinned openlibrary pilot tasks, which this study
+  excludes as before, under the Amendment 1 choice rule with this study as the only candidate. If
+  the rate is outside (4/30, 26/30), stop and bring it to the user.
+
+Everything else carries over unchanged:
+- the split procedure and seeds, practice length, gate, freeze, test design and scoring;
+- the operator rules;
+- its own run directory, docs directory and freeze tag.
+
+The claim narrows to: do notes that refine writes during practice help a minimal agent solve more
+unseen tasks in the same repository?
