@@ -11,7 +11,8 @@ ALPHA = 0.05
 TOL = 1e-9
 GRID = tuple(k / 100 for k in range(-100, 101))
 LIMITS = (
-    f"One repository ({config.REPO_LABEL}) and one model ({config.MODEL_NAME}) through Claude Code only.",
+    f"One repository ({config.REPO_LABEL}) and one model ({config.MODEL_NAME}) through {config.HARNESS_NAME} "
+    "only.",
     "Plain against refined cannot separate useful lessons from any added notes; a placebo-notes arm would.",
     f"The {config.REPO_LABEL} fixes are public, so the model may have seen some of them; both arms share this.",
     "Edits were auto-approved and the daily cap lifted, which normal refine use does not do.",

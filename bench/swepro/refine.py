@@ -13,7 +13,7 @@ from pathlib import Path
 from bench.swepro import bundle, config, jobs
 from bench.tb4 import stream
 
-PROMPT = """/refine
+CLAUDE_PROMPT = """/refine
 
 You are improving the working notes of a coding agent that solves tasks in the {label} repository
 (github.com/{github}). A practice task has just finished. Its evidence is in /inputs:
@@ -32,7 +32,33 @@ For this study the operator authorises you to apply your own proposal: run `refi
 `--approved` and `--override-cap`. Apply at most one proposal. If nothing is worth learning, apply
 nothing and say so. Do not run `refine-outcome` or `refine-undo`, and do not copy task-specific code,
 file contents or test names into the notes.
-""".format(label=config.REPO_LABEL, github=config.REPO_GITHUB)
+"""
+
+MINI_PROMPT = """/refine
+
+You are improving the working notes of a coding agent that solves tasks in the {label} repository
+(github.com/{github}). The agent is mini-swe-agent: one bash tool and one prompt. A practice task has just
+finished. Its evidence is in /inputs:
+
+- /inputs/task.md: the task statement the agent was given.
+- /inputs/transcript.json: the agent's trajectory (mini-swe-agent's message list).
+- /inputs/result.txt: the hidden-test result in one line, for example `passed` or
+  `failed: 2 of 16 graded tests failed`. You will not get test names or test output.
+
+The project is /app. It holds no {label} code. Only /app/CLAUDE.md reaches the agent: its text is appended
+to the agent's system prompt on future {label} tasks. The agent has no skills, subagents or memory, so a
+change anywhere else is lost. Follow the refine skill as written, with PROJECT=/app and project scope, to
+decide whether this evidence supports one small change to CLAUDE.md that would help on *different* future
+tasks in this repository.
+
+For this study the operator authorises you to apply your own proposal: run `refine-apply` with
+`--approved` and `--override-cap`. Apply at most one proposal. If nothing is worth learning, apply
+nothing and say so. Do not run `refine-outcome` or `refine-undo`, and do not copy task-specific code,
+file contents or test names into the notes.
+"""
+
+PROMPT = (MINI_PROMPT if config.HARNESS == "mini" else CLAUDE_PROMPT).format(label=config.REPO_LABEL,
+                                                                             github=config.REPO_GITHUB)
 
 TASK_TOML = """schema_version = "1.4"
 
@@ -84,8 +110,12 @@ def make_inputs(task_dir: Path, trial_dir: Path, result_line: str, dest: Path) -
         shutil.rmtree(dest)
     dest.mkdir(parents=True)
     shutil.copyfile(task_dir / "instruction.md", dest / "task.md")
-    sessions = sorted((trial_dir / "agent" / "sessions" / "projects").rglob("*.jsonl"))
-    (dest / "transcript.jsonl").write_text("".join(p.read_text(errors="replace") for p in sessions))
+    mini = trial_dir / "agent" / "mini-swe-agent.trajectory.json"
+    if mini.is_file():  # a mini-swe-agent run keeps one trajectory file
+        shutil.copyfile(mini, dest / "transcript.json")
+    else:
+        sessions = sorted((trial_dir / "agent" / "sessions" / "projects").rglob("*.jsonl"))
+        (dest / "transcript.jsonl").write_text("".join(p.read_text(errors="replace") for p in sessions))
     (dest / "result.txt").write_text(result_line + "\n")
     return dest
 

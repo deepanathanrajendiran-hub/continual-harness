@@ -66,6 +66,33 @@ def bundle_steps(bundle_dir: Path) -> list:
     return steps
 
 
+def mini_steps(tools_dir: Path) -> list:
+    """Unpack the pre-built mini-swe-agent (tools.build_mini) at /opt/mswea; nothing is downloaded."""
+    return [
+        Upload(tools_dir / tools.MINI_REL, "/tmp/mswea.tgz"),
+        Exec("tar -xzf /tmp/mswea.tgz -C /opt && rm -f /tmp/mswea.tgz && "
+             "ln -sf /opt/mswea/bin/mini-swe-agent /usr/local/bin/mini-swe-agent && "
+             "/opt/mswea/bin/python3 -c 'import minisweagent, litellm'"),
+    ]
+
+
+def mini_bundle_steps(bundle_dir: Path) -> list:
+    """The notes reach mini-swe-agent through its prompt (mini_config); the container only records the hash."""
+    return [Exec(f"mkdir -p {NOTES} && echo {bundle.verify(bundle_dir)} > {NOTES}/HASH")]
+
+
+MINI_NOTES = "\n## Notes from earlier tasks in this repository\n\n{% raw %}{notes}{% endraw %}\n"
+
+
+def mini_config(system_template: str, notes: str | None, step_limit: int) -> dict:
+    """mini-swe-agent config layered over its packaged default: the step cap, and the notes (rho) appended
+    to the system prompt inside a Jinja raw block so their text is never treated as a template."""
+    if notes is not None and "endraw" in notes:
+        raise ValueError("notes contain 'endraw', which would end the raw block")
+    template = system_template if notes is None else system_template + MINI_NOTES.replace("{notes}", notes)
+    return {"agent": {"step_limit": step_limit, "system_template": template}}
+
+
 def refine_steps(state: Path, skill: Path, inputs: Path) -> list:
     """Lay out a refine container: the notes state at /app and in memory, the snapshot skill, the inputs."""
     steps = [Exec(f"mkdir -p /app/.claude/skills {REFINE_MEMORY} /inputs")]

@@ -9,7 +9,8 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 FIELDS = ("STUDY", "REPO_PREFIX", "EXCLUDED", "RUNS", "DOCS", "FREEZE_TAG", "REPO_LABEL", "MODEL",
-          "MODEL_NAME", "PILOT", "ALLOW_HOST", "BASE_URL", "PROVIDER_KEYCHAIN")
+          "MODEL_NAME", "PILOT", "ALLOW_HOST", "BASE_URL", "PROVIDER_KEYCHAIN", "HARNESS",
+          "AGENT_MODEL")
 
 
 def load(study):
@@ -127,3 +128,22 @@ def test_a_provider_studys_network_probe_needs_the_provider_open_and_anthropic_c
 def test_the_ansible_network_probe_is_unchanged():
     from bench.swepro import probe
     assert probe.MODEL_URL == "https://api.anthropic.com/v1/models" and len(probe.BLOCKED_URLS) == 4
+
+
+def test_the_openlibrary_mini_study_runs_mini_swe_agent_on_deepseek_and_refines_with_claude_code():
+    c = json.loads(load("openlibrary-mini").stdout)
+    o = json.loads(load("openlibrary").stdout)
+    assert (c["HARNESS"], c["AGENT_MODEL"], c["MODEL"]) == ("mini", "deepseek/deepseek-v4-flash", "deepseek-v4-flash")
+    assert (c["ALLOW_HOST"], c["PROVIDER_KEYCHAIN"]) == ("api.deepseek.com", "swepro-deepseek-key")
+    assert (c["EXCLUDED"], c["PILOT"]) == (o["EXCLUDED"], o["PILOT"])
+    assert c["FREEZE_TAG"] == "swepro-prereg-openlibrary-mini"
+    env = {**os.environ, "SWEPRO_STUDY": "openlibrary-mini"}
+    code = "from bench.swepro import jobs, analysis; print(jobs.ARM_AGENT); print(analysis.LIMITS[0])"
+    out = subprocess.run([sys.executable, "-c", code], cwd=ROOT, env=env, capture_output=True, text=True).stdout
+    assert out.splitlines()[0] == "bench.swepro.agent:ArmMiniSweAgent"
+    assert "through mini-swe-agent only" in out and "(DeepSeek V4 Flash)" in out
+
+
+def test_claude_studies_keep_claude_code_as_the_agent_under_test():
+    c = json.loads(load(None).stdout)
+    assert (c["HARNESS"], c["AGENT_MODEL"]) == ("claude", c["MODEL"])

@@ -128,3 +128,44 @@ def test_harbor_preflight_accepts_the_refine_options():
 def test_harbor_preflight_still_rejects_unknown_options():
     with pytest.raises(ValueError, match="nonsense"):
         agent.ArmClaudeCode.parse_options({"nonsense": "1"})
+
+
+def make_mini(tmp_path, **kw):
+    write(tmp_path / "tools" / "mini" / "mini.yaml", "agent:\n  system_template: |\n    You are helpful.\n  step_limit: 0\n")
+    return agent.ArmMiniSweAgent(logs_dir=tmp_path / "logs", model_name="deepseek/deepseek-v4-flash",
+                                 tools_dir=str(tmp_path / "tools"), **kw)
+
+
+def test_a_plain_mini_agent_installs_offline_with_the_step_cap_and_no_notes(tmp_path):
+    a = make_mini(tmp_path)
+    assert "step_limit: 100" in a._config_yaml and "Notes from earlier" not in a._config_yaml
+    env = FakeEnv()
+    asyncio.run(a.install(env))
+    assert [c[2] for c in env.calls if c[0] == "upload_file"] == ["/tmp/mswea.tgz"]
+    assert any(c[0] == "exec" and c[1] == install.NOTES_REPORT for c in env.calls)
+    assert not any(c[0] == "exec" and ("apt-get" in c[1] or "curl" in c[1]) for c in env.calls)
+
+
+def test_a_refined_mini_agent_puts_the_notes_file_in_its_system_prompt_and_records_the_hash(tmp_path):
+    write(tmp_path / "state" / "app" / "CLAUDE.md", "Run the solr tests first.")
+    digest = bundle.export(tmp_path / "state", tmp_path / "bundle")["hash"]
+    a = make_mini(tmp_path, bundle_dir=str(tmp_path / "bundle"))
+    assert "Run the solr tests first." in a._config_yaml and "You are helpful." in a._config_yaml
+    env = FakeEnv()
+    asyncio.run(a.install(env))
+    assert any(c[0] == "exec" and f"echo {digest} > {install.NOTES}/HASH" in c[1] for c in env.calls)
+
+
+def test_a_mini_run_captures_the_patch_even_when_the_agent_fails(tmp_path, monkeypatch):
+    async def boom(self, instruction, environment, context):
+        raise RuntimeError("agent died")
+
+    monkeypatch.setattr(agent.MiniSweAgent, "run", boom)
+    env = FakeEnv()
+    with pytest.raises(RuntimeError, match="agent died"):
+        asyncio.run(make_mini(tmp_path).run("do it", env, SimpleNamespace()))
+    assert env.calls[-1] == ("exec", install.CAPTURE, "root")
+
+
+def test_harbor_preflight_accepts_the_mini_options():
+    agent.ArmMiniSweAgent.parse_options({"tools_dir": "/t", "bundle_dir": "/b", "cost_limit": "0"})

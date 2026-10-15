@@ -144,3 +144,24 @@ def test_running_the_snapshot_cli_counts_as_using_the_skill(tmp_path):
         {"type": "tool_use", "name": "Bash", "input": {"command":
             "python3 /app/.claude/skills/refine/scripts/harness.py --runtime claude --project /app doctor"}}]}}) + "\n")
     assert refine.skill_used(tmp_path / "trial") is True
+
+
+def test_inputs_for_a_mini_run_hold_its_trajectory(tmp_path):
+    task = write(tmp_path / "task" / "instruction.md", "Fix the solr query.").parent
+    trial = tmp_path / "trial"
+    write(trial / "agent" / "mini-swe-agent.trajectory.json", '{"messages": []}')
+    d = refine.make_inputs(task, trial, "passed", tmp_path / "inputs")
+    assert sorted(p.name for p in d.iterdir()) == ["result.txt", "task.md", "transcript.json"]
+    assert (d / "transcript.json").read_text() == '{"messages": []}'
+
+
+def test_the_mini_refine_prompt_limits_refine_to_the_notes_file():
+    import os
+    import sys
+    env = {**os.environ, "SWEPRO_STUDY": "openlibrary-mini"}
+    out = subprocess.run([sys.executable, "-c", "from bench.swepro import refine; print(refine.PROMPT)"],
+                         cwd=Path(__file__).resolve().parents[1], env=env, capture_output=True, text=True).stdout
+    for needle in ("/refine", "mini-swe-agent", "/inputs/transcript.json", "Only /app/CLAUDE.md reaches the agent",
+                   "--approved", "--override-cap", "at most one", "refine-outcome", "PROJECT=/app"):
+        assert needle in out, needle
+    assert "transcript.jsonl" not in out and "openlibrary" in out and "ansible" not in out

@@ -54,9 +54,9 @@ SONNET = ("anthropic/claude-sonnet-5-5", "Sonnet 5.5")
 HAIKU = ("anthropic/claude-haiku-5-5", "Haiku 5.5")
 DEEPSEEK = ("deepseek-v4-flash", "DeepSeek V4 Flash")
 PROVIDERS = {  # where Claude Code sends model calls; anthropic uses the subscription token
-    "anthropic": {"host": "api.anthropic.com", "base_url": None, "keychain": None},
+    "anthropic": {"host": "api.anthropic.com", "base_url": None, "keychain": None, "litellm_key_env": None},
     "deepseek": {"host": "api.deepseek.com", "base_url": "https://api.deepseek.com/anthropic",
-                 "keychain": "swepro-deepseek-key"},
+                 "keychain": "swepro-deepseek-key", "litellm_key_env": "DEEPSEEK_API_KEY"},
 }
 STUDIES = {
     "ansible": {"repo": "ansible", "prefix": "instance_ansible__ansible-", "github": "ansible/ansible",
@@ -74,6 +74,10 @@ STUDIES = {
     "openlibrary-deepseek": {"repo": "openlibrary", "prefix": "instance_internetarchive__openlibrary-",
                              "github": "internetarchive/openlibrary", "excluded": OPENLIBRARY_PILOT,
                              "pilot": OPENLIBRARY_PILOT, "model": DEEPSEEK, "provider": "deepseek"},
+    "openlibrary-mini": {"repo": "openlibrary", "prefix": "instance_internetarchive__openlibrary-",
+                         "github": "internetarchive/openlibrary", "excluded": OPENLIBRARY_PILOT,
+                         "pilot": OPENLIBRARY_PILOT, "model": DEEPSEEK, "provider": "deepseek",
+                         "harness": "mini", "agent_model": "deepseek/deepseek-v4-flash"},
 }
 if STUDY not in STUDIES:
     raise ValueError(f"unknown SWEPRO_STUDY {STUDY!r}: choose one of {sorted(STUDIES)}")
@@ -87,6 +91,17 @@ _PROVIDER = PROVIDERS[STUDIES[STUDY].get("provider", "anthropic")]
 ALLOW_HOST = _PROVIDER["host"]
 BASE_URL = _PROVIDER["base_url"]
 PROVIDER_KEYCHAIN = _PROVIDER["keychain"]
+LITELLM_KEY_ENV = _PROVIDER["litellm_key_env"]
+HARNESS = STUDIES[STUDY].get("harness", "claude")  # the agent under test; refine is always Claude Code
+HARNESS_NAME = {"claude": "Claude Code", "mini": "mini-swe-agent"}[HARNESS]
+AGENT_MODEL = STUDIES[STUDY].get("agent_model", MODEL)  # what the agent under test is called with
+MINI_VERSION = "2.4.6"
+MINI_STEP_LIMIT = 100
+MINI_UV_VERSION = "0.12.20"
+MINI_EXCLUDE_NEWER = "2026-10-01T00:00:00Z"
+MINI_PYTHON_URL = ("https://github.com/astral-sh/python-build-standalone/releases/download/20260929/"
+                   "cpython-3.12.14%2B20260929-x86_64-unknown-linux-gnu-install_only.tar.gz")
+MINI_PYTHON_SHA256 = "06c90b93f419b63371c18f20fed0558a1a901f6518c3c24f755077e048447e7f"
 
 HARBOR_VERSION = "0.24.0"
 CLAUDE_CODE_VERSION = "2.1.293"

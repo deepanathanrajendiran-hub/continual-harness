@@ -7,11 +7,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import yaml
 from harbor.agents.installed.claude_code import ClaudeCode, ClaudeCodeOptions
+from harbor.agents.installed.mini_swe_agent import MiniSweAgent, MiniSweAgentOptions
 from harbor.environments.base import BaseEnvironment
 from harbor.models.agent.context import AgentContext
 
-from bench.swepro import install, tools
+from bench.swepro import config, install, tools
 
 
 class ArmClaudeCodeOptions(ClaudeCodeOptions):
@@ -102,3 +104,45 @@ class RefineClaudeCode(ArmClaudeCode):
             self._out.mkdir(parents=True, exist_ok=True)
             await environment.download_dir("/app", self._out / "app")
             await environment.download_dir(install.REFINE_MEMORY, self._out / "memory")
+
+
+class ArmMiniSweAgentOptions(MiniSweAgentOptions):
+    tools_dir: str | None = None
+    bundle_dir: str | None = None
+
+
+class ArmMiniSweAgent(MiniSweAgent):
+    """mini-swe-agent from the pre-built tools tarball, capped at config.MINI_STEP_LIMIT steps, with the
+    bundle's notes file (rho) appended to its system prompt. No other note layer reaches it."""
+
+    options_model = ArmMiniSweAgentOptions
+    _apply = ArmClaudeCode._apply
+
+    def __init__(self, logs_dir: Path, *args, tools_dir: str | None = None, bundle_dir: str | None = None,
+                 **kwargs):
+        self._tools = Path(tools_dir) if tools_dir else tools.TOOLS
+        self._bundle = Path(bundle_dir) if bundle_dir else None
+        default = yaml.safe_load((self._tools / tools.MINI_YAML_REL).read_text())["agent"]["system_template"]
+        notes_file = self._bundle / ".claude" / "CLAUDE.md" if self._bundle is not None else None
+        notes = notes_file.read_text() if notes_file is not None and notes_file.is_file() else None
+        kwargs["config"] = install.mini_config(default, notes, config.MINI_STEP_LIMIT)
+        super().__init__(*args, logs_dir=logs_dir, **kwargs)  # MiniSweAgent's first positional is not logs_dir
+
+    @staticmethod
+    def name() -> str:
+        return "mini-swe-agent-arm"
+
+    async def install(self, environment: BaseEnvironment) -> None:
+        await self._apply(environment, install.mini_steps(self._tools))
+        if self._bundle is not None:
+            await self._apply(environment, install.mini_bundle_steps(self._bundle))
+        await self._apply(environment, [install.Exec(install.NOTES_REPORT, check=False)])
+
+    async def run(self, instruction: str, environment: BaseEnvironment, context: AgentContext) -> None:
+        try:
+            await super().run(instruction, environment, context)
+        finally:
+            try:
+                await environment.exec(command=install.CAPTURE, user="root", timeout_sec=300)
+            except Exception as error:  # never mask the trial outcome
+                self.logger.warning(f"patch capture failed: {error}")

@@ -61,6 +61,7 @@ def deepseek(monkeypatch):
     monkeypatch.setattr(config, "ALLOW_HOST", "api.deepseek.com")
     monkeypatch.setattr(config, "BASE_URL", "https://api.deepseek.com/anthropic")
     monkeypatch.setattr(config, "PROVIDER_KEYCHAIN", "swepro-deepseek-key")
+    monkeypatch.setattr(config, "LITELLM_KEY_ENV", "DEEPSEEK_API_KEY")
     monkeypatch.setattr(jobs, "provider_key", lambda: "pk")
 
 
@@ -77,6 +78,45 @@ def test_a_provider_job_env_carries_the_provider_key_not_the_subscription_token(
     env = jobs.job_env("tok", base={"CLAUDE_CODE_OAUTH_TOKEN": "leak", "PATH": "/bin"})
     assert env["SWEPRO_PROVIDER_KEY"] == "pk" and "CLAUDE_CODE_OAUTH_TOKEN" not in env
     assert "SWEPRO_PROVIDER_KEY" not in jobs.job_env(None, base={"PATH": "/bin"})
+
+
+def test_a_mini_command_runs_mini_swe_agent_on_the_provider_without_claude_flags(tmp_path, deepseek, monkeypatch):
+    monkeypatch.setattr(config, "AGENT_MODEL", "deepseek/deepseek-v4-flash")
+    joined = " ".join(jobs.harbor_command(tmp_path / "task", "pilot__t__plain__a1", tmp_path / "jobs",
+                                          jobs.MINI_AGENT, {"tools_dir": "/x/tools"}, claude=True))
+    for part in (f"-a {jobs.MINI_AGENT}", "-m deepseek/deepseek-v4-flash", "--ae MSWEA_API_KEY=${SWEPRO_PROVIDER_KEY}",
+                 "--ae DEEPSEEK_API_KEY=${SWEPRO_PROVIDER_KEY}", "--ae LITELLM_LOCAL_MODEL_COST_MAP=True",
+                 "--allow-agent-host api.deepseek.com", "--ak tools_dir=/x/tools"):
+        assert part in joined, part
+    for absent in ("--effort", "version=", "OAUTH", "ANTHROPIC", "disable_web_search"):
+        assert absent not in joined, absent
+
+
+def mini_trial(tmp_path, commands, *, exit_status="Submitted"):
+    job, t = trial(tmp_path, events=[])
+    (t / "agent" / "claude-code.txt").unlink()
+    result = json.loads((t / "result.json").read_text())
+    result["agent_result"] = {"n_input_tokens": 900, "n_cache_tokens": 600, "n_output_tokens": 40, "cost_usd": None}
+    (t / "result.json").write_text(json.dumps(result))
+    messages = [{"role": "system", "content": "s"}, {"role": "user", "content": "task"}]
+    messages += [{"role": "assistant", "content": "plan", "tool_calls": [
+        {"id": f"c{i}", "function": {"name": "bash", "arguments": json.dumps({"command": c})}}]}
+        for i, c in enumerate(commands)]
+    traj = {"info": {"mini_version": "2.4.6", "exit_status": exit_status,
+                     "config": {"model": {"model_name": "deepseek/deepseek-v4-flash"}}}, "messages": messages}
+    (t / "agent" / "mini-swe-agent.trajectory.json").write_text(json.dumps(traj))
+    return job, t
+
+
+def test_read_trial_takes_a_mini_runs_model_tokens_and_commands_from_its_trajectory(tmp_path):
+    r = jobs.read_trial(mini_trial(tmp_path, ["grep -rn foo openlibrary"])[0])
+    assert (r["model"], r["agent_version"], r["claude_version"]) == ("deepseek/deepseek-v4-flash", "2.4.6", None)
+    assert (r["tokens_in"], r["tokens_out"], r["reward"]) == (900, 40, 1.0)
+    assert r["audit_tests"] is False and r["api_error"] is False
+
+
+def test_a_mini_run_that_reads_the_hidden_tests_is_flagged(tmp_path):
+    assert jobs.read_trial(mini_trial(tmp_path, ["ls /tests"])[0])["audit_tests"] is True
 
 
 def test_a_missing_provider_key_stops_the_run(monkeypatch):

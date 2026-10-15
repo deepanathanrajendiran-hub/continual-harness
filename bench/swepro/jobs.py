@@ -17,7 +17,9 @@ import signal
 import threading
 import time
 
-ARM_AGENT = "bench.swepro.agent:ArmClaudeCode"
+CLAUDE_AGENT = "bench.swepro.agent:ArmClaudeCode"
+MINI_AGENT = "bench.swepro.agent:ArmMiniSweAgent"
+ARM_AGENT = MINI_AGENT if config.HARNESS == "mini" else CLAUDE_AGENT  # the agent under test
 REFINE_AGENT = "bench.swepro.agent:RefineClaudeCode"
 REPLAY_AGENT = "patch_replay:PatchReplayAgent"
 RESULT_EXCEPTIONS = (*MODEL_OUTCOMES, "NonZeroAgentExitCodeError")  # the model's outcome, not a rerun
@@ -63,7 +65,10 @@ def harbor_command(task_dir: Path, job: str, jobs_dir: Path, agent: str, kwargs:
                    model: str | None = None, allow_host: bool | None = None) -> list:
     """`allow_host` (default: same as `claude`) opens the model endpoint during the offline agent phase."""
     cmd = ["harbor", "run", "-p", str(task_dir), "-a", agent]
-    if claude:
+    if claude and agent == MINI_AGENT:
+        cmd += ["-m", config.AGENT_MODEL, "--ae", "MSWEA_API_KEY=${SWEPRO_PROVIDER_KEY}",
+                "--ae", f"{config.LITELLM_KEY_ENV}=${{SWEPRO_PROVIDER_KEY}}", "--ae", "LITELLM_LOCAL_MODEL_COST_MAP=True"]
+    elif claude:
         cmd += ["-m", config.MODEL, "--effort", config.EFFORT,
                 "--ak", f"version={config.CLAUDE_CODE_VERSION}", "--ak", "disable_web_search=true",
                 *(["--ae", f"ANTHROPIC_BASE_URL={config.BASE_URL}", "--ae", "ANTHROPIC_AUTH_TOKEN=${SWEPRO_PROVIDER_KEY}"]
@@ -134,6 +139,15 @@ def read_trial(job_dir: Path):
     init = stream.init_info(events)
     tool_text = " ".join(str(v) for _, b in stream.tool_uses(events) for v in (b.get("input") or {}).values())
     patch = agent / "model.patch"
+    mini = _json(agent / "mini-swe-agent.trajectory.json")
+    if isinstance(mini, dict):  # mini-swe-agent: Harbor sums its token usage into agent_result
+        totals = result.get("agent_result") or {}
+        info = mini.get("info") or {}
+        final = {"total_cost_usd": totals.get("cost_usd")}
+        usage = {"mini": {"inputTokens": totals.get("n_input_tokens"), "outputTokens": totals.get("n_output_tokens")}}
+        init = {"model": ((info.get("config") or {}).get("model") or {}).get("model_name")}
+        tool_text = " ".join(json.dumps(m.get("tool_calls")) for m in mini.get("messages") or []
+                             if isinstance(m, dict) and m.get("role") == "assistant")
     return {
         "trial_dir": str(trial),
         "task_name": str(result.get("task_name") or "").split("/")[-1],
@@ -143,6 +157,7 @@ def read_trial(job_dir: Path):
         "tokens_in": sum(int(m.get(k) or 0) for m in usage.values() for k in INPUT_FIELDS) if final else None,
         "tokens_out": sum(int(m.get("outputTokens") or 0) for m in usage.values()) if final else None,
         "claude_version": init.get("version"),
+        "agent_version": (mini.get("info") or {}).get("mini_version") if isinstance(mini, dict) else None,
         "model": init.get("model"),
         "agent_sec": _seconds(result.get("agent_execution")),
         "verifier_sec": _seconds(result.get("verifier")),
