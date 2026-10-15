@@ -10,6 +10,7 @@ all 8 openlibrary pilot tasks. That is above the pre-registered ceiling
 
 - **Pool.** The openlibrary tasks in SWE-bench Pro v2
   (`scaleapi/SWE-bench_Pro-os` at `66f92766`), minus the excluded tasks.
+  All 74 passed local validation (oracle 1, empty patch 0).
 - **Pilot.** The same 8 fixed openlibrary pilot tasks used by the earlier
   pilots, one attempt each, no notes file.
 - **Agent.** mini-swe-agent 2.4.6, model `deepseek/deepseek-v4-flash` via

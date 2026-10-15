@@ -1,3 +1,4 @@
 - 2026-10-15 01:57: scale/ and tools/ copied from ~/swepro-runs-pilot; mini-swe-agent bundle built by tools.build_mini (manifest in tools/manifest.json). Plan B (Amendment 3), user asleep, delegated.
 - 2026-10-15 02:15: pool validation runs in ~/swepro-runs-openlibrary-validate (same dataset, model-free) so it can run beside the pilot; validation/ and valid.json are copied in afterwards.
 - 2026-10-15 03:20: pilot 8/8 (rate 1.0) is outside (4/30, 26/30); study stopped per Amendment 3 before split and practice. Pool validation left running (model-free) for any follow-up.
+- 2026-10-15 04:43: pool validation finished, 74 valid / 0 invalid; validation/ and valid.json copied in.
