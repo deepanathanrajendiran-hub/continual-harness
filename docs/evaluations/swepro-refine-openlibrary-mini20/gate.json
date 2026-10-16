@@ -1,0 +1,15 @@
+{
+  "decision": "ask_user",
+  "edits": 28,
+  "edits_by_layer": {
+    "rho": 28
+  },
+  "mean_agent_cost_usd": 0.0119945132,
+  "mean_refine_cost_usd": 0.7354490333333333,
+  "mean_tokens": 321111.5333333333,
+  "passes": 19,
+  "projected_test_seven_day": 0.0016047383452075998,
+  "runs": 30,
+  "sessions_without_change": 2,
+  "seven_day_used": 0.010000000000000009
+}
