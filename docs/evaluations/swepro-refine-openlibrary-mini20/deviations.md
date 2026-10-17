@@ -3,3 +3,9 @@
 - 2026-10-15 12:28: refine cost_usd in records is Claude Code's own estimate at Anthropic list prices ($0.61 for session 001); actual DeepSeek balance moved $6.87 → $6.85 for practice task 1 plus its refine session. Real cost is read from the DeepSeek balance, not from cost_usd.
 - 2026-10-15 20:46: practice 19/30, gate ask_user. Copy check clean (no 6-word run shared with any practice statement, no 5-word run with any practice patch).
 - 2026-10-15 21:56: user read the gate summary and said go (test phase with notes frozen as-is). Bundle ec58109a… (CLAUDE.md only).
+- 2026-10-16 03:14: first interim look at user request (5/44 tasks re-graded): plain 4/15 vs refined 9/15. No change to the run; no early stopping (no interim stopping rule exists).
+- 2026-10-16 11:55: second interim look at user request (12/44 tasks re-graded): plain 12/36 vs refined 23/36; refined better on 7 tasks, worse on 0, tied 5. No change to the run; no early stopping.
+- 2026-10-16 14:33: third interim look at user request (15/44 tasks re-graded): plain 15/45 vs refined 30/45; refined better on 10 tasks, worse on 0, tied 5. No change to the run; no early stopping.
+- 2026-10-16 22:22: fourth interim look at user request (20/44 tasks re-graded): plain 26/60 vs refined 44/60; refined better on 12 tasks, worse on 0, tied 8. No change to the run; no early stopping.
+- 2026-10-17 13:28: fifth interim look at user request (41/44 tasks re-graded): plain 72/123 vs refined 97/123; refined better on 20 tasks, worse on 3, tied 18. No change to the run; no early stopping.
+- 2026-10-17 13:59: test phase complete, 264 runs, 264 re-grades. The frozen analysis's validity check that every run reported Claude Code 2.1.293 and claude-sonnet-5-5 was written for the Claude Code studies and does not apply to the mini-swe-agent harness; the report states the model check this study needs instead.
