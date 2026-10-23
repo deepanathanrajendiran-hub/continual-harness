@@ -1,5 +1,12 @@
 # Continual Harness for Codex and Claude Code
 
+> **Archived.** The two skills now live in their own repositories:
+> [refine](https://github.com/deepanathanrajendiran-hub/refine) and
+> [horizon](https://github.com/deepanathanrajendiran-hub/horizon). This
+> repository is kept read-only as the research record: full study logs,
+> evaluation archives, and the pre-registration freeze tags (for example
+> `swepro-prereg-openlibrary-mini20`).
+
 A harness that lets coding agents learn from the tasks they finish. It runs
 inside Codex and Claude Code as two skills:
 
