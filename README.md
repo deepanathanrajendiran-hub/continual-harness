@@ -1,10 +1,10 @@
 # Continual Harness for Codex and Claude Code
 
-> **Archived.** The two skills now live in their own repositories:
-> [refine](https://github.com/deepanathanrajendiran-hub/refine) and
-> [horizon](https://github.com/deepanathanrajendiran-hub/horizon). This
-> repository is kept read-only as the research record: full study logs,
-> evaluation archives, and the pre-registration freeze tags (for example
+> **Research record.** Refine and Horizon are now developed in their own
+> repositories: [refine](https://github.com/deepanathanrajendiran-hub/refine)
+> and [horizon](https://github.com/deepanathanrajendiran-hub/horizon). This
+> repository holds the studies behind both: full study logs, evaluation
+> archives, and the pre-registration freeze tags (for example
 > `swepro-prereg-openlibrary-mini20`).
 
 A harness that lets coding agents learn from the tasks they finish. It runs
@@ -41,6 +41,10 @@ The result covers one repository, one model and a tight step cap. Claude Code
 with Sonnet and Haiku already passed 29/30 and 30/30 ansible practice tasks,
 so those studies stopped at the pre-registered gate with no room to measure a
 gain. [Full report](docs/evaluations/swepro-refine-openlibrary-mini20/report.md).
+
+Horizon's result, a comparison with plain Claude Code on the E2E-SWE benchmark,
+is reported with its scope and caveats in the
+[horizon repository](https://github.com/deepanathanrajendiran-hub/horizon#result).
 
 The agents have separate skill instructions and state, backed by **one shared
 Python implementation**. This keeps tool-specific behavior accurate while fixes
@@ -149,7 +153,8 @@ state needs a deliberate rerun. Review handles and approval flags record what th
 calling agent asserts; they are not identity verification or a security sandbox.
 Codex notes require explicit recall. These skills do not reproduce Prime Agent's
 persistent Python RLM. Refine's measured gain is the single study under
-[Results](#results). Horizon has no measured improvement yet.
+[Results](#results); Horizon's is reported in
+[its repository](https://github.com/deepanathanrajendiran-hub/horizon#result).
 
 The inspiration is Prime Intellect's trajectory-driven refinement of prompts,
 skills, subagents, and memory. [Prime Agent](https://www.primeintellect.ai/blog/prime-agent).
